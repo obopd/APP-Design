@@ -142,7 +142,11 @@ export function renderSettings(root) {
       h('div', { class: 'set-row' }, h('span', {}, 'Haptics'),
         h('input', {
           type: 'checkbox', class: 'switch', 'aria-label': 'Haptics', checked: state.settings.haptics !== false,
-          onchange: (e) => { state.settings.haptics = e.target.checked; save(); },
+          // Saving re-renders Settings, which would cut the slide short; save once it's done.
+          onchange: (e) => {
+            const on = e.target.checked;
+            setTimeout(() => { state.settings.haptics = on; save(); }, 320);
+          },
         }))),
     foldersSection(),
     h('div', {},

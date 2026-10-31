@@ -195,6 +195,8 @@ Stored in `localStorage` under `planner.v1`:
 - All-day alerts fire at 9:00 AM minus the alert offset.
 - Changing the shape: bump the key and migrate old data in `load()`. Never drop user data.
 - Mutate `state`, then call `save()`; `save()` notifies listeners, and `app.js` re-renders.
+  Re-rendering rebuilds the view, so for animated controls (e.g. the Haptics switch)
+  save after the animation finishes, or the change looks instant.
   Only cloud.js applies remote data, with `save({ touch: false })` / `replaceAll(data, { touch: false })`.
 
 ## Conventions
@@ -258,7 +260,7 @@ and put the Project URL + anon (publishable) key in `js/config.js` (done: projec
 responses are never cached.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v29`; bump to `planner-v30`, …) and keep its `ASSETS` list in sync
+(currently `planner-v30`; bump to `planner-v31`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
