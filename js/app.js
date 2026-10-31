@@ -3,16 +3,17 @@ import { onChange } from './store.js';
 import { renderCalendar } from './calendar.js';
 import { renderDay, renderUpcoming } from './day.js';
 import { openEditor } from './editor.js';
-import { openSettings, applyTheme } from './settings.js';
+import { renderSettings, applyTheme } from './settings.js';
 import { refreshReminders, setToast } from './reminders.js';
 
 const calendarEl = document.getElementById('calendar');
 const panelEl = document.getElementById('panel');
+const settingsEl = document.getElementById('view-settings');
 const toastEl = document.getElementById('toast');
 
 // view.selected = 'YYYY-MM-DD' → week mode; null → month mode.
 const now = new Date();
-const view = { cursor: new Date(now.getFullYear(), now.getMonth(), 1), selected: null };
+const view = { tab: 'calendar', cursor: new Date(now.getFullYear(), now.getMonth(), 1), selected: null };
 let prevView = null;
 
 const actions = {
@@ -37,17 +38,32 @@ const actions = {
     }
     render();
   },
+  add: () => openEditor({ kind: 'todo', date: view.selected || todayKey() }),
   create: (opts) => openEditor(opts),
   edit: (kind, item) => openEditor({ kind, item }),
-  openSettings,
 };
 
 function render() {
+  document.querySelectorAll('.tab').forEach((t) => {
+    const on = t.dataset.view === view.tab;
+    t.classList.toggle('active', on);
+    if (on) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
+  });
+  document.getElementById('view-calendar').hidden = view.tab !== 'calendar';
+  settingsEl.hidden = view.tab !== 'settings';
+
+  if (view.tab === 'settings') { renderSettings(settingsEl); return; }
+
   renderCalendar(calendarEl, view, prevView, actions);
   if (view.selected) renderDay(panelEl, view.selected, actions);
   else renderUpcoming(panelEl, actions);
   prevView = { ...view };
 }
+
+document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
+  view.tab = t.dataset.view;
+  render();
+}));
 
 let toastTimer;
 setToast((title, body) => {
@@ -57,10 +73,6 @@ setToast((title, body) => {
   toastTimer = setTimeout(() => { toastEl.hidden = true; }, 6000);
 });
 toastEl.addEventListener('click', () => { toastEl.hidden = true; });
-
-document.getElementById('add-btn').addEventListener('click', () => {
-  openEditor({ kind: 'todo', date: view.selected || todayKey() });
-});
 
 // Swipe left/right on the calendar to change month/week; swipe down to expand the month.
 let touch = null;
@@ -80,7 +92,7 @@ onChange(() => { render(); refreshReminders(); });
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') { render(); refreshReminders(); }
 });
-setInterval(() => { if (view.selected === todayKey()) render(); }, 60 * 1000); // move the "now" line
+setInterval(() => { if (view.tab === 'calendar' && view.selected === todayKey()) render(); }, 60 * 1000); // move the "now" line
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 

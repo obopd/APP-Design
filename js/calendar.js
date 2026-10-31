@@ -47,14 +47,14 @@ export function renderCalendar(root, view, prev, actions) {
 
   const head = h('div', { class: 'cal-head' },
     h('button', {
-      class: `cal-title${weekMode ? ' week' : ''}`,
+      class: `cal-title display${weekMode ? ' week' : ''}`,
       'aria-label': weekMode ? 'Show whole month' : title,
       onclick: actions.showMonth,
     }, title, icon(ICONS.down)),
     h('div', { class: 'cal-actions' },
       h('button', { class: 'icon-btn', 'aria-label': weekMode ? 'Previous week' : 'Previous month', onclick: () => actions.shift(-1) }, icon(ICONS.left)),
       h('button', { class: 'icon-btn', 'aria-label': weekMode ? 'Next week' : 'Next month', onclick: () => actions.shift(1) }, icon(ICONS.right)),
-      h('button', { class: 'icon-btn', 'aria-label': 'Settings', onclick: actions.openSettings }, icon(ICONS.gear)),
+      h('button', { class: 'icon-btn add-btn', 'aria-label': 'Add', onclick: actions.add }, icon(ICONS.plus)),
     ),
   );
 

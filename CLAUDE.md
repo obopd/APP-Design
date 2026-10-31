@@ -20,13 +20,20 @@ laptop. So:
 
 ## Product requirements (from the owner)
 
-- **One bottom tab for now** ("Calendar"); more tabs will be added later, so
-  keep the tab bar (`nav.tabbar` in `index.html`) ready for more buttons.
+- **Bottom tabs** (icon-only): Calendar and Settings. More will be added later;
+  a tab = a `.tab[data-view]` button in `index.html` + a `#view-<name>` container,
+  switched by `view.tab` in `js/app.js`.
 - The tab shows a **month calendar**. Tapping a date **rolls the month up into
   that date's week**, and the space below shows that day in **two columns**:
   to-do list on the left, hourly schedule timeline on the right.
-- Design: very modern, clean, intuitive. **Default colors are black & white**;
+- Design: **minimalist** — modern, clean, intuitive, small sizes, as few words as
+  possible (prefer icons/symbols over labels). **Default colors are black & white**;
   the user can change the accent color and light/dark mode in Settings.
+- Typography: headings, dates and numbers use **Fraunces** (bold, italic — classic
+  with a calligraphic feel) via the `.display` class / `--display` variable; small UI
+  text uses the system sans-serif.
+- Adding items: a **small round + in the calendar header** (no floating button).
+  Tapping an empty hour in the timeline also adds an event there.
 - **Important reminders** (e.g. a parent's birthday): items marked Important ★
   appear in "Coming up" (month view) and are counted in the home-screen icon badge.
 - **Alerts** at schedule times via notifications.
@@ -39,17 +46,18 @@ laptop. So:
 ## Codebase structure
 
 ```
-index.html             Shell: calendar section, panel, FAB (+), tab bar, toast, two <dialog> sheets
+index.html             Shell: calendar view (calendar + panel), settings view, tab bar, toast, editor <dialog>
 styles.css             All styles. Theme via CSS variables; html[data-theme] light/dark, html[data-accent]
+fonts/                 Fraunces variable fonts (latin, normal + italic woff2) + OFL.txt license
 manifest.webmanifest   PWA manifest
 sw.js                  Service worker: offline cache (network-first) + notification click
-js/app.js              Entry point: view state, actions, render(), swipe gestures, wiring
+js/app.js              Entry point: view state (tab, month, selected day), actions, render(), tabs, swipes
 js/util.js             h() DOM helper, inline SVG icons, date helpers (local 'YYYY-MM-DD' keys)
 js/store.js            State + localStorage persistence, change listeners, queries (eventsOn, todosOn, upcomingImportant)
 js/calendar.js         Month grid; rows collapse to the selected week (animated)
 js/day.js              Day view (to-do column + hourly timeline) and "Coming up" list
 js/editor.js           Bottom sheet to add/edit a to-do or schedule item
-js/settings.js         Settings sheet: theme, accent color, notifications, backup export/restore
+js/settings.js         Settings tab: theme, accent color, alerts, backup export/restore
 js/reminders.js        Alert timers, notifications, in-app toast, app icon badge
 icons/                 icon.svg (source) + 180/192/512 PNGs rendered from it
 docs/                  Screenshots of the app
@@ -80,7 +88,9 @@ Stored in `localStorage` under `planner.v1`:
 - Vanilla JS ES modules, `'use strict'` implicit, 2-space indent, single quotes, semicolons.
 - Build DOM with `h(tag, props, ...children)`; put user text in via text nodes only.
   `innerHTML` is only for the static SVG strings in `ICONS`.
-- No dependencies or CDN scripts (they break offline use).
+- No dependencies or CDN scripts (they break offline use). Fonts are self-hosted
+  in `fonts/`; npm (`registry.npmjs.org`, e.g. `@fontsource-variable/*`) is reachable
+  from cloud sessions for fetching font files, GitHub raw downloads are not.
 - Colors only through CSS variables (`--bg --fg --muted --line --soft --accent --on-accent`);
   new accents need a `:root[data-accent=…]` rule in `styles.css` and an entry in `ACCENTS`/`SWATCH` in `settings.js`.
 - Mobile first: touch targets ≥ 40px, respect `env(safe-area-inset-*)`, check light + dark.
@@ -115,8 +125,8 @@ GitHub Pages serving the repo root (all paths are relative, so it works under
 `/APP-Design/`): repo Settings → Pages → Deploy from a branch → branch, `/ (root)`.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(`planner-v1` → `planner-v2`) and keep its `ASSETS` list in sync with every
-file in `js/`, otherwise installed phones keep stale files.
+(currently `planner-v2`; bump to `planner-v3`, …) and keep its `ASSETS` list in sync
+with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
 

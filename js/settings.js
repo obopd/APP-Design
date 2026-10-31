@@ -1,9 +1,8 @@
-// Appearance (light/dark, accent color), notifications and backup.
+// Settings tab: appearance (light/dark, accent color), alerts and backup.
 import { h } from './util.js';
 import { state, save, replaceAll } from './store.js';
 import { notificationsSupported, requestNotifications } from './reminders.js';
 
-const dialog = document.getElementById('settings');
 const media = matchMedia('(prefers-color-scheme: dark)');
 
 export const ACCENTS = [
@@ -26,30 +25,16 @@ export function applyTheme() {
 }
 media.addEventListener('change', applyTheme);
 
-function notificationRow() {
-  const status = h('span', { class: 'status' });
-  const row = h('div', { class: 'field' }, h('span', {}, 'Alerts'), status);
-  const paint = () => {
-    if (!notificationsSupported()) {
-      status.textContent = 'Add to Home Screen first';
-    } else if (Notification.permission === 'granted') {
-      status.textContent = 'On';
-    } else if (Notification.permission === 'denied') {
-      status.textContent = 'Blocked in iPhone Settings';
-    } else {
-      status.replaceChildren(h('button', {
-        type: 'button', class: 'pill',
-        onclick: async () => { await requestNotifications(); paint(); },
-      }, 'Turn on'));
-    }
-  };
-  paint();
-  return row;
+function alertsControl(rerender) {
+  if (!notificationsSupported()) return h('span', { class: 'status' }, 'Add to Home Screen');
+  if (Notification.permission === 'granted') return h('span', { class: 'status' }, 'On');
+  if (Notification.permission === 'denied') return h('span', { class: 'status' }, 'Off in iPhone Settings');
+  return h('button', { class: 'pill', onclick: async () => { await requestNotifications(); rerender(); } }, 'Turn on');
 }
 
 function exportBackup() {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-  const a = h('a', { href: URL.createObjectURL(blob), download: `planner-backup-${new Date().toISOString().slice(0, 10)}.json` });
+  const a = h('a', { href: URL.createObjectURL(blob), download: `planner-${new Date().toISOString().slice(0, 10)}.json` });
   document.body.append(a);
   a.click();
   a.remove();
@@ -60,55 +45,45 @@ function importBackup() {
   input.addEventListener('change', async () => {
     try {
       const data = JSON.parse(await input.files[0].text());
-      if (!confirm('Replace all current data with this backup?')) return;
+      if (!confirm('Replace all data with this backup?')) return;
       replaceAll(data);
       applyTheme();
-      dialog.close();
     } catch {
-      alert('That file is not a Planner backup.');
+      alert('Not a Planner backup.');
     }
   });
   input.click();
 }
 
-export function openSettings() {
-  const themeSeg = h('div', { class: 'segmented', role: 'radiogroup' });
-  for (const [v, label] of [['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']]) {
-    themeSeg.append(h('button', {
-      type: 'button', role: 'radio', 'aria-checked': String(state.settings.theme === v),
-      onclick: () => { state.settings.theme = v; save(); applyTheme(); openSettings(); },
-    }, label));
-  }
+export function renderSettings(root) {
+  const rerender = () => renderSettings(root);
+  const set = (k, v) => { state.settings[k] = v; save(); applyTheme(); rerender(); };
 
-  const swatches = h('div', { class: 'swatches', role: 'radiogroup', 'aria-label': 'Accent color' },
+  const theme = h('div', { class: 'segmented', role: 'radiogroup', 'aria-label': 'Theme' },
+    [['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']].map(([v, label]) => h('button', {
+      role: 'radio', 'aria-checked': String(state.settings.theme === v), onclick: () => set('theme', v),
+    }, label)));
+
+  const swatches = h('div', { class: 'swatches', role: 'radiogroup', 'aria-label': 'Color' },
     ACCENTS.map(([v, label]) => h('button', {
-      type: 'button', role: 'radio', class: `swatch ${v}`, 'aria-label': label,
+      role: 'radio', class: `swatch ${v}`, 'aria-label': label,
       'aria-checked': String(state.settings.accent === v),
       style: SWATCH[v] ? `background:${SWATCH[v]}` : null,
-      onclick: () => { state.settings.accent = v; save(); applyTheme(); openSettings(); },
+      onclick: () => set('accent', v),
     })));
 
-  const form = h('form', { method: 'dialog' },
-    h('div', { class: 'grabber' }),
-    h('div', { class: 'sheet-head' }, h('span'), h('h3', {}, 'Settings'), h('button', { class: 'save' }, 'Done')),
-    h('p', { class: 'section-label' }, 'Appearance'),
-    themeSeg,
-    h('div', { class: 'group' }, swatches),
-    h('p', { class: 'section-label' }, 'Notifications'),
-    h('div', { class: 'group' }, notificationRow()),
-    h('p', { class: 'hint' },
-      'On iPhone, alerts need the app on your Home Screen (Share → Add to Home Screen) and iOS 16.4 or later. ' +
-      'They go off while the app is open or recently used — iPhone may pause it in the background, so don’t rely on it for critical alarms. ' +
-      'The app icon shows a badge with today’s important items.'),
-    h('p', { class: 'section-label' }, 'Backup'),
-    h('div', { class: 'group' },
-      h('button', { type: 'button', class: 'field', style: 'width:100%', onclick: exportBackup }, h('span', {}, 'Export backup')),
-      h('button', { type: 'button', class: 'field', style: 'width:100%', onclick: importBackup }, h('span', {}, 'Restore from backup'))),
-    h('p', { class: 'hint' }, 'Your data is stored only on this phone. Export a backup now and then.'),
-  );
-
-  dialog.replaceChildren(form);
-  if (!dialog.open) dialog.showModal();
+  root.replaceChildren(h('div', { class: 'settings' },
+    h('h1', { class: 'display' }, 'Settings'),
+    h('div', {},
+      h('div', { class: 'set-row' }, h('span', {}, 'Theme'), theme),
+      h('div', { class: 'set-row' }, h('span', {}, 'Color'), swatches)),
+    h('div', {},
+      h('div', { class: 'set-row' }, h('span', {}, 'Alerts'), alertsControl(rerender))),
+    h('p', { class: 'set-note' }, 'Works while the app is open or recently used.'),
+    h('div', {},
+      h('div', { class: 'set-row' }, h('span', {}, 'Backup'),
+        h('span', { class: 'swatches' },
+          h('button', { class: 'pill', onclick: exportBackup }, 'Export'),
+          h('button', { class: 'pill', onclick: importBackup }, 'Restore')))),
+  ));
 }
-
-dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
