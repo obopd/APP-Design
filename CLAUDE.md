@@ -24,7 +24,8 @@ laptop. So:
   Settings tab. More tabs will be added later; a tab = a `.tab[data-view]` button in
   `index.html` + a `#view-<name>` container, switched by `view.tab` in `js/app.js`.
 - The calendar is a **perfect square card** (always 6 week rows) with space on
-  all sides, month name **centered** between ‹ › arrows.
+  all sides, "Month Year" **centered** between ‹ › arrows. There is no date
+  heading above the day view (the owner found it redundant).
 - **No date selected → only the calendar is on screen, centered** vertically and
   horizontally. Tapping a date slides the card to the top, **rolls the month up into
   that date's week**, and the space below shows that day in **two columns**:
@@ -44,9 +45,11 @@ laptop. So:
   A folder shows in a day only if it contains that day's to-dos. Managed in
   Settings (rename, add sub-folder, delete) or via "New…" in the editor;
   "Academic/Biology" creates nested folders. Folder names use the same font as
-  the to-dos (one unified font in the list) and have a thin underline.
-- **Done mark**: in front of each to-do is a slim rounded line (`.dash`, not a
-  circle) — gray when open, solid black/accent when done. Tapping it toggles done;
+  the to-dos (one unified font in the list) and have an underline whose color is
+  chosen when the folder is created (`category.color`, sheet in `js/folders.js`;
+  editable from Settings by tapping the folder name).
+- **Done mark**: in front of each to-do is a thin *vertical* line with rounded
+  ends (`.dash`, not a circle) — gray when open, solid black/accent when done. Tapping it toggles done;
   done to-dos get a plain `line-through` and gray text (the owner rejected the
   hand-drawn pencil stroke). Tapping the text opens the editor.
 - **Routines**: to-dos and events can repeat daily, weekly, every 2 weeks,
@@ -76,6 +79,7 @@ js/store.js            State + localStorage, change listeners, routines (occursO
 js/calendar.js         Square month card (6 rows); rows collapse to the selected week (animated)
 js/day.js              Day view: to-do folders (mark = done, text = edit) + hourly timeline
 js/editor.js           Bottom sheet to add/edit a to-do or event (folder, repeat/until, alert)
+js/folders.js          Bottom sheet to create/edit a folder: name + underline color
 js/settings.js         Settings tab: theme, accent color, folders, alerts, backup export/restore
 js/reminders.js        Alert timers, notifications, in-app toast, app icon badge
 icons/                 icon.svg (source) + 180/192/512 PNGs rendered from it
@@ -92,7 +96,7 @@ Stored in `localStorage` under `planner.v1`:
              repeat, until, done /* one-off */, doneOn: { 'YYYY-MM-DD': true } /* routines */ }],
   events: [{ id, title, date, allDay, start: 'HH:MM', end: 'HH:MM', repeat, until,
              alert: 'none' | '<minutes before>', important, notes }],
-  categories: [{ id, name, parent: id | null, open }],
+  categories: [{ id, name, parent: id | null, open, color: css color | null }],
   settings: { theme: 'auto' | 'light' | 'dark', accent: 'mono' | 'blue' | 'red' | 'green' | 'orange' | 'purple' }
 }
 // repeat: 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'; until: '' = forever
@@ -149,7 +153,7 @@ GitHub Pages serving the repo root (all paths are relative, so it works under
 `/APP-Design/`): repo Settings → Pages → Deploy from a branch → branch, `/ (root)`.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v5`; bump to `planner-v6`, …) and keep its `ASSETS` list in sync
+(currently `planner-v6`; bump to `planner-v7`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

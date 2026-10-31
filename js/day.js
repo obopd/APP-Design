@@ -1,5 +1,5 @@
 // The area below the calendar when a day is selected: to-dos + hourly schedule.
-import { h, icon, ICONS, parseKey, todayKey, toMinutes, shortTime } from './util.js';
+import { h, icon, ICONS, todayKey, toMinutes, shortTime } from './util.js';
 import { state, save, eventsOn, todosOn, isDone, isRoutine, toggleDone, childCategories } from './store.js';
 
 const HOUR_PX = 48; // keep in sync with --hour in styles.css
@@ -37,6 +37,7 @@ function todoColumn(key, actions) {
       return h('li', { class: `folder${c.open === false ? '' : ' open'}` },
         h('button', {
           class: 'folder-head', 'aria-expanded': String(c.open !== false),
+          style: c.color ? `--folder-line:${c.color}` : null,
           onclick: () => { c.open = c.open === false; save(); },
         }, icon(ICONS.right), h('span', { class: 'folder-name' }, c.name), left ? h('span', { class: 'folder-count' }, String(left)) : null),
         h('ul', { class: 'todos' }, branch(c.id)));
@@ -124,13 +125,8 @@ export function renderDay(root, key, actions) {
   const scrolls = {};
   if (sameDay) root.querySelectorAll('[data-scroll]').forEach((el) => { scrolls[el.dataset.scroll] = el.scrollTop; });
 
-  const date = parseKey(key);
   root.dataset.date = key;
-  root.replaceChildren(
-    h('div', { class: 'panel-head' },
-      h('h2', { class: 'display' }, date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }))),
-    h('div', { class: 'columns' }, todoColumn(key, actions), scheduleColumn(key, actions)),
-  );
+  root.replaceChildren(h('div', { class: 'columns' }, todoColumn(key, actions), scheduleColumn(key, actions)));
 
   const tl = root.querySelector('[data-scroll="timeline"]');
   if (sameDay) {

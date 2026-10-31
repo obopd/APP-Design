@@ -40,7 +40,7 @@ export function renderCalendar(root, view, prev, actions) {
   const weekMode = !!view.selected;
   const cursor = weekMode ? parseKey(view.selected) : view.cursor;
   const month = cursor.getMonth();
-  const title = cursor.toLocaleDateString(undefined, { month: 'long', year: cursor.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
+  const title = cursor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
   const head = h('div', { class: 'cal-head' },
     h('button', { class: 'icon-btn', 'aria-label': weekMode ? 'Previous week' : 'Previous month', onclick: () => actions.shift(-1) }, icon(ICONS.left)),

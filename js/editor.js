@@ -1,6 +1,7 @@
 // Bottom sheet for creating / editing a to-do or a schedule item.
 import { h, icon, ICONS, todayKey, toMinutes, fromMinutes, pad } from './util.js';
-import { state, save, uid, REPEATS, categoryTree, ensureCategoryPath } from './store.js';
+import { state, save, uid, REPEATS, categoryTree } from './store.js';
+import { openFolderSheet } from './folders.js';
 
 const dialog = document.getElementById('editor');
 
@@ -61,7 +62,7 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null }
   const until = h('input', { type: 'date', value: draft.until || '', 'aria-label': 'Until' });
   const alert = select(ALERTS, draft.alert || 'none');
 
-  // Folder picker; "New…" asks for a name, and "Academic/Biology" makes nested folders.
+  // Folder picker; "New…" opens the folder sheet (name + underline color).
   const category = h('select', {});
   const fillCategories = (selected) => {
     category.replaceChildren(
@@ -74,12 +75,10 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null }
   let lastCategory = category.value;
   category.addEventListener('change', () => {
     if (category.value !== '__new') { lastCategory = category.value; return; }
-    const name = prompt('Folder name\n(use / for sub-folders, e.g. Academic/Biology)');
-    if (name && name.trim()) {
-      lastCategory = ensureCategoryPath(name);
-      save();
-    }
-    fillCategories(lastCategory);
+    openFolderSheet({
+      onDone: (id) => { lastCategory = id; fillCategories(id); },
+      onCancel: () => fillCategories(lastCategory),
+    });
   });
 
   const timeRow = field('Time', h('span', { class: 'times' }, start, '–', end));

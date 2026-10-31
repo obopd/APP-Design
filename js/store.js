@@ -8,7 +8,7 @@ const KEY = 'planner.v1';
               repeat, until, done (one-off), doneOn: { 'YYYY-MM-DD': true } (routines) }
   event:    { id, title, date, allDay, start: 'HH:MM', end: 'HH:MM', repeat, until,
               alert: 'none' | '<minutes before>', important, notes }
-  category: { id, name, parent: id | null, open }   — folders for to-dos, nestable
+  category: { id, name, parent: id | null, open, color: '#hex' | null }   — nestable to-do folders
   repeat:   'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'
   until:    '' (forever) or last 'YYYY-MM-DD' a routine occurs
 */
