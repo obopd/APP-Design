@@ -14,14 +14,12 @@ function todoItem(t, key, actions) {
     }, h('span', { class: 'dash' })),
     h('button', { class: 'todo-title', onclick: () => actions.edit('todo', t) },
       t.title,
-      isRoutine(t) ? h('span', { class: 'mark', 'aria-hidden': 'true' }, '↻') : null,
       t.important ? h('span', { class: 'mark star', 'aria-hidden': 'true' }, '★') : null));
 }
 
-// To-dos grouped into (nested) category folders. A folder only shows if it has
-// to-dos on this day somewhere inside it; its open/closed state is saved.
-function todoColumn(key, actions) {
-  const todos = todosOn(key);
+// One section's to-dos grouped into (nested) category folders. A folder only shows
+// if it has to-dos here somewhere inside it; its open/closed state is saved.
+function folderTree(todos, key, actions) {
   const known = new Set(state.categories.map((c) => c.id));
   const catOf = (t) => (known.has(t.category) ? t.category : null);
 
@@ -45,8 +43,26 @@ function todoColumn(key, actions) {
     return [...items, ...folders];
   };
 
-  return h('div', { class: 'col' },
-    h('div', { class: 'col-scroll', 'data-scroll': 'todos' }, todos.length ? h('ul', { class: 'todos root' }, branch(null)) : null));
+  return h('ul', { class: 'todos root' }, branch(null));
+}
+
+// Routines on top, regular to-dos below. Labels only appear when there are routines.
+function todoColumn(key, actions) {
+  const todos = todosOn(key);
+  const routines = todos.filter(isRoutine);
+  const regular = todos.filter((t) => !isRoutine(t));
+
+  const sections = [];
+  if (routines.length) {
+    sections.push(h('section', { class: 'todo-section' },
+      h('h3', { class: 'section-label' }, 'Routines'), folderTree(routines, key, actions)));
+  }
+  if (regular.length) {
+    sections.push(h('section', { class: 'todo-section' },
+      routines.length ? h('h3', { class: 'section-label' }, 'To-do') : null, folderTree(regular, key, actions)));
+  }
+
+  return h('div', { class: 'col' }, h('div', { class: 'col-scroll', 'data-scroll': 'todos' }, sections));
 }
 
 // Assign overlapping timed events to side-by-side lanes.

@@ -164,6 +164,13 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .mark { color: var(--muted); font-size: 10px; margin-left: 4px; vertical-align: 1px; font-weight: 400; }
 .mark.star { color: var(--accent); }
 
+/* Routines / To-do sections */
+.todo-section + .todo-section { margin-top: 18px; }
+.section-label {
+  margin: 0; padding: 0 14px 4px;
+  font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+}
+
 /* Category folders: same font as the to-dos, with a thin underline separating the name. */
 .folder { margin-top: 6px; }
 .folder-head {
