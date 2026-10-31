@@ -16,8 +16,10 @@ laptop. So:
 - Anything the owner must do by hand must be doable in a mobile browser, and
   explained step by step in plain language.
 - The owner describes the design; build what they ask for, and check with
-  them before inventing large features. Don't add sharing/multi-user features
-  (accounts exist only so one person can back up/sync their own data).
+  them before inventing large features. **Anyone with the app link may create
+  their own account** and use the app privately (open email/password sign-up);
+  accounts are fully separate — never add sharing or any way to see another
+  user's data.
 
 ## Product requirements (from the owner)
 
@@ -102,6 +104,8 @@ laptop. So:
   Email links (confirm / reset password) return with `#access_token…` handled by
   `handleAuthRedirect()`. `js/config.js` holds the project URL + anon/publishable key
   (public by design); empty = accounts hidden ("Not set up yet").
+  Multiple independent users are expected (anyone with the link can sign up);
+  RLS is what keeps each user's row private, so never weaken those policies.
 - **Tracking (opt-in per to-do)**: editor "Track" = Off | Count | Time. Only tracked
   to-dos show a number pill: Count → tap to enter a number; Time → tap to type
   minutes/h:mm, plus a ▶/■ stopwatch (stored as a start timestamp, so it keeps
@@ -219,7 +223,10 @@ GitHub Pages serving the repo root (all paths are relative, so it works under
 `.nojekyll` makes Pages serve files as-is (no Jekyll build). Note: the repo is
 private, and free GitHub accounts only get Pages for public repos.
 
-Accounts: Supabase project (free tier). Run `supabase/setup.sql` in its SQL editor,
+Accounts: Supabase project (free tier; open sign-ups for anyone with the link). The
+built-in email sender is heavily rate-limited, so the owner may turn off
+Authentication → Email → "Confirm email" (or add custom SMTP). Free projects pause
+after ~1 week of no activity; sync then fails until restored in the dashboard. Run `supabase/setup.sql` in its SQL editor,
 set Authentication → URL Configuration → Site URL / Redirect URLs to the Pages URL,
 and put the Project URL + anon (publishable) key in `js/config.js`. Never commit the
 service_role/secret key. The service worker only caches same-origin GETs, so API
