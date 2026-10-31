@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Habits">
+  <title>Habits</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <p class="date" id="today-label"></p>
+      <h1>Habits</h1>
+    </div>
+    <p class="progress" id="progress" aria-live="polite"></p>
+  </header>
+
+  <main>
+    <ul class="habits" id="habit-list"></ul>
+    <div class="empty" id="empty" hidden>
+      <p class="empty-emoji">🌱</p>
+      <p>No habits yet.<br>Tap <strong>+</strong> to add your first one.</p>
+    </div>
+  </main>
+
+  <button class="fab" id="add-btn" aria-label="Add habit">+</button>
+
+  <dialog id="habit-dialog">
+    <form method="dialog" id="habit-form">
+      <h2 id="dialog-title">New habit</h2>
+      <label>
+        Name
+        <input name="name" id="habit-name" maxlength="40" required autocomplete="off" placeholder="e.g. Drink water">
+      </label>
+      <fieldset>
+        <legend>Icon</legend>
+        <div class="emoji-grid" id="emoji-grid"></div>
+      </fieldset>
+      <div class="dialog-actions">
+        <button type="button" class="danger" id="delete-btn" hidden>Delete</button>
+        <span class="spacer"></span>
+        <button type="button" id="cancel-btn">Cancel</button>
+        <button type="submit" class="primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
