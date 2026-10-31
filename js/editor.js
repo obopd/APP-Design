@@ -1,6 +1,6 @@
 // Bottom sheet for creating / editing a to-do or a schedule item.
 import { h, icon, ICONS, todayKey, toMinutes, fromMinutes, pad } from './util.js';
-import { state, save, uid } from './store.js';
+import { state, save, uid, REPEATS, categoryTree, ensureCategoryPath } from './store.js';
 
 const dialog = document.getElementById('editor');
 
@@ -41,7 +41,7 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null }
   const draft = item ? { ...item } : {
     title: '', date, important: false, notes: '',
     allDay: false, start: `${pad(startHour)}:00`, end: fromMinutes(Math.min(startHour * 60 + 60, 23 * 60 + 59)),
-    repeat: 'none', alert: 'none',
+    repeat: 'none', until: '', alert: 'none', category: null,
   };
 
   const title = h('input', { type: 'text', placeholder: 'Title', maxlength: '80', value: draft.title, autocomplete: 'off', enterkeyhint: 'done', 'aria-label': 'Title' });
@@ -57,17 +57,44 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null }
   const allDay = h('input', { type: 'checkbox', class: 'switch', checked: draft.allDay });
   const start = h('input', { type: 'time', value: draft.start || '09:00', 'aria-label': 'Start' });
   const end = h('input', { type: 'time', value: draft.end || '10:00', 'aria-label': 'End' });
-  const repeat = select([['none', 'Never'], ['yearly', 'Yearly']], draft.repeat || 'none');
+  const repeat = select(REPEATS, draft.repeat || 'none');
+  const until = h('input', { type: 'date', value: draft.until || '', 'aria-label': 'Until' });
   const alert = select(ALERTS, draft.alert || 'none');
 
+  // Folder picker; "New…" asks for a name, and "Academic/Biology" makes nested folders.
+  const category = h('select', {});
+  const fillCategories = (selected) => {
+    category.replaceChildren(
+      h('option', { value: '' }, 'None'),
+      ...categoryTree().map(({ cat, depth }) => h('option', { value: cat.id }, `${'\u2002'.repeat(depth * 2)}${cat.name}`)),
+      h('option', { value: '__new' }, 'New…'));
+    category.value = selected || '';
+  };
+  fillCategories(draft.category);
+  let lastCategory = category.value;
+  category.addEventListener('change', () => {
+    if (category.value !== '__new') { lastCategory = category.value; return; }
+    const name = prompt('Folder name\n(use / for sub-folders, e.g. Academic/Biology)');
+    if (name && name.trim()) {
+      lastCategory = ensureCategoryPath(name);
+      save();
+    }
+    fillCategories(lastCategory);
+  });
+
   const timeRow = field('Time', h('span', { class: 'times' }, start, '–', end));
-  const eventRows = [field('All-day', allDay), timeRow, field('Repeat', repeat), field('Alert', alert)];
+  const untilRow = field('Until', until);
+  const todoRows = [field('Folder', category)];
+  const eventRows = [field('All-day', allDay), timeRow, field('Alert', alert)];
 
   const sync = () => {
+    todoRows.forEach((r) => { r.hidden = type !== 'todo'; });
     eventRows.forEach((r) => { r.hidden = type !== 'event'; });
     if (type === 'event') timeRow.hidden = allDay.checked;
+    untilRow.hidden = repeat.value === 'none';
   };
   allDay.addEventListener('change', sync);
+  repeat.addEventListener('change', sync);
 
   // Keep the end after the start when the start moves.
   start.addEventListener('change', () => {
@@ -82,17 +109,21 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null }
     ev.preventDefault();
     const text = title.value.trim();
     if (!text) { title.focus(); return; }
-    const base = { title: text, date: dateIn.value || draft.date, important, notes: notes.value.trim() };
+    const date = dateIn.value || draft.date;
+    const base = {
+      title: text, date, important, notes: notes.value.trim(),
+      repeat: repeat.value, until: repeat.value !== 'none' && until.value >= date ? until.value : '',
+    };
 
     if (type === 'todo') {
-      const data = { ...base, done: item?.done || false };
+      const data = { ...base, category: category.value && category.value !== '__new' ? category.value : null };
       if (isNew) state.todos.push({ id: uid(), ...data });
       else Object.assign(item, data);
     } else {
       const s = start.value || '09:00';
       let e = end.value || fromMinutes(toMinutes(s) + 60);
       if (toMinutes(e) <= toMinutes(s)) e = fromMinutes(Math.min(toMinutes(s) + 60, 23 * 60 + 59));
-      const data = { ...base, allDay: allDay.checked, start: s, end: e, repeat: repeat.value, alert: alert.value };
+      const data = { ...base, allDay: allDay.checked, start: s, end: e, alert: alert.value };
       if (isNew) state.events.push({ id: uid(), ...data });
       else Object.assign(item, data);
     }
@@ -101,7 +132,7 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null }
   };
 
   const remove = () => {
-    if (!confirm(`Delete “${item.title}”?`)) return;
+    if (!confirm(item.repeat && item.repeat !== 'none' ? `Delete routine “${item.title}” (every day it repeats)?` : `Delete “${item.title}”?`)) return;
     const list = kind === 'todo' ? 'todos' : 'events';
     state[list] = state[list].filter((x) => x !== item);
     save();
@@ -119,7 +150,7 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null }
       h('span', { class: 'spacer' }),
       h('button', { type: 'submit', class: 'icon-btn ok', 'aria-label': 'Save' }, icon(ICONS.check))),
     h('div', { class: 'title-row' }, title, star),
-    h('div', { class: 'fields' }, field('Date', dateIn), ...eventRows),
+    h('div', { class: 'fields' }, field('Date', dateIn), ...todoRows, ...eventRows, field('Repeat', repeat), untilRow),
     notes,
   );
 

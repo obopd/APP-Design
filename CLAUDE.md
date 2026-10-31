@@ -38,6 +38,18 @@ laptop. So:
   variable; small UI text uses the system sans-serif.
 - Adding items: the small round + in the bottom bar. Tapping an empty hour in the
   timeline also adds an event there.
+- **To-do folders (categories)**, nestable like computer folders (Academic →
+  Biology, Chemistry). New folders start open; each folder's open/closed state is
+  saved (`category.open`) and must survive closing/reopening the tab or app.
+  A folder shows in a day only if it contains that day's to-dos. Managed in
+  Settings (rename, add sub-folder, delete) or via "New…" in the editor;
+  "Academic/Biology" creates nested folders.
+- **To-dos have no checkbox circle**: tap the text to cross it out with a
+  hand-drawn pencil stroke (`--pencil` SVG in `styles.css`); tap again to undo.
+  **Press and hold** a to-do to edit it.
+- **Routines**: to-dos and events can repeat daily, weekly, every 2 weeks,
+  monthly or yearly, with an optional "Until" date. Routine to-dos are checked
+  off per day (`doneOn`). Routines only get a calendar dot when starred.
 - **Important reminders** (e.g. a parent's birthday): items marked Important ★ get
   an accent-colored dot on the calendar and are counted in the home-screen icon badge.
 - **Alerts** at schedule times via notifications.
@@ -58,11 +70,11 @@ manifest.webmanifest   PWA manifest
 sw.js                  Service worker: offline cache (network-first) + notification click
 js/app.js              Entry point: view state (tab, month, selected day), actions, render(), tabs, swipes
 js/util.js             h() DOM helper, inline SVG icons, date helpers (local 'YYYY-MM-DD' keys)
-js/store.js            State + localStorage persistence, change listeners, queries (eventsOn, todosOn)
+js/store.js            State + localStorage, change listeners, routines (occursOn, isDone), queries, folder helpers
 js/calendar.js         Square month card (6 rows); rows collapse to the selected week (animated)
-js/day.js              Day view: to-do column + hourly timeline
-js/editor.js           Bottom sheet to add/edit a to-do or schedule item
-js/settings.js         Settings tab: theme, accent color, alerts, backup export/restore
+js/day.js              Day view: to-do folders (tap = cross out, hold = edit) + hourly timeline
+js/editor.js           Bottom sheet to add/edit a to-do or event (folder, repeat/until, alert)
+js/settings.js         Settings tab: theme, accent color, folders, alerts, backup export/restore
 js/reminders.js        Alert timers, notifications, in-app toast, app icon badge
 icons/                 icon.svg (source) + 180/192/512 PNGs rendered from it
 docs/                  Screenshots of the app
@@ -74,16 +86,21 @@ Stored in `localStorage` under `planner.v1`:
 
 ```js
 {
-  todos:  [{ id, title, date: 'YYYY-MM-DD', important, done, notes }],
-  events: [{ id, title, date, allDay, start: 'HH:MM', end: 'HH:MM',
-             repeat: 'none' | 'yearly', alert: 'none' | '<minutes before>',
-             important, notes }],
+  todos:  [{ id, title, date: 'YYYY-MM-DD', important, notes, category: id | null,
+             repeat, until, done /* one-off */, doneOn: { 'YYYY-MM-DD': true } /* routines */ }],
+  events: [{ id, title, date, allDay, start: 'HH:MM', end: 'HH:MM', repeat, until,
+             alert: 'none' | '<minutes before>', important, notes }],
+  categories: [{ id, name, parent: id | null, open }],
   settings: { theme: 'auto' | 'light' | 'dark', accent: 'mono' | 'blue' | 'red' | 'green' | 'orange' | 'purple' }
 }
+// repeat: 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'; until: '' = forever
 ```
 
 - Dates are **local** date keys (`dateKey()`), never UTC ISO strings.
-- Yearly events (birthdays) match on month-day from their start date (`occursOn`).
+- `date` is the first occurrence; `occursOn(item, key)` decides repeats. Monthly/yearly
+  starting on e.g. the 31st fall on the last day of shorter months.
+- Use `isDone(todo, key)` / `toggleDone(todo, key)`, never `todo.done` directly.
+- Deleting a folder moves its sub-folders and to-dos up one level (`deleteCategory`).
 - All-day alerts fire at 9:00 AM minus the alert offset.
 - Changing the shape: bump the key and migrate old data in `load()`. Never drop user data.
 - Mutate `state`, then call `save()`; `save()` notifies listeners, and `app.js` re-renders.
@@ -130,7 +147,7 @@ GitHub Pages serving the repo root (all paths are relative, so it works under
 `/APP-Design/`): repo Settings → Pages → Deploy from a branch → branch, `/ (root)`.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v3`; bump to `planner-v4`, …) and keep its `ASSETS` list in sync
+(currently `planner-v4`; bump to `planner-v5`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

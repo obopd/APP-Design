@@ -1,6 +1,6 @@
-// Settings tab: appearance (light/dark, accent color), alerts and backup.
-import { h } from './util.js';
-import { state, save, replaceAll } from './store.js';
+// Settings tab: appearance (light/dark, accent color), folders, alerts and backup.
+import { h, icon, ICONS } from './util.js';
+import { state, save, replaceAll, categoryTree, ensureCategoryPath, deleteCategory } from './store.js';
 import { notificationsSupported, requestNotifications } from './reminders.js';
 
 const media = matchMedia('(prefers-color-scheme: dark)');
@@ -55,6 +55,35 @@ function importBackup() {
   input.click();
 }
 
+const askName = (msg, value = '') => {
+  const name = prompt(msg, value);
+  return name && name.trim() ? name.trim() : null;
+};
+
+function foldersSection() {
+  const rows = categoryTree().map(({ cat, depth }) => h('div', { class: 'cat-row', style: `padding-left:${depth * 16}px` },
+    h('button', {
+      class: 'cat-name', 'aria-label': `Rename ${cat.name}`,
+      onclick: () => { const n = askName('Rename folder', cat.name); if (n) { cat.name = n; save(); } },
+    }, cat.name),
+    h('button', {
+      class: 'icon-btn', 'aria-label': `Add folder inside ${cat.name}`,
+      onclick: () => { const n = askName(`New folder inside ${cat.name}`); if (n) { ensureCategoryPath(n, cat.id); save(); } },
+    }, icon(ICONS.plus)),
+    h('button', {
+      class: 'icon-btn', 'aria-label': `Delete ${cat.name}`,
+      onclick: () => { if (confirm(`Delete folder “${cat.name}”? Its to-dos move up a level.`)) deleteCategory(cat.id); },
+    }, icon(ICONS.trash))));
+
+  return h('div', {},
+    h('div', { class: 'set-row' }, h('span', {}, 'Folders'),
+      h('button', {
+        class: 'pill',
+        onclick: () => { const n = askName('New folder\n(use / for sub-folders, e.g. Academic/Biology)'); if (n) { ensureCategoryPath(n); save(); } },
+      }, 'New')),
+    rows.length ? h('div', { class: 'cat-list' }, rows) : null);
+}
+
 export function renderSettings(root) {
   const rerender = () => renderSettings(root);
   const set = (k, v) => { state.settings[k] = v; save(); applyTheme(); rerender(); };
@@ -77,6 +106,7 @@ export function renderSettings(root) {
     h('div', {},
       h('div', { class: 'set-row' }, h('span', {}, 'Theme'), theme),
       h('div', { class: 'set-row' }, h('span', {}, 'Color'), swatches)),
+    foldersSection(),
     h('div', {},
       h('div', { class: 'set-row' }, h('span', {}, 'Alerts'), alertsControl(rerender))),
     h('p', { class: 'set-note' }, 'Works while the app is open or recently used.'),

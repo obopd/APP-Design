@@ -1,23 +1,71 @@
 // The area below the calendar when a day is selected: to-dos + hourly schedule.
 import { h, icon, ICONS, parseKey, todayKey, toMinutes, shortTime } from './util.js';
-import { save, eventsOn, todosOn } from './store.js';
+import { state, save, eventsOn, todosOn, isDone, isRoutine, toggleDone, childCategories } from './store.js';
 
 const HOUR_PX = 48; // keep in sync with --hour in styles.css
 
+// Tap to cross out, press and hold to edit.
+function longPress(el, onLong) {
+  let timer = null;
+  let fired = false;
+  let origin = null;
+  const cancel = () => { clearTimeout(timer); timer = null; };
+  el.addEventListener('pointerdown', (e) => {
+    fired = false;
+    origin = { x: e.clientX, y: e.clientY };
+    timer = setTimeout(() => { fired = true; navigator.vibrate?.(10); onLong(); }, 450);
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (origin && Math.hypot(e.clientX - origin.x, e.clientY - origin.y) > 8) cancel();
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => el.addEventListener(t, cancel));
+  el.addEventListener('contextmenu', (e) => e.preventDefault());
+  // Swallow the click that follows a long press.
+  el.addEventListener('click', (e) => { if (fired) { e.stopImmediatePropagation(); fired = false; } }, true);
+}
+
+function todoItem(t, key, actions) {
+  const done = isDone(t, key);
+  const btn = h('button', {
+    class: 'todo-title', role: 'checkbox', 'aria-checked': String(done),
+    'aria-label': `${t.title}${done ? ', done' : ''}. Hold to edit`,
+    onclick: () => toggleDone(t, key),
+  },
+  h('span', { class: 'ink' }, t.title),
+  isRoutine(t) ? h('span', { class: 'mark', 'aria-hidden': 'true' }, '↻') : null,
+  t.important ? h('span', { class: 'mark star', 'aria-hidden': 'true' }, '★') : null);
+  longPress(btn, () => actions.edit('todo', t));
+  return h('li', { class: `todo${done ? ' done' : ''}${t.important ? ' imp' : ''}` }, btn);
+}
+
+// To-dos grouped into (nested) category folders. A folder only shows if it has
+// to-dos on this day somewhere inside it; its open/closed state is saved.
 function todoColumn(key, actions) {
   const todos = todosOn(key);
-  const list = h('ul', { class: 'todos' }, todos.map((t) =>
-    h('li', { class: `todo${t.done ? ' done' : ''}${t.important ? ' imp' : ''}` },
-      h('button', {
-        class: 'check', role: 'checkbox', 'aria-checked': String(!!t.done), 'aria-label': `Done: ${t.title}`,
-        onclick: () => { t.done = !t.done; save(); },
-      }, icon(ICONS.check)),
-      h('button', { class: 'todo-title', onclick: () => actions.edit('todo', t) },
-        t.title, t.important ? h('span', { class: 'star', 'aria-label': 'important' }, '★') : null),
-    )));
+  const known = new Set(state.categories.map((c) => c.id));
+  const catOf = (t) => (known.has(t.category) ? t.category : null);
+
+  const countIn = (catId) => todos.filter((t) => catOf(t) === catId).length
+    + childCategories(catId).reduce((n, c) => n + countIn(c.id), 0);
+  const openIn = (catId) => todos.filter((t) => catOf(t) === catId && !isDone(t, key)).length
+    + childCategories(catId).reduce((n, c) => n + openIn(c.id), 0);
+
+  const branch = (catId) => {
+    const items = todos.filter((t) => catOf(t) === catId).map((t) => todoItem(t, key, actions));
+    const folders = childCategories(catId).filter((c) => countIn(c.id) > 0).map((c) => {
+      const left = openIn(c.id);
+      return h('li', { class: `folder${c.open === false ? '' : ' open'}` },
+        h('button', {
+          class: 'folder-head', 'aria-expanded': String(c.open !== false),
+          onclick: () => { c.open = c.open === false; save(); },
+        }, icon(ICONS.right), h('span', { class: 'folder-name' }, c.name), left ? h('span', { class: 'folder-count' }, String(left)) : null),
+        h('ul', { class: 'todos' }, branch(c.id)));
+    });
+    return [...items, ...folders];
+  };
 
   return h('div', { class: 'col' },
-    h('div', { class: 'col-scroll', 'data-scroll': 'todos' }, todos.length ? list : null));
+    h('div', { class: 'col-scroll', 'data-scroll': 'todos' }, todos.length ? h('ul', { class: 'todos root' }, branch(null)) : null));
 }
 
 // Assign overlapping timed events to side-by-side lanes.

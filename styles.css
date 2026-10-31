@@ -25,6 +25,7 @@
   --cal-w: min(100vw - 2 * var(--gap), 480px);
   --cell: calc((var(--cal-w) - 2 * var(--cal-pad) - 2px - var(--cal-head) - var(--cal-weekdays)) / 6); /* 2px = border */
   --display: "Fraunces", ui-serif, "New York", Georgia, serif;
+  --pencil: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10' preserveAspectRatio='none'><path d='M1 6.5C17 5.3 33 6.3 51 5.1S80 4.5 99 4.1' fill='none' stroke='%23333333' stroke-opacity='.72' stroke-width='1.5' stroke-linecap='round' vector-effect='non-scaling-stroke'/><path d='M3 6.1C24 5.5 45 6.4 66 5.2S88 4.4 97 4.8' fill='none' stroke='%23333333' stroke-opacity='.4' stroke-width='.8' stroke-linecap='round' vector-effect='non-scaling-stroke'/></svg>");
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Apple SD Gothic Neo", sans-serif;
   color-scheme: light;
 }
@@ -35,6 +36,7 @@
   --muted: #7c7c82;
   --line: #1c1c1f;
   --soft: #141416;
+  --pencil: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10' preserveAspectRatio='none'><path d='M1 6.5C17 5.3 33 6.3 51 5.1S80 4.5 99 4.1' fill='none' stroke='%23e2e2e2' stroke-opacity='.72' stroke-width='1.5' stroke-linecap='round' vector-effect='non-scaling-stroke'/><path d='M3 6.1C24 5.5 45 6.4 66 5.2S88 4.4 97 4.8' fill='none' stroke='%23e2e2e2' stroke-opacity='.4' stroke-width='.8' stroke-linecap='round' vector-effect='non-scaling-stroke'/></svg>");
   color-scheme: dark;
 }
 
@@ -135,22 +137,38 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .col + .col { border-left: 1px solid var(--line); }
 .col-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 24px; }
 
-/* To-dos */
-.todos { list-style: none; margin: 0; padding: 0 6px 0 12px; }
-.todo { display: flex; align-items: flex-start; gap: 9px; padding: 8px 2px; }
-.check {
-  width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px;
-  border-radius: 50%; border: 1.4px solid var(--muted);
-  display: grid; place-items: center;
+/* To-dos: tap crosses out with a pencil stroke (an SVG background on the inline text,
+   cloned per wrapped line); hold to edit. */
+.todos { list-style: none; margin: 0; padding: 0 6px 0 14px; }
+.todo-title {
+  display: block; width: 100%; text-align: left; padding: 7px 2px;
+  font-size: 14px; line-height: 1.4; overflow-wrap: anywhere;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
 }
-.check svg { width: 11px; height: 11px; stroke-width: 2.8; opacity: 0; }
-.check[aria-checked="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-.check[aria-checked="true"] svg { opacity: 1; }
-.todo-title { flex: 1; min-width: 0; text-align: left; font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
-.todo.done .todo-title { color: var(--muted); text-decoration: line-through; }
-.todo.imp .todo-title { font-weight: 600; }
-.star { color: var(--accent); font-size: 10px; margin-left: 3px; vertical-align: 1px; }
+.ink {
+  background-image: var(--pencil);
+  background-repeat: no-repeat;
+  background-position: 0 58%;
+  background-size: 0% .75em;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  transition: background-size .35s ease-out, color .3s;
+}
+.todo.done .ink { background-size: 100% .75em; color: var(--muted); }
+.todo.imp .ink { font-weight: 600; }
+.mark { color: var(--muted); font-size: 10px; margin-left: 4px; vertical-align: 1px; }
+.mark.star { color: var(--accent); }
 
+/* Category folders */
+.folder-head {
+  display: flex; align-items: center; gap: 5px; width: 100%; padding: 9px 2px 3px;
+  font-family: var(--display); font-weight: 600; font-size: 14px; text-align: left;
+}
+.folder-head svg { width: 11px; height: 11px; stroke-width: 2.2; color: var(--muted); transition: transform .2s; flex-shrink: 0; }
+.folder.open > .folder-head svg { transform: rotate(90deg); }
+.folder-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-count { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 500; font-size: 11px; color: var(--muted); }
+.folder > .todos { display: none; padding: 0 0 0 9px; margin-left: 5px; border-left: 1px solid var(--line); }
+.folder.open > .todos { display: block; }
 
 /* Schedule timeline */
 .allday { padding: 0 8px 6px; display: grid; gap: 3px; }
@@ -198,6 +216,11 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .settings h1 { margin: 0 0 -4px; font-size: 26px; }
 .set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; }
 .set-row > span { font-size: 14px; }
+.cat-list { margin-top: 4px; border-top: 1px solid var(--line); }
+.cat-row { display: flex; align-items: center; gap: 2px; min-height: 38px; border-bottom: 1px solid var(--line); }
+.cat-name { flex: 1; min-width: 0; text-align: left; font-size: 14px; padding: 8px 0; }
+.cat-row .icon-btn { color: var(--muted); width: 32px; height: 32px; }
+.cat-row .icon-btn svg { width: 16px; height: 16px; }
 .set-note { color: var(--muted); font-size: 11.5px; margin: -16px 0 0; }
 
 /* ---------- Toast ---------- */

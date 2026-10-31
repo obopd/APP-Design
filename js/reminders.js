@@ -4,7 +4,7 @@
 // the Home Screen. There is no way to schedule a local notification in advance, so
 // alerts fire from timers that only run while the app is open or recently used.
 import { addDays, dateKey, todayKey, toMinutes, formatTime } from './util.js';
-import { eventsOn, todosOn } from './store.js';
+import { eventsOn, todosOn, isDone } from './store.js';
 
 let timers = [];
 const fired = new Set(JSON.parse(sessionStorage.getItem('planner.fired') || '[]'));
@@ -44,7 +44,7 @@ function updateBadge() {
   if (!('setAppBadge' in navigator)) return;
   const key = todayKey();
   const count = eventsOn(key).filter((e) => e.important).length
-    + todosOn(key).filter((t) => t.important && !t.done).length;
+    + todosOn(key).filter((t) => t.important && !isDone(t, key)).length;
   (count ? navigator.setAppBadge(count) : navigator.clearAppBadge()).catch(() => {});
 }
 

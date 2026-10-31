@@ -1,6 +1,6 @@
 // Month grid that "rolls up" into the selected week when a date is picked.
 import { h, icon, ICONS, addDays, dateKey, parseKey, todayKey } from './util.js';
-import { eventsOn, todosOn } from './store.js';
+import { eventsOn, todosOn, isDone, isRoutine } from './store.js';
 
 // Always 6 weeks, so the calendar card stays the same square size every month.
 function weeksOfMonth(cursor) {
@@ -11,9 +11,10 @@ function weeksOfMonth(cursor) {
 
 function dayCell(date, view, month, actions) {
   const key = dateKey(date);
+  // Routines only get a dot when starred, so a daily routine doesn't dot every day.
   const events = eventsOn(key);
-  const todos = todosOn(key).filter((t) => !t.done);
-  const items = [...events, ...todos];
+  const todos = todosOn(key).filter((t) => !isDone(t, key));
+  const items = [...events, ...todos].filter((i) => i.important || !isRoutine(i));
   const important = items.some((i) => i.important);
 
   const cls = ['day'];
