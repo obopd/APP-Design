@@ -20,8 +20,8 @@ laptop. So:
 
 ## Product requirements (from the owner)
 
-- **Bottom bar** (icon-only): Calendar tab, a small round **+** (add) in the middle,
-  Settings tab. More tabs will be added later; a tab = a `.tab[data-view]` button in
+- **Bottom bar** (icon-only, evenly spaced): Calendar · D-Day · **+** (small round
+  add button; on the D-Day tab it adds a D-Day) · Settings. More tabs will be added later; a tab = a `.tab[data-view]` button in
   `index.html` + a `#view-<name>` container, switched by `view.tab` in `js/app.js`.
 - The calendar is a **perfect square card** (always 6 week rows) with space on
   all sides, "Month Year" **centered** between ‹ › arrows. There is no date
@@ -67,6 +67,10 @@ laptop. So:
   Routines sit in a shaded rounded box (`.todo-section.routines`), To-do below on
   the plain page; both have display-font headings with an open-item count.
   Headings only show when routines exist.
+- **D-Day tab** (`js/dday.js`): countdowns for birthdays, graduation, etc. Each row
+  shows title, date (+ ↻ and "58th" for yearly ones) and a big "D-12" / "D-Day" /
+  "D+30". Upcoming sorted soonest first; past one-off dates count up under "Since".
+  Yearly entries roll to the next occurrence (`ddayTarget`). Tap a row to edit/delete.
 - **Tracking (opt-in per to-do)**: editor "Track" = Off | Count | Time. Only tracked
   to-dos show a number pill: Count → tap to enter a number; Time → tap to type
   minutes/h:mm, plus a ▶/■ stopwatch (stored as a start timestamp, so it keeps
@@ -86,7 +90,7 @@ laptop. So:
 ## Codebase structure
 
 ```
-index.html             Shell: calendar view (.grow spacers + calendar + panel), settings view, bottom bar, toast, editor <dialog>
+index.html             Shell: calendar / D-Day / settings views, bottom bar, toast, sheets (editor, folder, D-Day)
 styles.css             All styles. Theme via CSS variables; html[data-theme] light/dark, html[data-accent].
                        Square card size comes from --cal-w / --cell; .month-mode/.week-mode drive layout
 fonts/                 Fraunces variable font (latin, upright woff2) + OFL.txt license
@@ -99,6 +103,7 @@ js/calendar.js         Square month card (6 rows); rows collapse to the selected
 js/day.js              Day view: to-do folders (mark = done, text = edit) + hourly timeline, stretchable split
 js/editor.js           Bottom sheet to add/edit a to-do or event (folder, repeat/until, alert)
 js/folders.js          Bottom sheet to create/edit a folder: name + underline color
+js/dday.js             D-Day tab (countdown list) + its add/edit sheet
 js/settings.js         Settings tab: theme, accent color, folders, alerts, backup export/restore
 js/reminders.js        Alert timers, notifications, in-app toast, app icon badge
 icons/                 icon.svg (source) + 180/192/512 PNGs rendered from it
@@ -118,6 +123,7 @@ Stored in `localStorage` under `planner.v1`:
   // todos also: track: 'none' | 'count' | 'time', values: { dateKey: number /* count or seconds */ },
   //             timer: { key: dateKey, start: epochMs } | null
   categories: [{ id, name, parent: id | null, open, color: css color | null }],
+  ddays: [{ id, title, date, yearly }],
   settings: { theme: 'auto' | 'light' | 'dark', accent: 'mono' | 'blue' | 'red' | 'green' | 'orange' | 'purple' }
 }
 // repeat: 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'; until: '' = forever
@@ -174,7 +180,7 @@ GitHub Pages serving the repo root (all paths are relative, so it works under
 `/APP-Design/`): repo Settings → Pages → Deploy from a branch → branch, `/ (root)`.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v10`; bump to `planner-v11`, …) and keep its `ASSETS` list in sync
+(currently `planner-v11`; bump to `planner-v12`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

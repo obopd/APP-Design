@@ -4,12 +4,14 @@ import { renderCalendar } from './calendar.js';
 import { renderDay, currentLayout, tickTimers } from './day.js';
 import { openEditor } from './editor.js';
 import { renderSettings, applyTheme } from './settings.js';
+import { renderDdays, openDdaySheet } from './dday.js';
 import { refreshReminders, setToast } from './reminders.js';
 
 const calendarView = document.getElementById('view-calendar');
 const calendarEl = document.getElementById('calendar');
 const panelEl = document.getElementById('panel');
 const settingsEl = document.getElementById('view-settings');
+const ddayEl = document.getElementById('view-dday');
 const toastEl = document.getElementById('toast');
 
 // view.selected = 'YYYY-MM-DD' → week mode; null → month mode.
@@ -39,11 +41,11 @@ const actions = {
     }
     render();
   },
-  // With the schedule stretched full width, + starts on "Event".
-  add: () => openEditor({
+  // On the D-Day tab, + adds a D-Day. With the schedule stretched full width, + starts on "Event".
+  add: () => (view.tab === 'dday' ? openDdaySheet() : openEditor({
     kind: view.selected && currentLayout() === 'schedule' ? 'event' : 'todo',
     date: view.selected || todayKey(),
-  }),
+  })),
   create: (opts) => openEditor(opts),
   edit: (kind, item) => openEditor({ kind, item }),
   refresh: () => render(),
@@ -57,8 +59,10 @@ function render() {
   });
   calendarView.hidden = view.tab !== 'calendar';
   settingsEl.hidden = view.tab !== 'settings';
+  ddayEl.hidden = view.tab !== 'dday';
 
   if (view.tab === 'settings') { renderSettings(settingsEl); return; }
+  if (view.tab === 'dday') { renderDdays(ddayEl); return; }
 
   renderCalendar(calendarEl, view, prevView, actions);
   // Month mode shows only the calendar, centered; the panel's old content just fades out.

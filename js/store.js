@@ -14,8 +14,9 @@ const KEY = 'planner.v1';
   category: { id, name, parent: id | null, open, color: '#hex' | null }   — nestable to-do folders
   repeat:   'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'
   until:    '' (forever) or last 'YYYY-MM-DD' a routine occurs
+  dday:     { id, title, date: 'YYYY-MM-DD', yearly }   — countdowns (birthdays, graduation…)
 */
-const DEFAULTS = { todos: [], events: [], categories: [], settings: { theme: 'auto', accent: 'mono' } };
+const DEFAULTS = { todos: [], events: [], categories: [], ddays: [], settings: { theme: 'auto', accent: 'mono' } };
 
 export const REPEATS = [
   ['none', 'Never'],
@@ -49,6 +50,7 @@ export function replaceAll(data) {
   state.todos = data.todos;
   state.events = data.events;
   state.categories = data.categories || [];
+  state.ddays = data.ddays || [];
   state.settings = { ...DEFAULTS.settings, ...data.settings };
   save();
 }
@@ -185,3 +187,21 @@ export function routineStats(todo) {
     total: Object.values(todo.values || {}).reduce((a, b) => a + b, 0),
   };
 }
+
+/* ---------- D-Day ---------- */
+
+// Next date a D-Day falls on (yearly ones roll to this or next year; Feb 29 → Feb 28).
+export function ddayTarget(dday, fromKey = todayKey()) {
+  if (!dday.yearly) return dday.date;
+  const start = parseKey(dday.date);
+  const from = parseKey(fromKey);
+  for (let y = Math.max(from.getFullYear(), start.getFullYear()); ; y++) {
+    const last = new Date(y, start.getMonth() + 1, 0).getDate();
+    const d = new Date(y, start.getMonth(), Math.min(start.getDate(), last));
+    const key = `${y}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    if (key >= fromKey) return key;
+  }
+}
+
+// Days until (positive), 0 on the day, negative once passed.
+export const ddayDiff = (dday, fromKey = todayKey()) => daysBetween(fromKey, ddayTarget(dday, fromKey));
