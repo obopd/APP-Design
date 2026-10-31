@@ -32,7 +32,9 @@ laptop. So:
 - The calendar is a **perfect square card** (always 6 week rows) with space on
   all sides, "Month Year" **centered** between ‹ › arrows. There is no date
   heading above the day view (the owner found it redundant).
-- **No date selected → only the calendar is on screen**, exactly centered. When a
+- **No date selected → only the calendar is on screen**, exactly centered, with a small
+  "Kairos" wordmark (`.brand`, ~19px display font) above it — and above today's D-Days
+  when there are any; it fades out in week mode. When a
   D-Day is shown above it, it sits slightly lower instead (`.has-dday`: top spacer
   1.3 : bottom 0.7). Tapping a date slides the card to the top, **rolls the month up into
   that date's week**, and the space below shows that day in **two columns**:
@@ -88,7 +90,7 @@ laptop. So:
   "D+30". Upcoming sorted soonest first; past one-off dates count up under "Since".
   Yearly entries roll to the next occurrence (`ddayTarget`). Tap a row to edit/delete.
   **On the day itself**, the starting screen (month mode) shows it in the free space
-  above the centered calendar (`#top-slot`, `renderTodayDdays`); tapping it opens the
+  above the centered calendar (`#dday-slot` inside the top spacer, below the wordmark; `renderTodayDdays`); tapping it opens the
   D-Day tab. It fades out in week mode and never shifts the calendar.
   Several D-Days on the same day form a horizontal row: the centered one is fully
   opaque, neighbours peek in at low opacity (12px gap). The row is positioned with
@@ -269,7 +271,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v32`; bump to `planner-v33`, …) and keep its `ASSETS` list in sync
+(currently `planner-v33`; bump to `planner-v34`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

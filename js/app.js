@@ -17,7 +17,7 @@ const settingsEl = document.getElementById('view-settings');
 const ddayEl = document.getElementById('view-dday');
 const loginEl = document.getElementById('view-login');
 const toastEl = document.getElementById('toast');
-const topSlot = document.getElementById('top-slot');
+const ddaySlot = document.getElementById('dday-slot');
 
 // view.selected = 'YYYY-MM-DD' → week mode; null → month mode.
 const now = new Date();
@@ -86,7 +86,7 @@ function render() {
   if (view.tab === 'dday') { renderDdays(ddayEl); return; }
 
   renderCalendar(calendarEl, view, prevView, actions);
-  const ddaysToday = renderTodayDdays(topSlot, () => { view.tab = 'dday'; render(); });
+  const ddaysToday = renderTodayDdays(ddaySlot, () => { view.tab = 'dday'; render(); });
   calendarView.classList.toggle('has-dday', ddaysToday > 0);
   // Month mode shows only the calendar, centered; the panel's old content just fades out.
   // When opening a day, build its lists first (still hidden, slightly lowered), then switch
