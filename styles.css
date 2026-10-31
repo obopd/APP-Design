@@ -218,16 +218,18 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .track-btn.running { color: var(--accent); }
 
 /* Routines / To-do sections: routines live in a shaded box, to-dos below on the plain page. */
-.todo-section.routines { background: var(--soft); border-radius: 14px; margin: 0 6px 0 8px; padding: 6px 0 6px; }
-.todo-section.routines .todos.root { padding-left: 4px; }
-.todo-section + .todo-section { margin-top: 22px; }
+/* Both sections share the same box geometry so headings, + and items line up;
+   only Routines gets the shaded background. */
+.todo-section { margin: 0 6px 0 8px; padding: 6px 0; border-radius: 14px; }
+.todo-section .todos.root { padding-left: 4px; }
+.todo-section.routines { background: var(--soft); }
+.todo-section + .todo-section { margin-top: 16px; }
 .section-label {
   display: flex; align-items: baseline; gap: 6px;
   margin: 0; padding: 0 14px 4px;
   font-family: var(--display); font-size: 16px; font-weight: 600; color: var(--fg);
 }
 .section-head { display: flex; align-items: center; padding-right: 4px; }
-.todo-section:not(.routines) .section-head { padding-right: 10px; } /* line up with the + inside the routines box */
 .section-head .section-label { flex: 1; min-width: 0; padding-bottom: 0; }
 .section-add, .page-add { flex-shrink: 0; color: var(--fg); }
 .section-add svg { width: 18px; height: 18px; stroke-width: 2; }

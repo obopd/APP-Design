@@ -71,7 +71,8 @@ laptop. So:
   (folder open/closed state is shared). The two must look clearly distinct:
   Routines sit in a shaded rounded box (`.todo-section.routines`), To-do below on
   the plain page; both have display-font headings with an open-item count and a +.
-  **Both sections always show** on a selected day, even when empty.
+  **Both sections always show** on a selected day, even when empty, and share the
+  same margins/indent (`.todo-section`) so headings, + and items line up exactly.
 - **D-Day tab** (`js/dday.js`): countdowns for birthdays, graduation, etc. Each row
   shows title, date (+ ↻ and "58th" for yearly ones) and a big "D-12" / "D-Day" /
   "D+30". Upcoming sorted soonest first; past one-off dates count up under "Since".
@@ -225,7 +226,7 @@ service_role/secret key. The service worker only caches same-origin GETs, so API
 responses are never cached.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v23`; bump to `planner-v24`, …) and keep its `ASSETS` list in sync
+(currently `planner-v24`; bump to `planner-v25`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
