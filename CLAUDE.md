@@ -63,7 +63,10 @@ laptop. So:
   off per day (`doneOn`). Routines only get a calendar dot when starred.
   In the to-do column, **routines have their own section on top ("Routines") and
   regular to-dos sit below ("To-do")**; each section has its own folder tree
-  (folder open/closed state is shared). Labels only show when routines exist.
+  (folder open/closed state is shared). The two must look clearly distinct:
+  Routines sit in a shaded rounded box (`.todo-section.routines`), To-do below on
+  the plain page; both have display-font headings with an open-item count.
+  Headings only show when routines exist.
 - **Important reminders** (e.g. a parent's birthday): items marked Important ★ get
   an accent-colored dot on the calendar and are counted in the home-screen icon badge.
 - **Alerts** at schedule times via notifications.
@@ -162,7 +165,7 @@ GitHub Pages serving the repo root (all paths are relative, so it works under
 `/APP-Design/`): repo Settings → Pages → Deploy from a branch → branch, `/ (root)`.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v8`; bump to `planner-v9`, …) and keep its `ASSETS` list in sync
+(currently `planner-v9`; bump to `planner-v10`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

@@ -52,14 +52,19 @@ function todoColumn(key, actions) {
   const routines = todos.filter(isRoutine);
   const regular = todos.filter((t) => !isRoutine(t));
 
+  const left = (list) => list.filter((t) => !isDone(t, key)).length;
+  const label = (text, list) => h('h3', { class: 'section-label' },
+    text, left(list) ? h('span', { class: 'section-count' }, String(left(list))) : null);
+
+  // Routines sit in a shaded box so the two sections read as clearly separate.
   const sections = [];
   if (routines.length) {
-    sections.push(h('section', { class: 'todo-section' },
-      h('h3', { class: 'section-label' }, 'Routines'), folderTree(routines, key, actions)));
+    sections.push(h('section', { class: 'todo-section routines' },
+      label('Routines', routines), folderTree(routines, key, actions)));
   }
   if (regular.length) {
     sections.push(h('section', { class: 'todo-section' },
-      routines.length ? h('h3', { class: 'section-label' }, 'To-do') : null, folderTree(regular, key, actions)));
+      routines.length ? label('To-do', regular) : null, folderTree(regular, key, actions)));
   }
 
   return h('div', { class: 'col' }, h('div', { class: 'col-scroll', 'data-scroll': 'todos' }, sections));

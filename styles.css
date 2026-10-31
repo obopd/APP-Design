@@ -164,12 +164,16 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .mark { color: var(--muted); font-size: 10px; margin-left: 4px; vertical-align: 1px; font-weight: 400; }
 .mark.star { color: var(--accent); }
 
-/* Routines / To-do sections */
-.todo-section + .todo-section { margin-top: 18px; }
+/* Routines / To-do sections: routines live in a shaded box, to-dos below on the plain page. */
+.todo-section.routines { background: var(--soft); border-radius: 14px; margin: 0 6px 0 8px; padding: 10px 0 6px; }
+.todo-section.routines .todos.root { padding-left: 4px; }
+.todo-section + .todo-section { margin-top: 22px; }
 .section-label {
+  display: flex; align-items: baseline; gap: 6px;
   margin: 0; padding: 0 14px 4px;
-  font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+  font-family: var(--display); font-size: 16px; font-weight: 600; color: var(--fg);
 }
+.section-count { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; font-weight: 500; color: var(--muted); }
 
 /* Category folders: same font as the to-dos, with a thin underline separating the name. */
 .folder { margin-top: 6px; }
