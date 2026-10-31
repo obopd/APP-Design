@@ -55,7 +55,7 @@ laptop. So:
   Inside the card, `.cal-rows-inner` slides to the selected week and is masked with
   `clip-path`; the rounded outline is two pseudo-elements (`::before` clipped, `::after`
   translated by `--frame-cut`). The card has a solid background + `z-index: 1` so the
-  fading panel never shows through. All parts share `--dur` / `--ease`; going back to the month is slower and eased in-out
+  fading panel never shows through. All parts share `--dur` (.65s opening) / `--ease`; going back to the month is slower and eased in-out
   (`#view-calendar.closing`: .75s, added in `render()` and removed by `flip()`'s timer). Intl formatters
   are cached (`fmt()` in util.js) because creating them on every render made the tap
   itself slow. Measure with CDP CPU throttling (4×) and rAF frame times before/after. **Default colors are black & white**;
@@ -298,7 +298,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v43`; bump to `planner-v44`, …) and keep its `ASSETS` list in sync
+(currently `planner-v44`; bump to `planner-v45`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

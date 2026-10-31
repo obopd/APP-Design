@@ -18,7 +18,7 @@
   --hour: 48px;
   /* One shared motion for the month ⇄ day transition (iOS-like ease-out). */
   --ease: cubic-bezier(.32, .72, 0, 1);
-  --dur: .55s;
+  --dur: .65s;
   /* Floating rounded dock at the bottom (like the iPhone dock). --tabbar = space it takes. */
   --dock-h: 52px;
   --dock-bottom: max(12px, calc(env(safe-area-inset-bottom) - 8px));
