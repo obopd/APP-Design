@@ -81,7 +81,7 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
    The slot keeps flex-basis 0, so its content never pushes the calendar off center. */
 .top-slot { min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
 .today-dday {
-  display: grid; justify-items: center; gap: 4px; margin-bottom: 22px; padding: 4px 16px;
+  align-self: stretch; display: grid; justify-items: center; gap: 6px; margin-bottom: 22px;
   transition: opacity .25s;
 }
 .week-mode .today-dday { opacity: 0; pointer-events: none; }
@@ -89,8 +89,22 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
   color: var(--on-accent); background: var(--accent); border-radius: 999px; padding: 3px 9px 2px;
 }
-.tdd-item { display: flex; align-items: baseline; gap: 6px; }
-.tdd-title { font-size: 22px; line-height: 1.2; }
+/* Snap row: items are 64% wide with 18% side padding, so one sits centered and the
+   next peeks in at the edge. */
+.tdd-track {
+  width: 100%; display: flex; overflow-x: auto; overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory; padding-inline: 18%; scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+}
+.tdd-track::-webkit-scrollbar { display: none; }
+.tdd-item {
+  flex: 0 0 64%; scroll-snap-align: center;
+  display: flex; align-items: baseline; justify-content: center; gap: 6px; padding: 2px 6px;
+  opacity: .28; transition: opacity .25s;
+}
+.tdd-item.active { opacity: 1; }
+.tdd-title { font-size: 22px; line-height: 1.2; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tdd-sub { font-size: 12px; color: var(--muted); }
 
 /* ---------- Calendar ---------- */

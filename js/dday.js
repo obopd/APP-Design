@@ -19,17 +19,34 @@ function nthOf(d, targetKey) {
   return d.yearly && year > startYear ? ordinal(year - startYear) : null;
 }
 
-// Shown above the calendar on the starting screen when a D-Day is today.
+// Shown above the calendar on the starting screen when a D-Day is today. Several
+// D-Days form a sideways snap row: the centered one is solid, the next peeks in faded.
 export function renderTodayDdays(root, onOpen) {
   const today = todayKey();
   const hits = state.ddays.filter((d) => ddayDiff(d, today) === 0);
-  root.replaceChildren(hits.length
-    ? h('button', { class: 'today-dday', 'aria-label': 'Open D-Day', onclick: onOpen },
-      h('span', { class: 'tdd-label' }, 'D-Day'),
-      hits.map((d) => h('span', { class: 'tdd-item' },
-        h('span', { class: 'tdd-title display' }, d.title),
-        nthOf(d, today) ? h('span', { class: 'tdd-sub' }, nthOf(d, today)) : null)))
-    : '');
+  if (!hits.length) { root.replaceChildren(); return; }
+
+  const items = hits.map((d, i) => h('button', { class: `tdd-item${i === 0 ? ' active' : ''}`, onclick: onOpen },
+    h('span', { class: 'tdd-title display' }, d.title),
+    nthOf(d, today) ? h('span', { class: 'tdd-sub' }, nthOf(d, today)) : null));
+  const track = h('div', { class: 'tdd-track', 'aria-label': 'Today’s D-Days' }, items);
+
+  // Whichever item is nearest the middle is the active (fully visible) one.
+  let frame = 0;
+  track.addEventListener('scroll', () => {
+    cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(() => {
+      const mid = track.scrollLeft + track.clientWidth / 2;
+      let best = items[0];
+      for (const el of items) {
+        if (Math.abs(el.offsetLeft + el.offsetWidth / 2 - mid) < Math.abs(best.offsetLeft + best.offsetWidth / 2 - mid)) best = el;
+      }
+      items.forEach((el) => el.classList.toggle('active', el === best));
+    });
+  }, { passive: true });
+
+  root.replaceChildren(h('div', { class: 'today-dday' },
+    h('span', { class: 'tdd-label' }, 'D-Day'), track));
 }
 
 function row(d) {
