@@ -25,7 +25,6 @@
   --cal-w: min(100vw - 2 * var(--gap), 480px);
   --cell: calc((var(--cal-w) - 2 * var(--cal-pad) - 2px - var(--cal-head) - var(--cal-weekdays)) / 6); /* 2px = border */
   --display: "Fraunces", ui-serif, "New York", Georgia, serif;
-  --pencil: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10' preserveAspectRatio='none'><path d='M1 6.5C17 5.3 33 6.3 51 5.1S80 4.5 99 4.1' fill='none' stroke='%23333333' stroke-opacity='.72' stroke-width='1.5' stroke-linecap='round' vector-effect='non-scaling-stroke'/><path d='M3 6.1C24 5.5 45 6.4 66 5.2S88 4.4 97 4.8' fill='none' stroke='%23333333' stroke-opacity='.4' stroke-width='.8' stroke-linecap='round' vector-effect='non-scaling-stroke'/></svg>");
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Apple SD Gothic Neo", sans-serif;
   color-scheme: light;
 }
@@ -36,7 +35,6 @@
   --muted: #7c7c82;
   --line: #1c1c1f;
   --soft: #141416;
-  --pencil: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10' preserveAspectRatio='none'><path d='M1 6.5C17 5.3 33 6.3 51 5.1S80 4.5 99 4.1' fill='none' stroke='%23e2e2e2' stroke-opacity='.72' stroke-width='1.5' stroke-linecap='round' vector-effect='non-scaling-stroke'/><path d='M3 6.1C24 5.5 45 6.4 66 5.2S88 4.4 97 4.8' fill='none' stroke='%23e2e2e2' stroke-opacity='.4' stroke-width='.8' stroke-linecap='round' vector-effect='non-scaling-stroke'/></svg>");
   color-scheme: dark;
 }
 
@@ -137,37 +135,33 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .col + .col { border-left: 1px solid var(--line); }
 .col-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 24px; }
 
-/* To-dos: tap crosses out with a pencil stroke (an SVG background on the inline text,
-   cloned per wrapped line); hold to edit. */
-.todos { list-style: none; margin: 0; padding: 0 6px 0 14px; }
+/* To-dos: a slim rounded mark (gray → solid when done) toggles; the text opens the editor. */
+.todos { list-style: none; margin: 0; padding: 0 6px 0 8px; }
+.todo { display: flex; align-items: flex-start; }
+.mark-btn { flex-shrink: 0; width: 28px; height: 34px; display: grid; place-items: center; }
+.dash { width: 14px; height: 3.5px; border-radius: 2px; background: var(--muted); opacity: .55; transition: background .2s, opacity .2s, width .2s; }
+.todo.done .dash { background: var(--accent); opacity: 1; }
 .todo-title {
-  display: block; width: 100%; text-align: left; padding: 7px 2px;
-  font-size: 14px; line-height: 1.4; overflow-wrap: anywhere;
-  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  flex: 1; min-width: 0; text-align: left; padding: 8px 2px 8px 2px;
+  font-size: 14px; line-height: 18px; overflow-wrap: anywhere;
 }
-.ink {
-  background-image: var(--pencil);
-  background-repeat: no-repeat;
-  background-position: 0 58%;
-  background-size: 0% .75em;
-  -webkit-box-decoration-break: clone; box-decoration-break: clone;
-  transition: background-size .35s ease-out, color .3s;
-}
-.todo.done .ink { background-size: 100% .75em; color: var(--muted); }
-.todo.imp .ink { font-weight: 600; }
-.mark { color: var(--muted); font-size: 10px; margin-left: 4px; vertical-align: 1px; }
+.todo.done .todo-title { color: var(--muted); text-decoration: line-through; }
+.todo.imp .todo-title { font-weight: 600; }
+.mark { color: var(--muted); font-size: 10px; margin-left: 4px; vertical-align: 1px; font-weight: 400; }
 .mark.star { color: var(--accent); }
 
-/* Category folders */
+/* Category folders: same font as the to-dos, with a thin underline separating the name. */
+.folder { margin-top: 6px; }
 .folder-head {
-  display: flex; align-items: center; gap: 5px; width: 100%; padding: 9px 2px 3px;
-  font-family: var(--display); font-weight: 600; font-size: 14px; text-align: left;
+  display: flex; align-items: center; gap: 5px; width: 100%; padding: 8px 2px 5px 6px;
+  font-weight: 600; font-size: 14px; text-align: left;
+  border-bottom: 1px solid color-mix(in srgb, var(--fg) 22%, transparent);
 }
 .folder-head svg { width: 11px; height: 11px; stroke-width: 2.2; color: var(--muted); transition: transform .2s; flex-shrink: 0; }
 .folder.open > .folder-head svg { transform: rotate(90deg); }
 .folder-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.folder-count { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 500; font-size: 11px; color: var(--muted); }
-.folder > .todos { display: none; padding: 0 0 0 9px; margin-left: 5px; border-left: 1px solid var(--line); }
+.folder-count { font-weight: 500; font-size: 11px; color: var(--muted); }
+.folder > .todos { display: none; padding: 2px 0 0 10px; }
 .folder.open > .todos { display: block; }
 
 /* Schedule timeline */

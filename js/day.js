@@ -4,38 +4,18 @@ import { state, save, eventsOn, todosOn, isDone, isRoutine, toggleDone, childCat
 
 const HOUR_PX = 48; // keep in sync with --hour in styles.css
 
-// Tap to cross out, press and hold to edit.
-function longPress(el, onLong) {
-  let timer = null;
-  let fired = false;
-  let origin = null;
-  const cancel = () => { clearTimeout(timer); timer = null; };
-  el.addEventListener('pointerdown', (e) => {
-    fired = false;
-    origin = { x: e.clientX, y: e.clientY };
-    timer = setTimeout(() => { fired = true; navigator.vibrate?.(10); onLong(); }, 450);
-  });
-  el.addEventListener('pointermove', (e) => {
-    if (origin && Math.hypot(e.clientX - origin.x, e.clientY - origin.y) > 8) cancel();
-  });
-  ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => el.addEventListener(t, cancel));
-  el.addEventListener('contextmenu', (e) => e.preventDefault());
-  // Swallow the click that follows a long press.
-  el.addEventListener('click', (e) => { if (fired) { e.stopImmediatePropagation(); fired = false; } }, true);
-}
-
+// The slim mark checks a to-do off; tapping the text opens it for editing.
 function todoItem(t, key, actions) {
   const done = isDone(t, key);
-  const btn = h('button', {
-    class: 'todo-title', role: 'checkbox', 'aria-checked': String(done),
-    'aria-label': `${t.title}${done ? ', done' : ''}. Hold to edit`,
-    onclick: () => toggleDone(t, key),
-  },
-  h('span', { class: 'ink' }, t.title),
-  isRoutine(t) ? h('span', { class: 'mark', 'aria-hidden': 'true' }, '↻') : null,
-  t.important ? h('span', { class: 'mark star', 'aria-hidden': 'true' }, '★') : null);
-  longPress(btn, () => actions.edit('todo', t));
-  return h('li', { class: `todo${done ? ' done' : ''}${t.important ? ' imp' : ''}` }, btn);
+  return h('li', { class: `todo${done ? ' done' : ''}${t.important ? ' imp' : ''}` },
+    h('button', {
+      class: 'mark-btn', role: 'checkbox', 'aria-checked': String(done), 'aria-label': `Done: ${t.title}`,
+      onclick: () => toggleDone(t, key),
+    }, h('span', { class: 'dash' })),
+    h('button', { class: 'todo-title', onclick: () => actions.edit('todo', t) },
+      t.title,
+      isRoutine(t) ? h('span', { class: 'mark', 'aria-hidden': 'true' }, '↻') : null,
+      t.important ? h('span', { class: 'mark star', 'aria-hidden': 'true' }, '★') : null));
 }
 
 // To-dos grouped into (nested) category folders. A folder only shows if it has

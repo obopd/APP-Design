@@ -43,10 +43,12 @@ laptop. So:
   saved (`category.open`) and must survive closing/reopening the tab or app.
   A folder shows in a day only if it contains that day's to-dos. Managed in
   Settings (rename, add sub-folder, delete) or via "New…" in the editor;
-  "Academic/Biology" creates nested folders.
-- **To-dos have no checkbox circle**: tap the text to cross it out with a
-  hand-drawn pencil stroke (`--pencil` SVG in `styles.css`); tap again to undo.
-  **Press and hold** a to-do to edit it.
+  "Academic/Biology" creates nested folders. Folder names use the same font as
+  the to-dos (one unified font in the list) and have a thin underline.
+- **Done mark**: in front of each to-do is a slim rounded line (`.dash`, not a
+  circle) — gray when open, solid black/accent when done. Tapping it toggles done;
+  done to-dos get a plain `line-through` and gray text (the owner rejected the
+  hand-drawn pencil stroke). Tapping the text opens the editor.
 - **Routines**: to-dos and events can repeat daily, weekly, every 2 weeks,
   monthly or yearly, with an optional "Until" date. Routine to-dos are checked
   off per day (`doneOn`). Routines only get a calendar dot when starred.
@@ -72,7 +74,7 @@ js/app.js              Entry point: view state (tab, month, selected day), actio
 js/util.js             h() DOM helper, inline SVG icons, date helpers (local 'YYYY-MM-DD' keys)
 js/store.js            State + localStorage, change listeners, routines (occursOn, isDone), queries, folder helpers
 js/calendar.js         Square month card (6 rows); rows collapse to the selected week (animated)
-js/day.js              Day view: to-do folders (tap = cross out, hold = edit) + hourly timeline
+js/day.js              Day view: to-do folders (mark = done, text = edit) + hourly timeline
 js/editor.js           Bottom sheet to add/edit a to-do or event (folder, repeat/until, alert)
 js/settings.js         Settings tab: theme, accent color, folders, alerts, backup export/restore
 js/reminders.js        Alert timers, notifications, in-app toast, app icon badge
@@ -147,7 +149,7 @@ GitHub Pages serving the repo root (all paths are relative, so it works under
 `/APP-Design/`): repo Settings → Pages → Deploy from a branch → branch, `/ (root)`.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v4`; bump to `planner-v5`, …) and keep its `ASSETS` list in sync
+(currently `planner-v5`; bump to `planner-v6`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
