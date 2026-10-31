@@ -46,10 +46,18 @@ laptop. So:
   no `confirm` / `alert` / `prompt` and no native `<select>` — use `ask` / `tell` /
   `askText` / `pick` / `selectButton` from `js/ui.js` (the app's own cards and menus;
   red button for deletes).
-- Month ⇄ day transition must feel smooth: everything moves together with one
-  shared duration/easing (`--dur`, `--ease` in `styles.css`); the day's lists fade and
-  rise in slightly behind the calendar fold (app.js renders them before switching to
-  week mode). **Default colors are black & white**;
+- Month ⇄ day transition must feel smooth. It is a **FLIP animation that never animates
+  layout** (the old version animated `grid-template-rows`/`flex-grow` and re-laid out the
+  page every frame → visible jank on iPhone). On a mode change `render()` measures the card,
+  switches to the final layout at once, then `flip()` animates only `transform`/`opacity`:
+  the card slides from its old position; the day panel rides on the card's bottom edge
+  (opening) or is pinned `position: fixed` where it was and fades/drops away (closing).
+  Inside the card, `.cal-rows-inner` slides to the selected week and is masked with
+  `clip-path`; the rounded outline is two pseudo-elements (`::before` clipped, `::after`
+  translated by `--frame-cut`). The card has a solid background + `z-index: 1` so the
+  fading panel never shows through. All parts share `--dur` / `--ease`. Intl formatters
+  are cached (`fmt()` in util.js) because creating them on every render made the tap
+  itself slow. Measure with CDP CPU throttling (4×) and rAF frame times before/after. **Default colors are black & white**;
   the user can change the accent color and light/dark mode in Settings.
 - Typography: headings, dates and numbers use **Fraunces** (semi-bold, upright —
   **no italics**, the owner rejected them) via the `.display` class / `--display`
@@ -168,7 +176,7 @@ sw.js                  Service worker: offline cache (network-first) + notificat
 js/app.js              Entry point: view state (tab, month, selected day), actions, render(), tabs, swipes
 js/util.js             h() DOM helper, inline SVG icons, date helpers (local 'YYYY-MM-DD' keys)
 js/store.js            State + localStorage, change listeners, routines (occursOn, isDone), queries, folder helpers
-js/calendar.js         Square month card (6 rows); rows collapse to the selected week (animated)
+js/calendar.js         Square month card (6 rows); week mode = rows slid + clip-path masked to one week
 js/day.js              Day view: to-do folders (mark = done, text = edit) + hourly timeline, stretchable split
 js/editor.js           Bottom sheet to add/edit a to-do or event (folder, repeat/until, alert)
 js/folders.js          Bottom sheet to create/edit a folder: name + underline color
@@ -288,7 +296,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v40`; bump to `planner-v41`, …) and keep its `ASSETS` list in sync
+(currently `planner-v42`; bump to `planner-v43`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

@@ -1,9 +1,9 @@
 // Postpone a to-do: to tomorrow, or to a chosen date. Shows "Moved to …" with Undo.
-import { addDays, dateKey, parseKey } from './util.js';
+import { addDays, dateKey, parseKey, fmt } from './util.js';
 import { postponeTodo } from './store.js';
 import { askDate, snack } from './ui.js';
 
-const label = (key) => parseKey(key).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+const label = (key) => fmt({ weekday: 'short', month: 'short', day: 'numeric' }).format(parseKey(key));
 
 export function postpone(todo, fromKey, toKey) {
   if (!toKey || toKey === fromKey) return;

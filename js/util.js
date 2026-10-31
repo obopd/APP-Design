@@ -57,9 +57,17 @@ export const todayKey = () => dateKey(new Date());
 export const toMinutes = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 export const fromMinutes = (min) => `${pad(Math.floor(min / 60) % 24)}:${pad(min % 60)}`;
 
+// Intl formatters are slow to create, so make each one once and reuse it.
+const fmtCache = new Map();
+export function fmt(options) {
+  const k = JSON.stringify(options);
+  if (!fmtCache.has(k)) fmtCache.set(k, new Intl.DateTimeFormat(undefined, options));
+  return fmtCache.get(k);
+}
+
 export function formatTime(t) {
-  const d = new Date(2000, 0, 1, ...t.split(':').map(Number));
-  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  const [hh, mm] = t.split(':').map(Number);
+  return fmt({ hour: 'numeric', minute: '2-digit' }).format(new Date(2000, 0, 1, hh, mm));
 }
 
 // '9:00' instead of '9:00 AM' — for tight spots where position already implies the time of day.

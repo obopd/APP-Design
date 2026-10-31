@@ -82,7 +82,7 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 
 /* Month mode: the calendar sits alone in the middle of the screen (the two .grow
    spacers share the free space). Week mode: spacers shrink, the day panel grows. */
-.grow { flex: 1 1 0; transition: flex-grow var(--dur) var(--ease); }
+.grow { flex: 1 1 0; }
 .week-mode .grow { flex-grow: 0; }
 /* With a D-Day showing above it, the starting screen sits slightly below center
    (the top spacer takes more of the free space); otherwise it's exactly centered. */
@@ -94,9 +94,9 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .top-slot { min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
 .today-dday {
   align-self: stretch; display: grid; justify-items: center; gap: 6px; margin-bottom: 22px;
-  transition: opacity calc(var(--dur) * .6) var(--ease);
+  transition: opacity .3s var(--ease) .2s;
 }
-.week-mode .today-dday { opacity: 0; pointer-events: none; }
+.week-mode .today-dday { opacity: 0; pointer-events: none; transition: none; }
 #dday-slot { align-self: stretch; }
 
 /* Small app icon (logo), always at the top of the calendar screen (month and week mode). */
@@ -131,13 +131,35 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 
 /* ---------- Calendar ---------- */
 .calendar {
-  flex: none;
+  position: relative; flex: none;
   width: var(--cal-w);
   margin: 0 auto;
-  padding: var(--cal-pad);
-  border: 1px solid var(--line);
-  border-radius: 24px;
+  padding: calc(var(--cal-pad) + 1px); /* +1px where the outline sits */
   touch-action: pan-y;
+  transition: transform var(--dur) var(--ease);
+  /* Solid and in front, so the day lists fading out behind it never show through. */
+  background: var(--bg); border-radius: 24px; z-index: 1;
+  /* Week mode hides 5 rows; the outline's bottom edge rises by exactly that much. */
+  --frame-cut: 0px;
+}
+.week-mode .calendar { --frame-cut: calc(var(--cell) * 5); }
+/* The rounded outline is two pieces so it can shrink without re-layout: ::before is the
+   top + sides (clipped from below), ::after is the rounded bottom edge (slides up). */
+.calendar::before, .calendar::after {
+  content: ""; position: absolute; left: 0; right: 0; pointer-events: none;
+  border: 1px solid var(--line);
+}
+.calendar::before {
+  top: 0; height: calc(var(--cal-w) - 20px); /* overlaps the bottom piece by 4px: no seam */
+  border-bottom: 0; border-radius: 24px 24px 0 0;
+  clip-path: inset(0 0 var(--frame-cut) 0);
+  transition: clip-path var(--dur) var(--ease);
+}
+.calendar::after {
+  top: calc(var(--cal-w) - 24px); height: 24px;
+  border-top: 0; border-radius: 0 0 24px 24px;
+  transform: translateY(calc(var(--frame-cut) * -1));
+  transition: transform var(--dur) var(--ease);
 }
 
 .cal-head { height: var(--cal-head); display: grid; grid-template-columns: 34px 1fr 34px; align-items: center; }
@@ -151,10 +173,18 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .weekdays { height: var(--cal-weekdays); align-items: start; }
 .weekdays span { text-align: center; font-size: 10.5px; font-weight: 600; color: var(--muted); letter-spacing: .04em; }
 
-/* Rows collapse with a grid-row transition so the month "rolls up" into one week. */
-.row-wrap { display: grid; grid-template-rows: 1fr; transition: grid-template-rows var(--dur) var(--ease), opacity calc(var(--dur) * .6) var(--ease); }
-.row-wrap.collapsed { grid-template-rows: 0fr; opacity: 0; }
-.row { overflow: hidden; min-height: 0; }
+/* Week mode: the rows block keeps its size, slides up to the selected week and is masked
+   to that one row. The card's layout box shrinks to one row at once (FLIP hides the jump). */
+.cal-rows { height: calc(var(--cell) * 6); }
+.week-mode .cal-rows { height: var(--cell); }
+.cal-rows-inner {
+  clip-path: inset(0 0 0 0);
+  transition: transform var(--dur) var(--ease), clip-path var(--dur) var(--ease);
+}
+.week-mode .cal-rows-inner {
+  transform: translateY(calc(var(--sel-row) * var(--cell) * -1));
+  clip-path: inset(calc(var(--sel-row) * var(--cell)) 0 calc((5 - var(--sel-row)) * var(--cell)) 0);
+}
 
 .day { height: var(--cell); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
 .day .num {
@@ -173,15 +203,11 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 
 /* ---------- Panel (below calendar) ---------- */
 .panel {
-  flex: 0 1 0; min-height: 0; overflow: hidden; opacity: 0;
+  flex: 0 1 0; min-height: 0; overflow: hidden; opacity: 0; pointer-events: none;
   display: flex; flex-direction: column;
-  transition: flex-grow var(--dur) var(--ease), opacity calc(var(--dur) * .7) var(--ease);
+  transition: transform var(--dur) var(--ease), opacity calc(var(--dur) * .6) var(--ease);
 }
-.week-mode .panel { flex-grow: 1; opacity: 1; }
-/* The day's lists rise in slightly behind the calendar folding up. */
-.panel .columns { transform: translateY(18px); transition: transform var(--dur) var(--ease) .04s, grid-template-columns .35s var(--ease); }
-.week-mode .panel .columns { transform: none; }
-.panel .columns.dragging { transition: none; }
+.week-mode .panel { flex-grow: 1; opacity: 1; pointer-events: auto; }
 
 
 .columns {
@@ -278,7 +304,7 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   font-family: var(--display); font-size: 16px; font-weight: 600; color: var(--fg);
 }
 .section-head { display: flex; align-items: center; padding-right: 4px; }
-.section-head .section-label { flex: 1; min-width: 0; padding-bottom: 0; }
+.section-head .section-label { flex: 1; min-width: 0; padding-bottom: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .section-add, .page-add { flex-shrink: 0; color: var(--fg); }
 .section-add svg { width: 18px; height: 18px; stroke-width: 2; }
 .section-folder { margin-right: -6px; } /* sits snug next to the + */

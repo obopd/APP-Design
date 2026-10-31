@@ -1,5 +1,5 @@
 // The area below the calendar when a day is selected: to-dos + hourly schedule.
-import { h, icon, ICONS, todayKey, toMinutes, shortTime, formatDuration, formatClock, formatNumber } from './util.js';
+import { h, icon, ICONS, fmt, todayKey, toMinutes, shortTime, formatDuration, formatClock, formatNumber } from './util.js';
 import {
   state, save, eventsOn, todosOn, isDone, isRoutine, toggleDone, childCategories,
   isTracked, valueOn, setValue, startTimer, stopTimer, routineStats,
@@ -7,6 +7,9 @@ import {
 import { askText } from './ui.js';
 import { postponeTomorrow, postponePick } from './postpone.js';
 import { openFolderSheet } from './folders.js';
+
+let hourLabels = null;
+const hourLabel = (hr) => (hourLabels ||= Array.from({ length: 24 }, (_, i) => fmt({ hour: 'numeric' }).format(new Date(2000, 0, 1, i))))[hr];
 
 const HOUR_PX = 48; // keep in sync with --hour in styles.css
 
@@ -244,7 +247,7 @@ function scheduleColumn(key, actions) {
 
   const hours = [];
   for (let hr = 1; hr < 24; hr++) {
-    const label = new Date(2000, 0, 1, hr).toLocaleTimeString(undefined, { hour: 'numeric' });
+    const label = hourLabel(hr);
     hours.push(h('button', {
       class: 'hour', style: `top:${hr * HOUR_PX}px`, 'aria-label': `Add at ${label}`,
       onclick: () => actions.create({ kind: 'event', date: key, hour: hr }),

@@ -51,6 +51,33 @@ const actions = {
   refresh: () => render(),
 };
 
+const setStyle = (el, styles) => Object.assign(el.style, styles);
+const PANEL_RESET = { transition: '', transform: '', opacity: '', position: '', top: '', left: '', width: '', height: '', zIndex: '' };
+let flipTimer = 0;
+
+// FLIP: the calendar card slides from its old position; the day panel rides on the card's
+// bottom edge (opening) or fades away from where it was (closing).
+function flip(first, opening, panelFirst) {
+  const last = calendarEl.getBoundingClientRect();
+  clearTimeout(flipTimer);
+  setStyle(calendarEl, { transition: 'none', transform: `translateY(${first.top - last.top}px)` });
+  if (opening) {
+    setStyle(panelEl, { ...PANEL_RESET, transition: 'none', transform: `translateY(${first.bottom - last.bottom}px)`, opacity: '0' });
+  } else if (panelFirst) {
+    setStyle(panelEl, {
+      transition: 'none', position: 'fixed', zIndex: '0', opacity: '1', transform: 'none',
+      top: `${panelFirst.top}px`, left: `${panelFirst.left}px`, width: `${panelFirst.width}px`, height: `${panelFirst.height}px`,
+    });
+  }
+  void calendarEl.offsetHeight;
+  requestAnimationFrame(() => {
+    setStyle(calendarEl, { transition: '', transform: '' });
+    if (opening) setStyle(panelEl, { transition: '', transform: '', opacity: '' });
+    else if (panelFirst) setStyle(panelEl, { transition: '', opacity: '0', transform: 'translateY(28px)' });
+  });
+  if (!opening) flipTimer = setTimeout(() => setStyle(panelEl, PANEL_RESET), 650);
+}
+
 // Accounts are required: while signed out, only the login page shows (no dock).
 const isGated = () => isConfigured() && !currentUser();
 let gateShown = false;
@@ -82,19 +109,25 @@ function render() {
   settingsEl.hidden = view.tab !== 'settings';
   ddayEl.hidden = view.tab !== 'dday';
 
-  if (view.tab === 'settings') { renderSettings(settingsEl); return; }
-  if (view.tab === 'dday') { renderDdays(ddayEl); return; }
+  if (view.tab === 'settings') { renderSettings(settingsEl); prevView = { ...view }; return; }
+  if (view.tab === 'dday') { renderDdays(ddayEl); prevView = { ...view }; return; }
 
-  renderCalendar(calendarEl, view, prevView, actions);
+  // Month ⇄ week: lay out the end state at once, then animate only transform / opacity /
+  // clip-path from where things were (FLIP), so the phone never re-lays out mid-animation.
+  const wasWeek = calendarView.classList.contains('week-mode');
+  const willWeek = !!view.selected;
+  const animate = wasWeek !== willWeek && prevView?.tab === 'calendar';
+  const first = animate ? calendarEl.getBoundingClientRect() : null;
+  const panelFirst = animate && wasWeek ? panelEl.getBoundingClientRect() : null;
+
+  renderCalendar(calendarEl, view, actions);
   const ddaysToday = renderTodayDdays(ddaySlot, () => { view.tab = 'dday'; render(); });
   calendarView.classList.toggle('has-dday', ddaysToday > 0);
-  // Month mode shows only the calendar, centered; the panel's old content just fades out.
-  // When opening a day, build its lists first (still hidden, slightly lowered), then switch
-  // to week mode on the next frame so they fade and rise in together with the calendar fold.
   if (view.selected) renderDay(panelEl, view.selected, actions);
-  if (view.selected && !calendarView.classList.contains('week-mode')) void panelEl.offsetHeight;
-  calendarView.classList.toggle('week-mode', !!view.selected);
-  calendarView.classList.toggle('month-mode', !view.selected);
+  if (animate) void calendarEl.offsetHeight; // commit the start state so CSS transitions run
+  calendarView.classList.toggle('week-mode', willWeek);
+  calendarView.classList.toggle('month-mode', !willWeek);
+  if (animate) flip(first, willWeek, panelFirst);
   prevView = { ...view };
 }
 
