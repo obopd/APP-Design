@@ -141,7 +141,7 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null, 
     close();
   };
 
-  const form = h('form', { onsubmit: submit },
+  const form = h('form', { novalidate: true, onsubmit: submit },
     h('div', { class: 'grabber' }),
     h('div', { class: 'sheet-head' },
       h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Cancel', onclick: close }, icon(ICONS.close)),

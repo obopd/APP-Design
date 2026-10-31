@@ -160,7 +160,7 @@ export function openDdaySheet(dday = null) {
     close();
   };
 
-  dialog.replaceChildren(h('form', { onsubmit: submit },
+  dialog.replaceChildren(h('form', { novalidate: true, onsubmit: submit },
     h('div', { class: 'grabber' }),
     h('div', { class: 'sheet-head' },
       h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Cancel', onclick: close }, icon(ICONS.close)),

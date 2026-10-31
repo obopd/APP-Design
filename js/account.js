@@ -62,7 +62,7 @@ export function openAccountSheet(mode = 'signin') {
       onclick: () => { if (mode !== v) openAccountSheet(v); },
     }, label)));
 
-  dialog.replaceChildren(h('form', { onsubmit: submit },
+  dialog.replaceChildren(h('form', { novalidate: true, onsubmit: submit },
     h('div', { class: 'grabber' }),
     h('div', { class: 'sheet-head' },
       h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Cancel', onclick: close }, icon(ICONS.close)),
@@ -143,7 +143,7 @@ export function renderLoginGate(root, { mode = 'signin', email: presetEmail = ''
 
   root.replaceChildren(h('div', { class: 'login' },
     h('h1', { class: 'display login-title' }, 'Planner'),
-    h('form', { class: 'login-form', onsubmit: submit },
+    h('form', { novalidate: true, class: 'login-form', onsubmit: submit },
       h('div', { class: 'title-row' }, email),
       h('div', { class: 'title-row' }, password),
       message,

@@ -48,7 +48,7 @@ export function askText({ title, message = '', value = '', placeholder = '', inp
     let layer;
     const input = h('input', { type: 'text', class: 'ask-input', value, placeholder, inputmode, autocomplete: 'off', enterkeyhint: 'done' });
     const done = (answer) => { layer.close(); resolve(answer); };
-    layer = openLayer('ask', h('form', {
+    layer = openLayer('ask', h('form', { novalidate: true,
       class: 'ask-card', onsubmit: (e) => { e.preventDefault(); done(input.value); },
     },
     h('p', { class: 'ask-title display' }, title),

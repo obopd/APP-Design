@@ -126,6 +126,12 @@ laptop. So:
   (public by design); empty = accounts hidden ("Not set up yet").
   Multiple independent users are expected (anyone with the link can sign up);
   RLS is what keeps each user's row private, so never weaken those policies.
+  Auth errors are mapped by Supabase `error_code` in `friendly()` (cloud.js) to plain
+  messages — e.g. `over_email_send_rate_limit` = the free email sender's ~2 emails/hour
+  project-wide limit (not "wait a minute"). With "Confirm email" on, sign-up of an
+  existing email returns a user with empty `identities` → treated as "already has an
+  account". All forms use `novalidate` so the browser never shows its own validation
+  pop-ups; the app validates and shows its own messages.
 - **Tracking (opt-in per to-do)**: editor "Track" = Off | Count | Time. Only tracked
   to-dos show a number pill: Count → tap to enter a number; Time → tap to type
   minutes/h:mm, plus a ▶/■ stopwatch (stored as a start timestamp, so it keeps
@@ -273,7 +279,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v36`; bump to `planner-v37`, …) and keep its `ASSETS` list in sync
+(currently `planner-v37`; bump to `planner-v38`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

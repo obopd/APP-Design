@@ -66,20 +66,28 @@ async function api(path, { method = 'GET', body, auth = false, token = null, hea
   try { data = text ? JSON.parse(text) : null; } catch { data = text; }
   if (!res.ok) {
     const msg = (data && (data.msg || data.error_description || data.message || data.error)) || `Error ${res.status}`;
-    const err = new Error(friendly(msg));
+    const code = (data && (data.error_code || data.code)) || '';
+    const err = new Error(friendly(String(code), msg, res.status));
     err.status = res.status;
+    err.code = code;
     throw err;
   }
   return data;
 }
 
-function friendly(msg) {
-  const m = String(msg).toLowerCase();
-  if (m.includes('invalid login')) return 'Wrong email or password.';
-  if (m.includes('email not confirmed')) return 'Please confirm your email first (check your inbox).';
-  if (m.includes('already registered')) return 'That email already has an account. Sign in instead.';
-  if (m.includes('password should be')) return 'Password must be at least 6 characters.';
-  if (m.includes('rate limit')) return 'Too many tries. Please wait a minute.';
+// Supabase Auth errors → plain messages. Match on error_code first (stable), then text.
+function friendly(code, msg, status) {
+  const m = `${code} ${msg}`.toLowerCase();
+  if (m.includes('invalid_credentials') || m.includes('invalid login')) return 'Wrong email or password.';
+  if (m.includes('email_not_confirmed') || m.includes('email not confirmed')) return 'Please confirm your email first (check your inbox and spam).';
+  if (m.includes('user_already_exists') || m.includes('email_exists') || m.includes('already registered')) return 'That email already has an account. Sign in instead.';
+  if (m.includes('weak_password') || m.includes('password should')) return 'Password must be at least 6 characters.';
+  if (m.includes('email_address_invalid') || m.includes('invalid format') || m.includes('unable to validate email')) return 'That email address doesn’t look right.';
+  if (m.includes('signup_disabled') || m.includes('signups not allowed')) return 'New accounts are turned off right now.';
+  // The free email sender allows only a few emails per hour for the whole project.
+  if (m.includes('over_email_send_rate_limit') || m.includes('email rate limit')) return 'We can’t send emails right now (hourly limit reached). Please try again later.';
+  if (m.includes('over_request_rate_limit') || m.includes('rate limit') || status === 429) return 'Too many attempts. Please wait a few minutes and try again.';
+  if (status >= 500) return 'The server had a problem. Please try again in a moment.';
   return msg;
 }
 
@@ -123,6 +131,11 @@ export async function signUp(email, password) {
     setSession(data);
     await afterSignIn();
     return 'signed-in';
+  }
+  // With "Confirm email" on, Supabase answers an already-registered email with a fake
+  // user that has no identities (so it doesn't reveal who has accounts).
+  if (data && Array.isArray(data.identities) && data.identities.length === 0) {
+    throw new Error('That email already has an account. Sign in instead (or use “Forgot password?”).');
   }
   return 'confirm-email';
 }
