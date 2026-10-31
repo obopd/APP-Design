@@ -76,7 +76,9 @@ export function renderDdays(root) {
   const since = withDiff.filter((x) => x.diff < 0).sort((a, b) => b.diff - a.diff);
 
   root.replaceChildren(h('div', { class: 'settings dday' },
-    h('h1', { class: 'display' }, 'D-Day'),
+    h('div', { class: 'page-head' },
+      h('h1', { class: 'display' }, 'D-Day'),
+      h('button', { class: 'icon-btn page-add', 'aria-label': 'Add D-Day', onclick: () => openDdaySheet() }, icon(ICONS.plus))),
     upcoming.length ? h('ul', { class: 'dday-list' }, upcoming.map((x) => row(x.d))) : null,
     since.length ? h('div', {},
       h('h3', { class: 'section-label' }, 'Since'),
@@ -128,7 +130,6 @@ export function openDdaySheet(dday = null) {
     h('p', { class: 'set-note dday-hint' }, 'For birthdays, use the birth date with “Every year” on.'),
   ));
   dialog.showModal();
-  if (!dday) title.focus();
 }
 
 dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });

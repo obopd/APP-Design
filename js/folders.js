@@ -83,7 +83,6 @@ export function openFolderSheet({ cat = null, parent = null, onDone = () => {}, 
 
   dialog.addEventListener('close', () => { if (!finished) onCancel(); }, { once: true });
   dialog.showModal();
-  if (!cat) name.focus();
 }
 
 dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });

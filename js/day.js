@@ -119,38 +119,37 @@ function routineStatsList(tracked) {
   }));
 }
 
-// Routines on top, regular to-dos below. Labels only appear when there are routines.
+// Routines on top (shaded box), regular to-dos below. Both sections always show,
+// each with its own + (a routine starts as a daily to-do).
 function todoColumn(key, actions) {
   const todos = todosOn(key);
   const routines = todos.filter(isRoutine);
   const regular = todos.filter((t) => !isRoutine(t));
 
   const left = (list) => list.filter((t) => !isDone(t, key)).length;
-  const label = (text, list) => h('h3', { class: 'section-label' },
-    text, left(list) ? h('span', { class: 'section-count' }, String(left(list))) : null);
+  const count = (list) => (left(list) ? h('span', { class: 'section-count' }, String(left(list))) : null);
+  const plus = (label, opts) => h('button', {
+    class: 'icon-btn section-add', 'aria-label': label,
+    onclick: () => actions.create({ kind: 'todo', date: key, ...opts }),
+  }, icon(ICONS.plus));
 
-  // Routines sit in a shaded box so the two sections read as clearly separate.
   // If any routine is tracked, tapping "Routines" reveals how often each was done.
-  const sections = [];
-  if (routines.length) {
-    const tracked = routines.filter(isTracked);
-    const heading = tracked.length
-      ? h('button', {
-        class: `section-label stats-toggle${showStats ? ' open' : ''}`, 'aria-expanded': String(showStats),
-        onclick: () => { showStats = !showStats; actions.refresh(); },
-      }, 'Routines', left(routines) ? h('span', { class: 'section-count' }, String(left(routines))) : null, icon(ICONS.right))
-      : label('Routines', routines);
-    sections.push(h('section', { class: 'todo-section routines' },
-      heading,
-      tracked.length && showStats ? routineStatsList(tracked) : null,
-      folderTree(routines, key, actions)));
-  }
-  if (regular.length) {
-    sections.push(h('section', { class: 'todo-section' },
-      routines.length ? label('To-do', regular) : null, folderTree(regular, key, actions)));
-  }
+  const tracked = routines.filter(isTracked);
+  const routineTitle = tracked.length
+    ? h('button', {
+      class: `section-label stats-toggle${showStats ? ' open' : ''}`, 'aria-expanded': String(showStats),
+      onclick: () => { showStats = !showStats; actions.refresh(); },
+    }, 'Routines', count(routines), icon(ICONS.right))
+    : h('h3', { class: 'section-label' }, 'Routines', count(routines));
 
-  return h('div', { class: 'col' }, h('div', { class: 'col-scroll', 'data-scroll': 'todos' }, sections));
+  return h('div', { class: 'col' }, h('div', { class: 'col-scroll', 'data-scroll': 'todos' },
+    h('section', { class: 'todo-section routines' },
+      h('div', { class: 'section-head' }, routineTitle, plus('Add routine', { repeat: 'daily' })),
+      tracked.length && showStats ? routineStatsList(tracked) : null,
+      routines.length ? folderTree(routines, key, actions) : null),
+    h('section', { class: 'todo-section' },
+      h('div', { class: 'section-head' }, h('h3', { class: 'section-label' }, 'To-do', count(regular)), plus('Add to-do')),
+      regular.length ? folderTree(regular, key, actions) : null)));
 }
 
 // Assign overlapping timed events to side-by-side lanes.
@@ -228,7 +227,6 @@ function scheduleColumn(key, actions) {
    Drag the divider (or swipe sideways) to stretch a side, and the same way back. */
 const SPLIT = 1 / 2.25; // default to-do share (to-do 1 : schedule 1.25)
 let layout = 'split';
-export const currentLayout = () => layout;
 
 const shareFor = (mode) => (mode === 'todo' ? 1 : mode === 'schedule' ? 0 : SPLIT);
 

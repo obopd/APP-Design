@@ -22,8 +22,9 @@ laptop. So:
 ## Product requirements (from the owner)
 
 - **Bottom bar** = a floating rounded dock like the iPhone home-screen dock (compact,
-  hugs its icons and is centered; frosted `--dock-bg`, 52px tall, radius 26px; icon-only): Calendar · D-Day · **+** (a plain + icon,
-  no circle; on the D-Day tab it adds a D-Day) · Settings. More tabs will be added later; a tab = a `.tab[data-view]` button in
+  hugs its icons and is centered; frosted `--dock-bg`, 52px tall, radius 26px; icon-only):
+  Calendar · D-Day · Settings. There is **no + in the dock**; adding happens via a + next
+  to each section heading (Routines, To-do, D-Day) and by tapping an empty hour. More tabs will be added later; a tab = a `.tab[data-view]` button in
   `index.html` + a `#view-<name>` container, switched by `view.tab` in `js/app.js`.
 - The calendar is a **perfect square card** (always 6 week rows) with space on
   all sides, "Month Year" **centered** between ‹ › arrows. There is no date
@@ -40,8 +41,9 @@ laptop. So:
 - Typography: headings, dates and numbers use **Fraunces** (semi-bold, upright —
   **no italics**, the owner rejected them) via the `.display` class / `--display`
   variable; small UI text uses the system sans-serif.
-- Adding items: the small round + in the bottom bar. Tapping an empty hour in the
-  timeline also adds an event there.
+- Adding items: + next to "Routines" (new to-do preset to repeat daily), + next to
+  "To-do", + next to the "D-Day" title; events by tapping an empty hour in the timeline.
+  Opening any sheet must **not** focus a text field (no keyboard until the owner taps one).
 - **To-do folders (categories)**, nestable like computer folders (Academic →
   Biology, Chemistry). New folders start open; each folder's open/closed state is
   saved (`category.open`) and must survive closing/reopening the tab or app.
@@ -51,16 +53,16 @@ laptop. So:
   the to-dos (one unified font in the list) and have an underline whose color is
   chosen when the folder is created (`category.color`, sheet in `js/folders.js`;
   editable from Settings by tapping the folder name).
-- **Done mark**: in front of each to-do is a thin *vertical* line with rounded
-  ends (`.dash`, not a circle) — gray when open, solid black/accent when done. Tapping it toggles done;
+- **Done mark**: in front of each to-do is a slim *vertical* line with rounded
+  ends (`.dash`, 3.5×13px, not a circle) inside a 30×36px tap area (`.mark-btn`; the owner
+  found the smaller one hard to hit) — gray when open, solid black/accent when done. Tapping it toggles done;
   done to-dos get a plain `line-through` and gray text (the owner rejected the
-  hand-drawn pencil stroke). Tapping the text opens the editor. The mark is
-  letter (cap) height and sits close to the text.
+  hand-drawn pencil stroke). Tapping the text opens the editor. The mark sits close to the text.
 - **Stretchable columns**: a divider with a grip sits between to-do and schedule.
   Dragging it to an edge stretches one side to full width (a to-do or schedule
   "tab"); dragging back (or a sideways swipe on the lists) returns to the split.
   Layout state lives in `js/day.js` (`layout`: split | todo | schedule) and is kept
-  while changing days. With the schedule full width, + starts on "Event".
+  while changing days.
 - **Routines**: to-dos and events can repeat daily, weekly, every 2 weeks,
   monthly or yearly, with an optional "Until" date. Routine to-dos are checked
   off per day (`doneOn`). Routines only get a calendar dot when starred.
@@ -68,8 +70,8 @@ laptop. So:
   regular to-dos sit below ("To-do")**; each section has its own folder tree
   (folder open/closed state is shared). The two must look clearly distinct:
   Routines sit in a shaded rounded box (`.todo-section.routines`), To-do below on
-  the plain page; both have display-font headings with an open-item count.
-  Headings only show when routines exist.
+  the plain page; both have display-font headings with an open-item count and a +.
+  **Both sections always show** on a selected day, even when empty.
 - **D-Day tab** (`js/dday.js`): countdowns for birthdays, graduation, etc. Each row
   shows title, date (+ ↻ and "58th" for yearly ones) and a big "D-12" / "D-Day" /
   "D+30". Upcoming sorted soonest first; past one-off dates count up under "Since".
@@ -223,7 +225,7 @@ service_role/secret key. The service worker only caches same-origin GETs, so API
 responses are never cached.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v22`; bump to `planner-v23`, …) and keep its `ASSETS` list in sync
+(currently `planner-v23`; bump to `planner-v24`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

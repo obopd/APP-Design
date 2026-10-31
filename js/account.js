@@ -80,7 +80,6 @@ export function openAccountSheet(mode = 'signin') {
         : 'Sign in to back up and sync your planner.'),
   ));
   if (!dialog.open) dialog.showModal();
-  (isNewPw ? password : email).focus();
 }
 
 dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });

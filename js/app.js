@@ -1,10 +1,10 @@
 import { addDays, dateKey, parseKey, todayKey, h } from './util.js';
 import { onChange } from './store.js';
 import { renderCalendar } from './calendar.js';
-import { renderDay, currentLayout, tickTimers } from './day.js';
+import { renderDay, tickTimers } from './day.js';
 import { openEditor } from './editor.js';
 import { renderSettings, applyTheme } from './settings.js';
-import { renderDdays, openDdaySheet, renderTodayDdays } from './dday.js';
+import { renderDdays, renderTodayDdays } from './dday.js';
 import { refreshReminders, setToast } from './reminders.js';
 import './haptics.js';
 import { onCloudChange, syncNow, handleAuthRedirect } from './cloud.js';
@@ -45,11 +45,6 @@ const actions = {
     }
     render();
   },
-  // On the D-Day tab, + adds a D-Day. With the schedule stretched full width, + starts on "Event".
-  add: () => (view.tab === 'dday' ? openDdaySheet() : openEditor({
-    kind: view.selected && currentLayout() === 'schedule' ? 'event' : 'todo',
-    date: view.selected || todayKey(),
-  })),
   create: (opts) => openEditor(opts),
   edit: (kind, item) => openEditor({ kind, item }),
   refresh: () => render(),
@@ -77,8 +72,6 @@ function render() {
   if (view.selected) renderDay(panelEl, view.selected, actions);
   prevView = { ...view };
 }
-
-document.getElementById('add-btn').addEventListener('click', actions.add);
 
 document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
   view.tab = t.dataset.view;

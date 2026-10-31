@@ -191,8 +191,8 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 /* To-dos: a slim rounded mark (gray → solid when done) toggles; the text opens the editor. */
 .todos { list-style: none; margin: 0; padding: 0 6px 0 8px; }
 .todo { display: flex; align-items: flex-start; }
-.mark-btn { flex-shrink: 0; width: 18px; height: 34px; display: flex; align-items: center; justify-content: flex-end; }
-.dash { width: 2.5px; height: 10px; /* ≈ cap height of the 14px text */ border-radius: 2px; background: var(--muted); opacity: .55; transition: background .2s, opacity .2s, width .2s; }
+.mark-btn { flex-shrink: 0; width: 30px; height: 36px; margin-left: -8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 2px; }
+.dash { width: 3.5px; height: 13px; /* a bit taller than the 14px text's caps, easy to see */ border-radius: 2px; background: var(--muted); opacity: .55; transition: background .2s, opacity .2s, width .2s; }
 .todo.done .dash { background: var(--accent); opacity: 1; }
 .todo-title {
   flex: 1; min-width: 0; text-align: left; padding: 8px 2px 8px 6px;
@@ -218,7 +218,7 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .track-btn.running { color: var(--accent); }
 
 /* Routines / To-do sections: routines live in a shaded box, to-dos below on the plain page. */
-.todo-section.routines { background: var(--soft); border-radius: 14px; margin: 0 6px 0 8px; padding: 10px 0 6px; }
+.todo-section.routines { background: var(--soft); border-radius: 14px; margin: 0 6px 0 8px; padding: 6px 0 6px; }
 .todo-section.routines .todos.root { padding-left: 4px; }
 .todo-section + .todo-section { margin-top: 22px; }
 .section-label {
@@ -226,6 +226,14 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   margin: 0; padding: 0 14px 4px;
   font-family: var(--display); font-size: 16px; font-weight: 600; color: var(--fg);
 }
+.section-head { display: flex; align-items: center; padding-right: 4px; }
+.todo-section:not(.routines) .section-head { padding-right: 10px; } /* line up with the + inside the routines box */
+.section-head .section-label { flex: 1; min-width: 0; padding-bottom: 0; }
+.section-add, .page-add { flex-shrink: 0; color: var(--fg); }
+.section-add svg { width: 18px; height: 18px; stroke-width: 2; }
+.page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: -4px; }
+.page-head h1 { margin: 0; }
+.page-add svg { width: 22px; height: 22px; stroke-width: 2; }
 .stats-toggle { width: 100%; text-align: left; }
 .stats-toggle svg { width: 12px; height: 12px; stroke-width: 2.2; color: var(--muted); margin-left: auto; margin-right: 2px; transition: transform .2s; align-self: center; }
 .stats-toggle.open svg { transform: rotate(90deg); }
@@ -288,9 +296,6 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .tab { width: 44px; height: 100%; display: grid; place-items: center; color: var(--muted); position: relative; }
 .tab svg { width: 22px; height: 22px; }
 .tab.active { color: var(--fg); }
-.tab-add { width: 44px; height: 100%; display: grid; place-items: center; color: var(--fg); transition: transform .12s; }
-.tab-add svg { width: 24px; height: 24px; stroke-width: 1.8; }
-.tab-add:active { transform: scale(.88); }
 .tab.active::after { content: ""; position: absolute; bottom: 5px; width: 4px; height: 4px; border-radius: 50%; background: var(--fg); }
 
 /* ---------- Settings view ---------- */
