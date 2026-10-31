@@ -32,9 +32,9 @@ laptop. So:
 - The calendar is a **perfect square card** (always 6 week rows) with space on
   all sides, "Month Year" **centered** between ‹ › arrows. There is no date
   heading above the day view (the owner found it redundant).
-- **No date selected → only the calendar is on screen**, exactly centered, with a small
-  "Kairos" wordmark (`.brand`, ~19px display font) above it — and above today's D-Days
-  when there are any; it fades out in week mode. When a
+- **No date selected → only the calendar is on screen**, exactly centered in the space
+  below a small "Kairos" wordmark (`.brand`, ~19px display font) that is **always at the
+  top of the calendar screen**, in month and week mode (above today's D-Days too). When a
   D-Day is shown above it, it sits slightly lower instead (`.has-dday`: top spacer
   1.3 : bottom 0.7). Tapping a date slides the card to the top, **rolls the month up into
   that date's week**, and the space below shows that day in **two columns**:
@@ -271,7 +271,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v33`; bump to `planner-v34`, …) and keep its `ASSETS` list in sync
+(currently `planner-v34`; bump to `planner-v35`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
