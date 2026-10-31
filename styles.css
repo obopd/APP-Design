@@ -1,14 +1,9 @@
 /* ---------- Fonts ---------- */
-/* Fraunces (SIL OFL, fonts/OFL.txt): classic serif with a calligraphic italic, used for headings. */
+/* Fraunces (SIL OFL, fonts/OFL.txt): classic, slightly soft serif used for headings and numbers. */
 @font-face {
   font-family: "Fraunces";
   src: url("fonts/fraunces-latin-wght-normal.woff2") format("woff2");
   font-weight: 100 900; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: "Fraunces";
-  src: url("fonts/fraunces-latin-wght-italic.woff2") format("woff2");
-  font-weight: 100 900; font-style: italic; font-display: swap;
 }
 
 /* ---------- Theme ---------- */
@@ -21,7 +16,14 @@
   --accent: var(--fg);
   --on-accent: var(--bg);
   --hour: 48px;
-  --tabbar: 50px;
+  --tabbar: 54px;
+  --gap: 24px;          /* space around the calendar card */
+  --cal-pad: 12px;
+  --cal-head: 44px;
+  --cal-weekdays: 20px;
+  /* The card is a square: width = 2*pad + head + weekdays + 6 rows. */
+  --cal-w: min(100vw - 2 * var(--gap), 480px);
+  --cell: calc((var(--cal-w) - 2 * var(--cal-pad) - 2px - var(--cal-head) - var(--cal-weekdays)) / 6); /* 2px = border */
   --display: "Fraunces", ui-serif, "New York", Georgia, serif;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Apple SD Gothic Neo", sans-serif;
   color-scheme: light;
@@ -59,45 +61,50 @@ body {
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 
-.display { font-family: var(--display); font-style: italic; font-weight: 600; letter-spacing: -0.01em; }
+.display { font-family: var(--display); font-weight: 600; letter-spacing: -0.01em; }
 
 .view {
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: calc(var(--tabbar) + env(safe-area-inset-bottom));
+  padding-top: calc(env(safe-area-inset-top) + var(--gap));
+  padding-bottom: calc(var(--tabbar) + env(safe-area-inset-bottom) + var(--gap));
 }
 .view[hidden] { display: none; }
 
+/* Month mode: the calendar sits alone in the middle of the screen (the two .grow
+   spacers share the free space). Week mode: spacers shrink, the day panel grows. */
+.grow { flex: 1 1 0; transition: flex-grow .4s cubic-bezier(.2,.8,.2,1); }
+.week-mode .grow { flex-grow: 0; }
+
 /* ---------- Calendar ---------- */
-.calendar { padding: 6px 12px 2px; flex-shrink: 0; touch-action: pan-y; }
+.calendar {
+  flex: none;
+  width: var(--cal-w);
+  margin: 0 auto;
+  padding: var(--cal-pad);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  touch-action: pan-y;
+}
 
-.cal-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 6px 10px; }
+.cal-head { height: var(--cal-head); display: grid; grid-template-columns: 34px 1fr 34px; align-items: center; }
+.cal-title { justify-self: center; font-size: 22px; line-height: 1; padding: 6px 10px; }
 
-.cal-title { display: flex; align-items: center; gap: 2px; font-size: 26px; line-height: 1.1; }
-.cal-title svg { width: 16px; height: 16px; color: var(--muted); opacity: 0; transition: opacity .3s; }
-.cal-title.week svg { opacity: 1; }
-
-.cal-actions { display: flex; align-items: center; gap: 0; }
 .icon-btn { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; }
 .icon-btn:active { background: var(--soft); }
 .icon-btn svg { width: 18px; height: 18px; }
 
-/* Small add button: a solid dot with a plus. */
-.add-btn { margin-left: 6px; background: var(--accent); color: var(--on-accent); width: 30px; height: 30px; }
-.add-btn svg { width: 16px; height: 16px; stroke-width: 2.2; }
-.add-btn:active { background: var(--accent); transform: scale(.92); }
-
 .weekdays, .row { display: grid; grid-template-columns: repeat(7, 1fr); }
-.weekdays span { text-align: center; font-size: 10.5px; font-weight: 600; color: var(--muted); padding-bottom: 4px; letter-spacing: .04em; }
+.weekdays { height: var(--cal-weekdays); align-items: start; }
+.weekdays span { text-align: center; font-size: 10.5px; font-weight: 600; color: var(--muted); letter-spacing: .04em; }
 
 /* Rows collapse with a grid-row transition so the month "rolls up" into one week. */
 .row-wrap { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .32s cubic-bezier(.2,.8,.2,1), opacity .25s; }
 .row-wrap.collapsed { grid-template-rows: 0fr; opacity: 0; }
 .row { overflow: hidden; min-height: 0; }
 
-.day { height: 42px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.day { height: var(--cell); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
 .day .num {
   width: 30px; height: 30px; border-radius: 50%;
   display: grid; place-items: center;
@@ -106,16 +113,21 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   transition: background .2s, color .2s;
 }
 .day.other .num { color: var(--muted); opacity: .45; }
-.day.today .num { font-weight: 800; font-style: italic; box-shadow: inset 0 0 0 1.2px var(--accent); }
-.day.selected .num { background: var(--accent); color: var(--on-accent); box-shadow: none; font-weight: 700; font-style: italic; }
+.day.today .num { font-weight: 800; box-shadow: inset 0 0 0 1.2px var(--accent); }
+.day.selected .num { background: var(--accent); color: var(--on-accent); box-shadow: none; font-weight: 700; }
 .day .dots { display: flex; gap: 2px; height: 3px; }
 .day .dots i { width: 3px; height: 3px; border-radius: 50%; background: var(--muted); }
 .day .dots i.imp { background: var(--accent); }
 
 /* ---------- Panel (below calendar) ---------- */
-.panel { flex: 1; min-height: 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; }
+.panel {
+  flex: 0 1 0; min-height: 0; overflow: hidden; opacity: 0;
+  display: flex; flex-direction: column;
+  transition: flex-grow .4s cubic-bezier(.2,.8,.2,1), opacity .3s;
+}
+.week-mode .panel { flex-grow: 1; opacity: 1; }
 
-.panel-head { padding: 12px 18px 6px; }
+.panel-head { padding: 16px 18px 6px; }
 .panel-head h2 { margin: 0; font-size: 19px; }
 
 .columns { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1.25fr; }
@@ -139,7 +151,6 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .todo.imp .todo-title { font-weight: 600; }
 .star { color: var(--accent); font-size: 10px; margin-left: 3px; vertical-align: 1px; }
 
-.empty { color: var(--muted); font-size: 13px; padding: 6px 18px; font-family: var(--display); font-style: italic; }
 
 /* Schedule timeline */
 .allday { padding: 0 8px 6px; display: grid; gap: 3px; }
@@ -163,30 +174,23 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .now { position: absolute; left: 42px; right: 0; height: 0; border-top: 1.5px solid var(--accent); pointer-events: none; z-index: 2; }
 .now::before { content: ""; position: absolute; left: -3px; top: -4px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
 
-/* Coming up (month view) */
-.upcoming { list-style: none; margin: 0; padding: 0 12px 24px; overflow-y: auto; flex: 1; }
-.up-item { display: flex; align-items: center; gap: 14px; width: 100%; padding: 9px 6px; text-align: left; }
-.up-date { width: 34px; text-align: center; flex-shrink: 0; line-height: 1; }
-.up-date b { display: block; font-family: var(--display); font-style: italic; font-weight: 600; font-size: 19px; }
-.up-date small { font-size: 9.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
-.up-main { flex: 1; min-width: 0; font-size: 14px; }
-.up-main small { color: var(--muted); font-size: 12px; margin-left: 6px; }
-.up-when { font-size: 12px; color: var(--muted); flex-shrink: 0; font-variant-numeric: tabular-nums; }
-
 /* ---------- Tab bar ---------- */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0;
   height: calc(var(--tabbar) + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
-  display: flex; justify-content: center; gap: 72px;
+  display: flex; justify-content: center; align-items: center; gap: 56px;
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid var(--line);
   z-index: 5;
 }
-.tab { width: 56px; display: grid; place-items: center; color: var(--muted); position: relative; }
+.tab { width: 48px; height: 100%; display: grid; place-items: center; color: var(--muted); position: relative; }
 .tab svg { width: 22px; height: 22px; }
 .tab.active { color: var(--fg); }
+.tab-add { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; transition: transform .12s; }
+.tab-add svg { width: 16px; height: 16px; stroke-width: 2.2; }
+.tab-add:active { transform: scale(.9); }
 .tab.active::after { content: ""; position: absolute; bottom: 7px; width: 4px; height: 4px; border-radius: 50%; background: var(--fg); }
 
 /* ---------- Settings view ---------- */
@@ -226,7 +230,7 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .title-row { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); }
 .title-row input {
   flex: 1; min-width: 0; border: 0; background: transparent; color: var(--fg); outline: none;
-  font-family: var(--display); font-style: italic; font-weight: 600; font-size: 22px; padding: 6px 0 8px;
+  font-family: var(--display); font-weight: 600; font-size: 22px; padding: 6px 0 8px;
 }
 .title-row input::placeholder { color: var(--muted); opacity: .6; }
 .star-btn { font-size: 20px; color: var(--muted); width: 34px; height: 34px; }

@@ -20,22 +20,26 @@ laptop. So:
 
 ## Product requirements (from the owner)
 
-- **Bottom tabs** (icon-only): Calendar and Settings. More will be added later;
-  a tab = a `.tab[data-view]` button in `index.html` + a `#view-<name>` container,
-  switched by `view.tab` in `js/app.js`.
-- The tab shows a **month calendar**. Tapping a date **rolls the month up into
+- **Bottom bar** (icon-only): Calendar tab, a small round **+** (add) in the middle,
+  Settings tab. More tabs will be added later; a tab = a `.tab[data-view]` button in
+  `index.html` + a `#view-<name>` container, switched by `view.tab` in `js/app.js`.
+- The calendar is a **perfect square card** (always 6 week rows) with space on
+  all sides, month name **centered** between ‹ › arrows.
+- **No date selected → only the calendar is on screen, centered** vertically and
+  horizontally. Tapping a date slides the card to the top, **rolls the month up into
   that date's week**, and the space below shows that day in **two columns**:
-  to-do list on the left, hourly schedule timeline on the right.
+  to-do list on the left, hourly schedule timeline on the right. Tapping the
+  selected date again, the month name, or swiping down returns to the month.
 - Design: **minimalist** — modern, clean, intuitive, small sizes, as few words as
   possible (prefer icons/symbols over labels). **Default colors are black & white**;
   the user can change the accent color and light/dark mode in Settings.
-- Typography: headings, dates and numbers use **Fraunces** (bold, italic — classic
-  with a calligraphic feel) via the `.display` class / `--display` variable; small UI
-  text uses the system sans-serif.
-- Adding items: a **small round + in the calendar header** (no floating button).
-  Tapping an empty hour in the timeline also adds an event there.
-- **Important reminders** (e.g. a parent's birthday): items marked Important ★
-  appear in "Coming up" (month view) and are counted in the home-screen icon badge.
+- Typography: headings, dates and numbers use **Fraunces** (semi-bold, upright —
+  **no italics**, the owner rejected them) via the `.display` class / `--display`
+  variable; small UI text uses the system sans-serif.
+- Adding items: the small round + in the bottom bar. Tapping an empty hour in the
+  timeline also adds an event there.
+- **Important reminders** (e.g. a parent's birthday): items marked Important ★ get
+  an accent-colored dot on the calendar and are counted in the home-screen icon badge.
 - **Alerts** at schedule times via notifications.
 - Chosen approach: *simple web app*. Known limits on iPhone (tell the owner,
   don't hide them): notifications need iOS 16.4+ and the app on the Home Screen;
@@ -46,16 +50,17 @@ laptop. So:
 ## Codebase structure
 
 ```
-index.html             Shell: calendar view (calendar + panel), settings view, tab bar, toast, editor <dialog>
-styles.css             All styles. Theme via CSS variables; html[data-theme] light/dark, html[data-accent]
-fonts/                 Fraunces variable fonts (latin, normal + italic woff2) + OFL.txt license
+index.html             Shell: calendar view (.grow spacers + calendar + panel), settings view, bottom bar, toast, editor <dialog>
+styles.css             All styles. Theme via CSS variables; html[data-theme] light/dark, html[data-accent].
+                       Square card size comes from --cal-w / --cell; .month-mode/.week-mode drive layout
+fonts/                 Fraunces variable font (latin, upright woff2) + OFL.txt license
 manifest.webmanifest   PWA manifest
 sw.js                  Service worker: offline cache (network-first) + notification click
 js/app.js              Entry point: view state (tab, month, selected day), actions, render(), tabs, swipes
 js/util.js             h() DOM helper, inline SVG icons, date helpers (local 'YYYY-MM-DD' keys)
-js/store.js            State + localStorage persistence, change listeners, queries (eventsOn, todosOn, upcomingImportant)
-js/calendar.js         Month grid; rows collapse to the selected week (animated)
-js/day.js              Day view (to-do column + hourly timeline) and "Coming up" list
+js/store.js            State + localStorage persistence, change listeners, queries (eventsOn, todosOn)
+js/calendar.js         Square month card (6 rows); rows collapse to the selected week (animated)
+js/day.js              Day view: to-do column + hourly timeline
 js/editor.js           Bottom sheet to add/edit a to-do or schedule item
 js/settings.js         Settings tab: theme, accent color, alerts, backup export/restore
 js/reminders.js        Alert timers, notifications, in-app toast, app icon badge
@@ -125,7 +130,7 @@ GitHub Pages serving the repo root (all paths are relative, so it works under
 `/APP-Design/`): repo Settings → Pages → Deploy from a branch → branch, `/ (root)`.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v2`; bump to `planner-v3`, …) and keep its `ASSETS` list in sync
+(currently `planner-v3`; bump to `planner-v4`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

@@ -2,15 +2,11 @@
 import { h, icon, ICONS, addDays, dateKey, parseKey, todayKey } from './util.js';
 import { eventsOn, todosOn } from './store.js';
 
+// Always 6 weeks, so the calendar card stays the same square size every month.
 function weeksOfMonth(cursor) {
   const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-  let start = addDays(first, -first.getDay());
-  const weeks = [];
-  do {
-    weeks.push(Array.from({ length: 7 }, (_, i) => addDays(start, i)));
-    start = addDays(start, 7);
-  } while (start.getMonth() === cursor.getMonth());
-  return weeks;
+  const start = addDays(first, -first.getDay());
+  return Array.from({ length: 6 }, (_, w) => Array.from({ length: 7 }, (_, i) => addDays(start, w * 7 + i)));
 }
 
 function dayCell(date, view, month, actions) {
@@ -46,16 +42,13 @@ export function renderCalendar(root, view, prev, actions) {
   const title = cursor.toLocaleDateString(undefined, { month: 'long', year: cursor.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
 
   const head = h('div', { class: 'cal-head' },
+    h('button', { class: 'icon-btn', 'aria-label': weekMode ? 'Previous week' : 'Previous month', onclick: () => actions.shift(-1) }, icon(ICONS.left)),
     h('button', {
-      class: `cal-title display${weekMode ? ' week' : ''}`,
-      'aria-label': weekMode ? 'Show whole month' : title,
+      class: 'cal-title display',
+      'aria-label': weekMode ? `${title}, show whole month` : title,
       onclick: actions.showMonth,
-    }, title, icon(ICONS.down)),
-    h('div', { class: 'cal-actions' },
-      h('button', { class: 'icon-btn', 'aria-label': weekMode ? 'Previous week' : 'Previous month', onclick: () => actions.shift(-1) }, icon(ICONS.left)),
-      h('button', { class: 'icon-btn', 'aria-label': weekMode ? 'Next week' : 'Next month', onclick: () => actions.shift(1) }, icon(ICONS.right)),
-      h('button', { class: 'icon-btn add-btn', 'aria-label': 'Add', onclick: actions.add }, icon(ICONS.plus)),
-    ),
+    }, title),
+    h('button', { class: 'icon-btn', 'aria-label': weekMode ? 'Next week' : 'Next month', onclick: () => actions.shift(1) }, icon(ICONS.right)),
   );
 
   const labels = [];

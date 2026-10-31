@@ -1,5 +1,4 @@
 // All app data lives in localStorage on the device; there is no server.
-import { addDays, dateKey, parseKey } from './util.js';
 
 const KEY = 'planner.v1';
 
@@ -56,14 +55,3 @@ export const todosOn = (key) =>
   state.todos
     .filter((t) => t.date === key)
     .sort((a, b) => a.done - b.done || b.important - a.important);
-
-export function upcomingImportant(fromKey, days) {
-  const out = [];
-  let d = parseKey(fromKey);
-  for (let i = 0; i < days; i++, d = addDays(d, 1)) {
-    const key = dateKey(d);
-    for (const e of eventsOn(key)) if (e.important) out.push({ kind: 'event', item: e, date: key });
-    for (const t of todosOn(key)) if (t.important && !t.done) out.push({ kind: 'todo', item: t, date: key });
-  }
-  return out;
-}

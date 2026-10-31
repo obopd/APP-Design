@@ -1,7 +1,6 @@
-// The area below the calendar: a selected day's to-dos + hourly schedule,
-// or (in month view) the list of upcoming important items.
-import { h, icon, ICONS, parseKey, todayKey, toMinutes, shortTime, daysBetween } from './util.js';
-import { save, eventsOn, todosOn, upcomingImportant } from './store.js';
+// The area below the calendar when a day is selected: to-dos + hourly schedule.
+import { h, icon, ICONS, parseKey, todayKey, toMinutes, shortTime } from './util.js';
+import { save, eventsOn, todosOn } from './store.js';
 
 const HOUR_PX = 48; // keep in sync with --hour in styles.css
 
@@ -114,29 +113,4 @@ export function renderDay(root, key, actions) {
     const hour = first ? toMinutes(first.start) / 60 : key === todayKey() ? new Date().getHours() : 8;
     tl.scrollTop = Math.max(0, (hour - 1) * HOUR_PX - 12); // leave room for the hour label
   }
-}
-
-const relDays = (diff) => (diff === 0 ? 'Today' : diff === 1 ? 'Tmrw' : `${diff}d`);
-
-export function renderUpcoming(root, actions) {
-  delete root.dataset.date;
-  const today = todayKey();
-  const items = upcomingImportant(today, 60);
-
-  const list = h('ul', { class: 'upcoming' }, items.map(({ kind, item, date }) => {
-    const d = parseKey(date);
-    const time = kind === 'event' && !item.allDay ? shortTime(item.start) : null;
-    return h('li', {},
-      h('button', { class: 'up-item', onclick: () => actions.select(date) },
-        h('div', { class: 'up-date' },
-          h('small', {}, d.toLocaleDateString(undefined, { month: 'short' })),
-          h('b', {}, String(d.getDate()))),
-        h('div', { class: 'up-main' }, item.title, time ? h('small', {}, time) : null),
-        h('span', { class: 'up-when' }, relDays(daysBetween(today, date)))));
-  }));
-
-  root.replaceChildren(
-    h('div', { class: 'panel-head' }, h('h2', { class: 'display' }, 'Coming up')),
-    items.length ? list : h('p', { class: 'empty' }, 'Nothing ahead — star ★ what matters.'),
-  );
 }

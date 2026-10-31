@@ -1,11 +1,12 @@
 import { addDays, dateKey, parseKey, todayKey, h } from './util.js';
 import { onChange } from './store.js';
 import { renderCalendar } from './calendar.js';
-import { renderDay, renderUpcoming } from './day.js';
+import { renderDay } from './day.js';
 import { openEditor } from './editor.js';
 import { renderSettings, applyTheme } from './settings.js';
 import { refreshReminders, setToast } from './reminders.js';
 
+const calendarView = document.getElementById('view-calendar');
 const calendarEl = document.getElementById('calendar');
 const panelEl = document.getElementById('panel');
 const settingsEl = document.getElementById('view-settings');
@@ -49,16 +50,20 @@ function render() {
     t.classList.toggle('active', on);
     if (on) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
   });
-  document.getElementById('view-calendar').hidden = view.tab !== 'calendar';
+  calendarView.hidden = view.tab !== 'calendar';
   settingsEl.hidden = view.tab !== 'settings';
 
   if (view.tab === 'settings') { renderSettings(settingsEl); return; }
 
   renderCalendar(calendarEl, view, prevView, actions);
+  // Month mode shows only the calendar, centered; the panel's old content just fades out.
+  calendarView.classList.toggle('week-mode', !!view.selected);
+  calendarView.classList.toggle('month-mode', !view.selected);
   if (view.selected) renderDay(panelEl, view.selected, actions);
-  else renderUpcoming(panelEl, actions);
   prevView = { ...view };
 }
+
+document.getElementById('add-btn').addEventListener('click', actions.add);
 
 document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
   view.tab = t.dataset.view;
