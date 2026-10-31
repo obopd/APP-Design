@@ -27,8 +27,9 @@ laptop. So:
 - The calendar is a **perfect square card** (always 6 week rows) with space on
   all sides, "Month Year" **centered** between ‹ › arrows. There is no date
   heading above the day view (the owner found it redundant).
-- **No date selected → only the calendar is on screen**, centered horizontally and
-  sitting slightly below vertical center (top spacer 1.3 : bottom 0.7). Tapping a date slides the card to the top, **rolls the month up into
+- **No date selected → only the calendar is on screen**, exactly centered. When a
+  D-Day is shown above it, it sits slightly lower instead (`.has-dday`: top spacer
+  1.3 : bottom 0.7). Tapping a date slides the card to the top, **rolls the month up into
   that date's week**, and the space below shows that day in **two columns**:
   to-do list on the left, hourly schedule timeline on the right. Tapping the
   selected date again, the month name, or swiping down returns to the month.
@@ -195,7 +196,7 @@ GitHub Pages serving the repo root (all paths are relative, so it works under
 private, and free GitHub accounts only get Pages for public repos.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v20`; bump to `planner-v21`, …) and keep its `ASSETS` list in sync
+(currently `planner-v21`; bump to `planner-v22`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

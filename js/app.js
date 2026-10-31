@@ -67,7 +67,8 @@ function render() {
   if (view.tab === 'dday') { renderDdays(ddayEl); return; }
 
   renderCalendar(calendarEl, view, prevView, actions);
-  renderTodayDdays(topSlot, () => { view.tab = 'dday'; render(); });
+  const ddaysToday = renderTodayDdays(topSlot, () => { view.tab = 'dday'; render(); });
+  calendarView.classList.toggle('has-dday', ddaysToday > 0);
   // Month mode shows only the calendar, centered; the panel's old content just fades out.
   calendarView.classList.toggle('week-mode', !!view.selected);
   calendarView.classList.toggle('month-mode', !view.selected);

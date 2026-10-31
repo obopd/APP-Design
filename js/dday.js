@@ -21,10 +21,11 @@ function nthOf(d, targetKey) {
 
 // Shown above the calendar on the starting screen when a D-Day is today. Several
 // D-Days form a sideways snap row: the centered one is solid, the next peeks in faded.
+// Returns how many D-Days are shown.
 export function renderTodayDdays(root, onOpen) {
   const today = todayKey();
   const hits = state.ddays.filter((d) => ddayDiff(d, today) === 0);
-  if (!hits.length) { root.replaceChildren(); return; }
+  if (!hits.length) { root.replaceChildren(); return 0; }
 
   const items = hits.map((d, i) => h('button', { class: `tdd-item${i === 0 ? ' active' : ''}`, onclick: onOpen },
     h('span', { class: 'tdd-title display' }, d.title),
@@ -49,6 +50,7 @@ export function renderTodayDdays(root, onOpen) {
     h('span', { class: 'tdd-label' }, 'D-Day'), track));
   // Start with the first D-Day centered (the row's 50% padding would otherwise leave it right of center).
   track.scrollLeft = items[0].offsetLeft - (track.clientWidth - items[0].offsetWidth) / 2;
+  return hits.length;
 }
 
 function row(d) {
