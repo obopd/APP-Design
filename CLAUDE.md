@@ -26,8 +26,8 @@ laptop. So:
 - The calendar is a **perfect square card** (always 6 week rows) with space on
   all sides, "Month Year" **centered** between ‹ › arrows. There is no date
   heading above the day view (the owner found it redundant).
-- **No date selected → only the calendar is on screen, centered** vertically and
-  horizontally. Tapping a date slides the card to the top, **rolls the month up into
+- **No date selected → only the calendar is on screen**, centered horizontally and
+  sitting slightly below vertical center (top spacer 1.3 : bottom 0.7). Tapping a date slides the card to the top, **rolls the month up into
   that date's week**, and the space below shows that day in **two columns**:
   to-do list on the left, hourly schedule timeline on the right. Tapping the
   selected date again, the month name, or swiping down returns to the month.
@@ -73,7 +73,7 @@ laptop. So:
   Yearly entries roll to the next occurrence (`ddayTarget`). Tap a row to edit/delete.
   **On the day itself**, the starting screen (month mode) shows it in the free space
   above the centered calendar (`#top-slot`, `renderTodayDdays`); tapping it opens the
-  D-Day tab. It fades out in week mode and never shifts the calendar off center.
+  D-Day tab. It fades out in week mode and never shifts the calendar.
   Several D-Days on the same day form a horizontal scroll-snap row: the centered one
   is fully opaque, the next peeks in at the right edge at low opacity.
 - **Tracking (opt-in per to-do)**: editor "Track" = Off | Count | Time. Only tracked
@@ -185,7 +185,7 @@ GitHub Pages serving the repo root (all paths are relative, so it works under
 `/APP-Design/`): repo Settings → Pages → Deploy from a branch → branch, `/ (root)`.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v13`; bump to `planner-v14`, …) and keep its `ASSETS` list in sync
+(currently `planner-v14`; bump to `planner-v15`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

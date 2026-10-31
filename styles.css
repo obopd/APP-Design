@@ -76,9 +76,12 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
    spacers share the free space). Week mode: spacers shrink, the day panel grows. */
 .grow { flex: 1 1 0; transition: flex-grow .4s cubic-bezier(.2,.8,.2,1); }
 .week-mode .grow { flex-grow: 0; }
+/* Starting screen sits slightly below center: the top spacer takes a bit more of the free space. */
+.month-mode .top-slot { flex-grow: 1.3; }
+.month-mode .grow:last-child { flex-grow: 0.7; }
 
-/* Today's D-Days sit in the free space above the centered calendar (month mode only).
-   The slot keeps flex-basis 0, so its content never pushes the calendar off center. */
+/* Today's D-Days sit in the free space above the calendar (month mode only).
+   The slot keeps flex-basis 0, so its content never pushes the calendar around. */
 .top-slot { min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
 .today-dday {
   align-self: stretch; display: grid; justify-items: center; gap: 6px; margin-bottom: 22px;
