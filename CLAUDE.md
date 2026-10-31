@@ -66,7 +66,7 @@ laptop. So:
   Settings (rename, add sub-folder, delete) or via "New…" in the editor;
   "Academic/Biology" creates nested folders. Folder names use the same font as
   the to-dos (one unified font in the list) and have an underline whose color is
-  chosen when the folder is created (`category.color`, sheet in `js/folders.js`;
+  chosen when the folder is created from 20 colors (`FOLDER_COLORS`, 2 rows of 10; `category.color`, sheet in `js/folders.js`;
   editable from Settings by tapping the folder name).
 - **Done mark**: in front of each to-do is a slim *vertical* line with rounded
   ends (`.dash`, 3.5×13px, not a circle) inside a 30×36px tap area (`.mark-btn`; the owner
@@ -288,7 +288,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v39`; bump to `planner-v40`, …) and keep its `ASSETS` list in sync
+(currently `planner-v40`; bump to `planner-v41`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

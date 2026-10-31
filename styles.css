@@ -444,7 +444,8 @@ textarea.notes {
 .swatch { width: 26px; height: 26px; border-radius: 50%; border: 2.5px solid var(--bg); box-shadow: 0 0 0 1px var(--line); }
 .swatch[aria-checked="true"] { box-shadow: 0 0 0 1.5px var(--fg); }
 .swatch.gray { background: color-mix(in srgb, var(--fg) 22%, var(--bg)); }
-.folder-colors { flex-wrap: wrap; gap: 9px; padding: 4px 0 6px; }
+.folder-colors { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; justify-items: center; padding: 4px 0 6px; }
+.folder-colors .swatch { width: 100%; max-width: 30px; height: auto; aspect-ratio: 1; }
 .swatch.mono { background: linear-gradient(135deg, #0a0a0a 50%, #ffffff 50%); }
 
 .pill { font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; background: var(--soft); }

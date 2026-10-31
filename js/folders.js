@@ -6,15 +6,26 @@ import { ask } from './ui.js';
 const dialog = document.getElementById('folder-sheet');
 
 // null = default thin gray underline.
+// Two rows of 10, ordered around the color wheel. Keep existing values (folders store them).
 export const FOLDER_COLORS = [
   [null, 'Gray'],
   ['var(--fg)', 'Black'], // follows the theme, so it's white in dark mode
+  ['#78716c', 'Stone'],
+  ['#92400e', 'Brown'],
+  ['#b91c1c', 'Crimson'],
   ['#e11d48', 'Red'],
+  ['#fb7185', 'Coral'],
   ['#ea580c', 'Orange'],
+  ['#f59e0b', 'Amber'],
   ['#ca8a04', 'Yellow'],
+  ['#84cc16', 'Lime'],
   ['#16a34a', 'Green'],
-  ['#0891b2', 'Teal'],
+  ['#047857', 'Forest'],
+  ['#0d9488', 'Teal'],
+  ['#0891b2', 'Cyan'],
+  ['#0ea5e9', 'Sky'],
   ['#2563eb', 'Blue'],
+  ['#4f46e5', 'Indigo'],
   ['#7c3aed', 'Purple'],
   ['#db2777', 'Pink'],
 ];
@@ -29,7 +40,7 @@ export function openFolderSheet({ cat = null, parent = null, onDone = () => {}, 
 
   const name = h('input', {
     type: 'text', maxlength: '40', value: cat ? cat.name : '', autocomplete: 'off', enterkeyhint: 'done',
-    placeholder: parent || cat ? 'Folder name' : 'Folder name, e.g. Academic/Biology', 'aria-label': 'Folder name',
+    placeholder: 'Folder name', 'aria-label': 'Folder name',
   });
 
   const swatches = h('div', { class: 'swatches folder-colors', role: 'radiogroup', 'aria-label': 'Underline color' });
