@@ -31,7 +31,9 @@ laptop. So:
   `index.html` + a `#view-<name>` container, switched by `view.tab` in `js/app.js`.
 - The calendar is a **perfect square card** (always 6 week rows) with space on
   all sides, "Month Year" **centered** between ‹ › arrows. There is no date
-  heading above the day view (the owner found it redundant).
+  heading above the day view (the owner found it redundant). Sundays are tinted red
+  and Saturdays blue (`--sun` / `--sat`, weekday letters + date numbers; the selected
+  day keeps the accent fill).
 - **No date selected → only the calendar is on screen**, exactly centered in the space
   below the small app icon / logo (`.brand`, 30px `icons/icon.svg`, rounded corners) that
   is **always at the top of the calendar screen**, in month and week mode (above today's
@@ -298,7 +300,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v44`; bump to `planner-v45`, …) and keep its `ASSETS` list in sync
+(currently `planner-v45`; bump to `planner-v46`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
