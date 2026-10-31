@@ -191,6 +191,8 @@ Playwright (`page.setContent` + `page.screenshot`).
 
 GitHub Pages serving the repo root (all paths are relative, so it works under
 `/APP-Design/`): repo Settings → Pages → Deploy from a branch → branch, `/ (root)`.
+`.nojekyll` makes Pages serve files as-is (no Jekyll build). Note: the repo is
+private, and free GitHub accounts only get Pages for public repos.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
 (currently `planner-v20`; bump to `planner-v21`, …) and keep its `ASSETS` list in sync
