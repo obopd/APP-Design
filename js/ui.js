@@ -112,3 +112,36 @@ export function selectButton(options, value) {
   paint();
   return el;
 }
+
+/**
+ * Date card (the field opens the iPhone date wheel). Resolves 'YYYY-MM-DD' or null.
+ */
+export function askDate({ title, message = '', value = '', min = '', ok = 'Move' }) {
+  return new Promise((resolve) => {
+    let layer;
+    const input = h('input', { type: 'date', class: 'ask-input ask-date', value, min: min || null });
+    const done = (answer) => { layer.close(); resolve(answer); };
+    layer = openLayer('ask', h('form', {
+      novalidate: true, class: 'ask-card', onsubmit: (e) => { e.preventDefault(); if (input.value) done(input.value); },
+    },
+    h('p', { class: 'ask-title display' }, title),
+    message ? h('p', { class: 'ask-message' }, message) : null,
+    input,
+    h('div', { class: 'ask-actions' },
+      h('button', { type: 'button', class: 'ask-btn', autofocus: true, onclick: () => done(null) }, 'Cancel'),
+      h('button', { type: 'submit', class: 'ask-btn primary' }, ok))),
+    { onBackdrop: () => done(null) });
+  });
+}
+
+/** Small message above the dock, with an optional action (e.g. Undo). */
+let toastTimer = null;
+export function snack(text, { action, onAction } = {}) {
+  document.querySelector('.snack')?.remove();
+  clearTimeout(toastTimer);
+  const el = h('div', { class: 'snack', role: 'status' },
+    h('span', {}, text),
+    action ? h('button', { type: 'button', class: 'snack-btn', onclick: () => { el.remove(); onAction(); } }, action) : null);
+  document.body.append(el);
+  toastTimer = setTimeout(() => { el.classList.add('leaving'); setTimeout(() => el.remove(), 250); }, 4500);
+}

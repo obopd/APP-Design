@@ -9,7 +9,8 @@ const KEY = 'planner.v1';
               repeat, until, done (one-off), doneOn: { 'YYYY-MM-DD': true } (routines),
               track: 'none' | 'count' | 'time',
               values: { 'YYYY-MM-DD': number }   (count, or seconds for time)
-              timer: { key, start: epoch ms } | null   (running stopwatch) }
+              timer: { key, start: epoch ms } | null   (running stopwatch)
+              skipOn: { 'YYYY-MM-DD': true }   (routine days moved away by "postpone") }
   event:    { id, title, date, allDay, start: 'HH:MM', end: 'HH:MM', repeat, until,
               alert: 'none' | '<minutes before>', important, notes }
   category: { id, name, parent: id | null, open, color: '#hex' | null }   — nestable to-do folders
@@ -125,7 +126,7 @@ export const eventsOn = (key) => state.events.filter((e) => occursOn(e, key)).so
 // Important first; done items sink to the bottom.
 export const todosOn = (key) =>
   state.todos
-    .filter((t) => occursOn(t, key))
+    .filter((t) => occursOn(t, key) && !t.skipOn?.[key])
     .sort((a, b) => isDone(a, key) - isDone(b, key) || b.important - a.important);
 
 /* ---------- Categories (folders) ---------- */
@@ -224,3 +225,34 @@ export function ddayTarget(dday, fromKey = todayKey()) {
 
 // Days until (positive), 0 on the day, negative once passed.
 export const ddayDiff = (dday, fromKey = todayKey()) => daysBetween(fromKey, ddayTarget(dday, fromKey));
+
+/* ---------- Postpone ---------- */
+
+// Move a to-do from fromKey to toKey. One-off to-dos just change date (recorded count/time
+// moves with them). For a routine only that day moves: the day is skipped and a one-off
+// copy is added on the new date. Returns an undo function.
+export function postponeTodo(todo, fromKey, toKey) {
+  if (isRoutine(todo)) {
+    todo.skipOn = { ...todo.skipOn, [fromKey]: true };
+    const copy = {
+      id: uid(), title: todo.title, date: toKey, important: !!todo.important, notes: todo.notes || '',
+      category: todo.category || null, repeat: 'none', until: '', track: todo.track || 'none',
+    };
+    state.todos.push(copy);
+    save();
+    return () => {
+      todo.skipOn = { ...todo.skipOn };
+      delete todo.skipOn[fromKey];
+      state.todos = state.todos.filter((t) => t !== copy);
+      save();
+    };
+  }
+  const prev = { date: todo.date, values: todo.values };
+  if (todo.values?.[fromKey] !== undefined) {
+    todo.values = { ...todo.values, [toKey]: todo.values[fromKey] };
+    delete todo.values[fromKey];
+  }
+  todo.date = toKey;
+  save();
+  return () => { todo.date = prev.date; todo.values = prev.values; save(); };
+}

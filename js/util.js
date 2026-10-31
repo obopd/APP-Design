@@ -25,6 +25,8 @@ export const ICONS = {
   right: '<path d="M9 5l7 7-7 7"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  calendar: '<rect x="4" y="5.5" width="16" height="14.5" rx="2.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/>',
   updown: '<path d="M8 9.5l4-4 4 4M8 14.5l4 4 4-4"/>',
   play: '<path d="M8 5.8v12.4l10-6.2z"/>',
   stop: '<rect x="6.5" y="6.5" width="11" height="11" rx="2"/>',

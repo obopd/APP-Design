@@ -47,7 +47,7 @@ const actions = {
     render();
   },
   create: (opts) => openEditor(opts),
-  edit: (kind, item) => openEditor({ kind, item }),
+  edit: (kind, item, occurrence) => openEditor({ kind, item, occurrence }),
   refresh: () => render(),
 };
 

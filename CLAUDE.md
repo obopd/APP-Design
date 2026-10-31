@@ -132,6 +132,12 @@ laptop. So:
   existing email returns a user with empty `identities` → treated as "already has an
   account". All forms use `novalidate` so the browser never shows its own validation
   pop-ups; the app validates and shows its own messages.
+- **Postpone a to-do** (`js/postpone.js`): swipe a to-do left to reveal **Tmrw** and
+  **Date** (date card from `askDate`), or use the editor's "Postpone" row (Tomorrow /
+  Pick date). A "Moved to …" snack with **Undo** appears (`snack` in ui.js). One-off
+  to-dos change `date` (recorded count/time moves with them); for a routine only that day
+  moves: `skipOn[day]` hides it there and a one-off copy is added on the new date.
+  Swiping sideways *on a to-do* = postpone; on empty list space = stretch columns.
 - **Tracking (opt-in per to-do)**: editor "Track" = Off | Count | Time. Only tracked
   to-dos show a number pill: Count → tap to enter a number; Time → tap to type
   minutes/h:mm, plus a ▶/■ stopwatch (stored as a start timestamp, so it keeps
@@ -165,7 +171,8 @@ js/day.js              Day view: to-do folders (mark = done, text = edit) + hour
 js/editor.js           Bottom sheet to add/edit a to-do or event (folder, repeat/until, alert)
 js/folders.js          Bottom sheet to create/edit a folder: name + underline color
 js/dday.js             D-Day tab (countdown list) + its add/edit sheet
-js/ui.js               App-styled dialogs/menus: ask, tell, askText, pick, selectButton (no system pop-ups)
+js/ui.js               App-styled dialogs/menus: ask, tell, askText, askDate, pick, selectButton, snack (no system pop-ups)
+js/postpone.js         Postpone a to-do to tomorrow / a picked date, with Undo
 js/haptics.js          Haptic tick on every button tap (iOS 18+ hidden-switch trick; Android vibrate)
 js/config.js           Supabase project URL + anon key (empty = no accounts)
 js/cloud.js            Supabase auth (sign up/in/out, reset) + whole-state cloud sync
@@ -279,7 +286,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v37`; bump to `planner-v38`, …) and keep its `ASSETS` list in sync
+(currently `planner-v38`; bump to `planner-v39`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

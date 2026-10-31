@@ -5,6 +5,7 @@ import {
   isTracked, valueOn, setValue, startTimer, stopTimer, routineStats,
 } from './store.js';
 import { askText } from './ui.js';
+import { postponeTomorrow, postponePick } from './postpone.js';
 
 const HOUR_PX = 48; // keep in sync with --hour in styles.css
 
@@ -64,18 +65,66 @@ export function tickTimers() {
   });
 }
 
+// Swipe a to-do left to reveal Postpone actions (tomorrow / pick a date).
+const ACTIONS_W = 112;
+let openRow = null; // only one row stays open at a time
+const closeRow = (row) => { if (row) { row.style.transform = ''; row.classList.remove('open'); } if (openRow === row) openRow = null; };
+document.addEventListener('pointerdown', (e) => { if (openRow && !e.target.closest('.todo.swipe-open')) closeRow(openRow); }, true);
+
+function makeSwipeable(li, row) {
+  let start = null;
+  let dragged = false;
+  row.addEventListener('pointerdown', (e) => {
+    start = { x: e.clientX, y: e.clientY, base: row.classList.contains('open') ? -ACTIONS_W : 0, id: e.pointerId };
+    dragged = false;
+  });
+  row.addEventListener('pointermove', (e) => {
+    if (!start || e.pointerId !== start.id) return;
+    const dx = e.clientX - start.x;
+    if (!dragged && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(e.clientY - start.y) * 1.3) {
+      dragged = true;
+      row.setPointerCapture(e.pointerId);
+      row.classList.add('dragging');
+      if (openRow && openRow !== row) closeRow(openRow);
+    }
+    if (dragged) row.style.transform = `translateX(${Math.min(0, Math.max(-ACTIONS_W - 24, start.base + dx))}px)`;
+  });
+  const end = (e) => {
+    if (!start || e.pointerId !== start.id) return;
+    const x = start.base + (e.clientX - start.x);
+    start = null;
+    row.classList.remove('dragging');
+    if (!dragged) return;
+    if (x < -ACTIONS_W / 2) { row.style.transform = `translateX(${-ACTIONS_W}px)`; row.classList.add('open'); li.classList.add('swipe-open'); openRow = row; }
+    else { closeRow(row); li.classList.remove('swipe-open'); }
+  };
+  row.addEventListener('pointerup', end);
+  row.addEventListener('pointercancel', end);
+  // A swipe shouldn't also count as a tap on the mark or the title.
+  row.addEventListener('click', (e) => { if (dragged) { e.stopPropagation(); e.preventDefault(); dragged = false; } }, true);
+}
+
 // The slim mark checks a to-do off; tapping the text opens it for editing.
 function todoItem(t, key, actions) {
   const done = isDone(t, key);
-  return h('li', { class: `todo${done ? ' done' : ''}${t.important ? ' imp' : ''}` },
+  const row = h('div', { class: 'todo-row' },
     h('button', {
       class: 'mark-btn', role: 'checkbox', 'aria-checked': String(done), 'aria-label': `Done: ${t.title}`,
       onclick: () => toggleDone(t, key),
     }, h('span', { class: 'dash' })),
-    h('button', { class: 'todo-title', onclick: () => actions.edit('todo', t) },
+    h('button', { class: 'todo-title', onclick: () => actions.edit('todo', t, key) },
       t.title,
       t.important ? h('span', { class: 'mark star', 'aria-hidden': 'true' }, '★') : null),
     isTracked(t) ? tracker(t, key) : null);
+  const li = h('li', { class: `todo${done ? ' done' : ''}${t.important ? ' imp' : ''}` },
+    h('div', { class: 'todo-actions' },
+      h('button', { class: 'todo-act', 'aria-label': `Postpone ${t.title} to tomorrow`, onclick: () => postponeTomorrow(t, key) },
+        icon(ICONS.arrow), h('span', {}, 'Tmrw')),
+      h('button', { class: 'todo-act', 'aria-label': `Postpone ${t.title} to a date`, onclick: () => { closeRow(row); postponePick(t, key); } },
+        icon(ICONS.calendar), h('span', {}, 'Date'))),
+    row);
+  makeSwipeable(li, row);
+  return li;
 }
 
 // One section's to-dos grouped into (nested) category folders. A folder only shows
@@ -267,7 +316,7 @@ function makeStretchable(columns, divider) {
   // Sideways swipe anywhere on the lists moves one step: schedule ⇄ split ⇄ to-do.
   let touch = null;
   columns.addEventListener('touchstart', (e) => {
-    if (e.target.closest('.divider')) return;
+    if (e.target.closest('.divider') || e.target.closest('.todo')) return; // swiping a to-do = postpone
     touch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   }, { passive: true });
   columns.addEventListener('touchend', (e) => {

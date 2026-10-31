@@ -207,7 +207,38 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 
 /* To-dos: a slim rounded mark (gray → solid when done) toggles; the text opens the editor. */
 .todos { list-style: none; margin: 0; padding: 0 6px 0 8px; }
-.todo { display: flex; align-items: flex-start; }
+.todo { position: relative; overflow: hidden; border-radius: 10px; }
+/* The row slides left (swipe) to reveal the Postpone actions underneath. */
+.todo-row {
+  position: relative; z-index: 1; display: flex; align-items: flex-start;
+  background: var(--row-bg, var(--bg)); touch-action: pan-y;
+  transition: transform .3s var(--ease);
+}
+.todo-row.dragging { transition: none; }
+.routines { --row-bg: var(--soft); }
+.todo-actions { position: absolute; inset: 0 0 0 auto; width: 112px; display: flex; gap: 4px; padding: 3px 2px 3px 6px; }
+.todo-act {
+  flex: 1; border-radius: 9px; background: var(--fg); color: var(--bg);
+  display: grid; place-items: center; align-content: center; gap: 1px; font-size: 10.5px; font-weight: 600;
+}
+.todo-act + .todo-act { background: color-mix(in srgb, var(--fg) 70%, var(--bg)); }
+.todo-act svg { width: 16px; height: 16px; stroke-width: 2; }
+.postpone-pills { display: flex; gap: 6px; }
+.postpone-pills .pill { padding: 6px 10px; font-size: 13px; color: var(--fg); }
+.postpone-row { border-top: 1px solid var(--line); margin-top: -12px; }
+
+/* Bottom message with Undo (js/ui.js snack) */
+.snack {
+  position: fixed; z-index: 30; left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--tabbar) + 14px); max-width: calc(100vw - 32px);
+  display: flex; align-items: center; gap: 14px; padding: 10px 12px 10px 16px; border-radius: 14px;
+  background: var(--fg); color: var(--bg); font-size: 13.5px; box-shadow: 0 10px 30px rgba(0,0,0,.2);
+  animation: snack-in .3s var(--ease);
+}
+.snack.leaving { opacity: 0; transition: opacity .25s; }
+.snack-btn { font-weight: 700; font-size: 13.5px; color: var(--bg); padding: 2px 4px; }
+@keyframes snack-in { from { opacity: 0; transform: translate(-50%, 10px); } }
+.ask-date { min-height: 44px; }
 .mark-btn { flex-shrink: 0; width: 30px; height: 36px; margin-left: -8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 2px; }
 .dash { width: 3.5px; height: 13px; /* a bit taller than the 14px text's caps, easy to see */ border-radius: 2px; background: var(--muted); opacity: .55; transition: background .2s, opacity .2s, width .2s; }
 .todo.done .dash { background: var(--accent); opacity: 1; }

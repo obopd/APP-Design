@@ -3,6 +3,7 @@ import { h, icon, ICONS, todayKey, toMinutes, fromMinutes, pad } from './util.js
 import { state, save, uid, REPEATS, TRACKS, categoryTree } from './store.js';
 import { openFolderSheet } from './folders.js';
 import { ask, selectButton } from './ui.js';
+import { postponeTomorrow, postponePick } from './postpone.js';
 
 const dialog = document.getElementById('editor');
 
@@ -32,7 +33,7 @@ const select = (options, value) => selectButton(options, value);
  * openEditor({ kind: 'todo'|'event', item?, date?, hour?, repeat? })
  * With `item` it edits in place; otherwise it creates a new one.
  */
-export function openEditor({ kind, item = null, date = todayKey(), hour = null, repeat: presetRepeat = 'none' }) {
+export function openEditor({ kind, item = null, date = todayKey(), hour = null, repeat: presetRepeat = 'none', occurrence = null }) {
   const isNew = !item;
   let type = kind;
   const startHour = hour ?? Math.min(new Date().getHours() + 1, 23);
@@ -141,6 +142,15 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null, 
     close();
   };
 
+  // Existing to-dos: move this day's to-do to tomorrow or another date (a div, not a
+  // <label>, so tapping the word doesn't trigger the first button).
+  const fromKey = occurrence || draft.date;
+  const postponeRow = !isNew && kind === 'todo' ? h('div', { class: 'field postpone-row' },
+    h('span', {}, 'Postpone'),
+    h('span', { class: 'postpone-pills' },
+      h('button', { type: 'button', class: 'pill', onclick: () => { close(); postponeTomorrow(item, fromKey); } }, 'Tomorrow'),
+      h('button', { type: 'button', class: 'pill', onclick: () => { close(); postponePick(item, fromKey); } }, 'Pick date'))) : null;
+
   const form = h('form', { novalidate: true, onsubmit: submit },
     h('div', { class: 'grabber' }),
     h('div', { class: 'sheet-head' },
@@ -153,6 +163,7 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null, 
       h('button', { type: 'submit', class: 'icon-btn ok', 'aria-label': 'Save' }, icon(ICONS.check))),
     h('div', { class: 'title-row' }, title, star),
     h('div', { class: 'fields' }, field('Date', dateIn), ...todoRows, ...eventRows, field('Repeat', repeat), untilRow),
+    postponeRow,
     notes,
   );
 
