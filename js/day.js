@@ -119,6 +119,66 @@ function scheduleColumn(key, actions) {
   );
 }
 
+/* ---------- Stretchable split ----------
+   'split' shows both columns; 'todo' / 'schedule' stretch one column to full width.
+   Drag the divider (or swipe sideways) to stretch a side, and the same way back. */
+const SPLIT = 1 / 2.25; // default to-do share (to-do 1 : schedule 1.25)
+let layout = 'split';
+export const currentLayout = () => layout;
+
+const shareFor = (mode) => (mode === 'todo' ? 1 : mode === 'schedule' ? 0 : SPLIT);
+
+function setShare(columns, share) {
+  columns.style.gridTemplateColumns = `minmax(0, ${share}fr) var(--divider) minmax(0, ${1 - share}fr)`;
+  columns.dataset.layout = share >= 1 ? 'todo' : share <= 0 ? 'schedule' : 'split';
+}
+
+function applyLayout(columns, mode) {
+  layout = mode;
+  setShare(columns, shareFor(mode));
+}
+
+function makeStretchable(columns, divider) {
+  let drag = null;
+  divider.addEventListener('pointerdown', (e) => {
+    const box = columns.getBoundingClientRect();
+    drag = { left: box.left, width: box.width };
+    divider.setPointerCapture(e.pointerId);
+    columns.classList.add('dragging');
+  });
+  divider.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    setShare(columns, Math.min(1, Math.max(0, (e.clientX - drag.left) / drag.width)));
+  });
+  const end = (e) => {
+    if (!drag) return;
+    const share = Math.min(1, Math.max(0, (e.clientX - drag.left) / drag.width));
+    drag = null;
+    columns.classList.remove('dragging');
+    // Snap: near an edge stretches that side, otherwise back to the split.
+    applyLayout(columns, share > 0.72 ? 'todo' : share < 0.2 ? 'schedule' : 'split');
+  };
+  divider.addEventListener('pointerup', end);
+  divider.addEventListener('pointercancel', end);
+
+  // Sideways swipe anywhere on the lists moves one step: schedule ⇄ split ⇄ to-do.
+  let touch = null;
+  columns.addEventListener('touchstart', (e) => {
+    if (e.target.closest('.divider')) return;
+    touch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, { passive: true });
+  columns.addEventListener('touchend', (e) => {
+    if (!touch) return;
+    const dx = e.changedTouches[0].clientX - touch.x;
+    const dy = e.changedTouches[0].clientY - touch.y;
+    touch = null;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    const order = ['schedule', 'split', 'todo'];
+    const i = order.indexOf(layout) + (dx > 0 ? 1 : -1);
+    if (i >= 0 && i < order.length) applyLayout(columns, order[i]);
+  });
+}
+
 export function renderDay(root, key, actions) {
   // Keep scroll positions when re-rendering the same day (e.g. after ticking a to-do).
   const sameDay = root.dataset.date === key;
@@ -126,7 +186,11 @@ export function renderDay(root, key, actions) {
   if (sameDay) root.querySelectorAll('[data-scroll]').forEach((el) => { scrolls[el.dataset.scroll] = el.scrollTop; });
 
   root.dataset.date = key;
-  root.replaceChildren(h('div', { class: 'columns' }, todoColumn(key, actions), scheduleColumn(key, actions)));
+  const divider = h('div', { class: 'divider', role: 'separator', 'aria-label': 'Drag to stretch to-do or schedule' }, h('span', { class: 'grip' }));
+  const columns = h('div', { class: 'columns' }, todoColumn(key, actions), divider, scheduleColumn(key, actions));
+  setShare(columns, shareFor(layout));
+  makeStretchable(columns, divider);
+  root.replaceChildren(columns);
 
   const tl = root.querySelector('[data-scroll="timeline"]');
   if (sameDay) {

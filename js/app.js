@@ -1,7 +1,7 @@
 import { addDays, dateKey, parseKey, todayKey, h } from './util.js';
 import { onChange } from './store.js';
 import { renderCalendar } from './calendar.js';
-import { renderDay } from './day.js';
+import { renderDay, currentLayout } from './day.js';
 import { openEditor } from './editor.js';
 import { renderSettings, applyTheme } from './settings.js';
 import { refreshReminders, setToast } from './reminders.js';
@@ -39,7 +39,11 @@ const actions = {
     }
     render();
   },
-  add: () => openEditor({ kind: 'todo', date: view.selected || todayKey() }),
+  // With the schedule stretched full width, + starts on "Event".
+  add: () => openEditor({
+    kind: view.selected && currentLayout() === 'schedule' ? 'event' : 'todo',
+    date: view.selected || todayKey(),
+  }),
   create: (opts) => openEditor(opts),
   edit: (kind, item) => openEditor({ kind, item }),
 };

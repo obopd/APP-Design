@@ -128,19 +128,35 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .week-mode .panel { flex-grow: 1; opacity: 1; }
 
 
-.columns { padding-top: 16px; flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1.25fr; }
-.col { display: flex; flex-direction: column; min-height: 0; }
-.col + .col { border-left: 1px solid var(--line); }
+.columns {
+  --divider: 16px;
+  padding-top: 16px; flex: 1; min-height: 0; display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--divider) minmax(0, 1.25fr);
+  transition: grid-template-columns .35s cubic-bezier(.2,.8,.2,1);
+}
+.columns.dragging { transition: none; }
+.col { display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
+
+/* Divider between to-do and schedule: a hairline with a grip; drag to stretch a side. */
+.divider { position: relative; touch-action: none; cursor: col-resize; }
+.divider::before { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: var(--line); }
+.grip {
+  position: absolute; left: 50%; top: 38%; transform: translateX(-50%);
+  width: 4px; height: 30px; border-radius: 2px;
+  background: color-mix(in srgb, var(--fg) 25%, var(--bg));
+  transition: height .2s, background .2s;
+}
+.divider:active .grip, .columns.dragging .grip { height: 40px; background: var(--fg); }
 .col-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 24px; }
 
 /* To-dos: a slim rounded mark (gray → solid when done) toggles; the text opens the editor. */
 .todos { list-style: none; margin: 0; padding: 0 6px 0 8px; }
 .todo { display: flex; align-items: flex-start; }
-.mark-btn { flex-shrink: 0; width: 22px; height: 34px; display: grid; place-items: center; }
-.dash { width: 2.5px; height: 15px; border-radius: 2px; background: var(--muted); opacity: .55; transition: background .2s, opacity .2s, width .2s; }
+.mark-btn { flex-shrink: 0; width: 18px; height: 34px; display: flex; align-items: center; justify-content: flex-end; }
+.dash { width: 2.5px; height: 10px; /* ≈ cap height of the 14px text */ border-radius: 2px; background: var(--muted); opacity: .55; transition: background .2s, opacity .2s, width .2s; }
 .todo.done .dash { background: var(--accent); opacity: 1; }
 .todo-title {
-  flex: 1; min-width: 0; text-align: left; padding: 8px 2px 8px 2px;
+  flex: 1; min-width: 0; text-align: left; padding: 8px 2px 8px 6px;
   font-size: 14px; line-height: 18px; overflow-wrap: anywhere;
 }
 .todo.done .todo-title { color: var(--muted); text-decoration: line-through; }

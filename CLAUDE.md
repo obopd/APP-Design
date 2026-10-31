@@ -51,7 +51,13 @@ laptop. So:
 - **Done mark**: in front of each to-do is a thin *vertical* line with rounded
   ends (`.dash`, not a circle) — gray when open, solid black/accent when done. Tapping it toggles done;
   done to-dos get a plain `line-through` and gray text (the owner rejected the
-  hand-drawn pencil stroke). Tapping the text opens the editor.
+  hand-drawn pencil stroke). Tapping the text opens the editor. The mark is
+  letter (cap) height and sits close to the text.
+- **Stretchable columns**: a divider with a grip sits between to-do and schedule.
+  Dragging it to an edge stretches one side to full width (a to-do or schedule
+  "tab"); dragging back (or a sideways swipe on the lists) returns to the split.
+  Layout state lives in `js/day.js` (`layout`: split | todo | schedule) and is kept
+  while changing days. With the schedule full width, + starts on "Event".
 - **Routines**: to-dos and events can repeat daily, weekly, every 2 weeks,
   monthly or yearly, with an optional "Until" date. Routine to-dos are checked
   off per day (`doneOn`). Routines only get a calendar dot when starred.
@@ -77,7 +83,7 @@ js/app.js              Entry point: view state (tab, month, selected day), actio
 js/util.js             h() DOM helper, inline SVG icons, date helpers (local 'YYYY-MM-DD' keys)
 js/store.js            State + localStorage, change listeners, routines (occursOn, isDone), queries, folder helpers
 js/calendar.js         Square month card (6 rows); rows collapse to the selected week (animated)
-js/day.js              Day view: to-do folders (mark = done, text = edit) + hourly timeline
+js/day.js              Day view: to-do folders (mark = done, text = edit) + hourly timeline, stretchable split
 js/editor.js           Bottom sheet to add/edit a to-do or event (folder, repeat/until, alert)
 js/folders.js          Bottom sheet to create/edit a folder: name + underline color
 js/settings.js         Settings tab: theme, accent color, folders, alerts, backup export/restore
@@ -153,7 +159,7 @@ GitHub Pages serving the repo root (all paths are relative, so it works under
 `/APP-Design/`): repo Settings → Pages → Deploy from a branch → branch, `/ (root)`.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v6`; bump to `planner-v7`, …) and keep its `ASSETS` list in sync
+(currently `planner-v7`; bump to `planner-v8`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
