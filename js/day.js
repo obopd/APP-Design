@@ -4,6 +4,7 @@ import {
   state, save, eventsOn, todosOn, isDone, isRoutine, toggleDone, childCategories,
   isTracked, valueOn, setValue, startTimer, stopTimer, routineStats,
 } from './store.js';
+import { askText } from './ui.js';
 
 const HOUR_PX = 48; // keep in sync with --hour in styles.css
 
@@ -23,8 +24,8 @@ function tracker(t, key) {
   if (t.track === 'count') {
     return h('span', { class: 'tracker' }, h('button', {
       class: `track-pill${value ? ' has' : ''}`, 'aria-label': `Count for ${t.title}: ${value || 'none'}`,
-      onclick: () => {
-        const input = prompt(`${t.title} — count`, value ? String(value) : '');
+      onclick: async () => {
+        const input = await askText({ title: t.title, message: 'Count', value: value ? String(value) : '', inputmode: 'decimal' });
         if (input === null) return;
         const n = Number(input.trim() || 0);
         if (Number.isFinite(n) && n >= 0) setValue(t, key, n);
@@ -36,10 +37,10 @@ function tracker(t, key) {
   const pill = h('button', {
     class: `track-pill${value || running ? ' has' : ''}${running ? ' running' : ''}`,
     'aria-label': `Time for ${t.title}: ${value ? formatDuration(value) : 'none'}`,
-    onclick: () => {
+    onclick: async () => {
       if (running) return;
       const mins = value ? `${Math.floor(value / 3600)}:${String(Math.round((value % 3600) / 60)).padStart(2, '0')}` : '';
-      const input = prompt(`${t.title} — time spent\n(minutes, or h:mm)`, mins);
+      const input = await askText({ title: t.title, message: 'Time spent: minutes, or h:mm', value: mins, placeholder: 'e.g. 45 or 1:30', inputmode: 'numeric' });
       if (input === null) return;
       const secs = parseMinutes(input);
       if (secs !== null) setValue(t, key, secs);

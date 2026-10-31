@@ -89,9 +89,12 @@ function render() {
   const ddaysToday = renderTodayDdays(topSlot, () => { view.tab = 'dday'; render(); });
   calendarView.classList.toggle('has-dday', ddaysToday > 0);
   // Month mode shows only the calendar, centered; the panel's old content just fades out.
+  // When opening a day, build its lists first (still hidden, slightly lowered), then switch
+  // to week mode on the next frame so they fade and rise in together with the calendar fold.
+  if (view.selected) renderDay(panelEl, view.selected, actions);
+  if (view.selected && !calendarView.classList.contains('week-mode')) void panelEl.offsetHeight;
   calendarView.classList.toggle('week-mode', !!view.selected);
   calendarView.classList.toggle('month-mode', !view.selected);
-  if (view.selected) renderDay(panelEl, view.selected, actions);
   prevView = { ...view };
 }
 

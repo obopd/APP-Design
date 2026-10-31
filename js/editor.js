@@ -2,6 +2,7 @@
 import { h, icon, ICONS, todayKey, toMinutes, fromMinutes, pad } from './util.js';
 import { state, save, uid, REPEATS, TRACKS, categoryTree } from './store.js';
 import { openFolderSheet } from './folders.js';
+import { ask, selectButton } from './ui.js';
 
 const dialog = document.getElementById('editor');
 
@@ -25,11 +26,7 @@ function segmented(options, value, onPick) {
 }
 
 const field = (label, control) => h('label', { class: 'field' }, h('span', {}, label), control);
-const select = (options, value) => {
-  const el = h('select', {}, options.map(([v, l]) => h('option', { value: v }, l)));
-  el.value = value;
-  return el;
-};
+const select = (options, value) => selectButton(options, value);
 
 /**
  * openEditor({ kind: 'todo'|'event', item?, date?, hour?, repeat? })
@@ -64,13 +61,13 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null, 
   const track = select(TRACKS, draft.track || 'none');
 
   // Folder picker; "New…" opens the folder sheet (name + underline color).
-  const category = h('select', {});
+  const category = selectButton([], '');
   const fillCategories = (selected) => {
-    category.replaceChildren(
-      h('option', { value: '' }, 'None'),
-      ...categoryTree().map(({ cat, depth }) => h('option', { value: cat.id }, `${'\u2002'.repeat(depth * 2)}${cat.name}`)),
-      h('option', { value: '__new' }, 'New…'));
-    category.value = selected || '';
+    category.setOptions([
+      ['', 'None'],
+      ...categoryTree().map(({ cat, depth }) => [cat.id, `${'\u2002'.repeat(depth * 2)}${cat.name}`]),
+      ['__new', 'New…'],
+    ], selected || '');
   };
   fillCategories(draft.category);
   let lastCategory = category.value;
@@ -131,8 +128,13 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null, 
     close();
   };
 
-  const remove = () => {
-    if (!confirm(item.repeat && item.repeat !== 'none' ? `Delete routine “${item.title}” (every day it repeats)?` : `Delete “${item.title}”?`)) return;
+  const remove = async () => {
+    const routine = item.repeat && item.repeat !== 'none';
+    if (!await ask({
+      title: `Delete “${item.title}”?`,
+      message: routine ? 'This removes the routine from every day it repeats.' : '',
+      ok: 'Delete', danger: true,
+    })) return;
     const list = kind === 'todo' ? 'todos' : 'events';
     state[list] = state[list].filter((x) => x !== item);
     save();

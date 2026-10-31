@@ -1,6 +1,7 @@
 // D-Day tab: countdowns to birthdays, graduation… ("D-12", "D-Day", "D+30").
 import { h, icon, ICONS, parseKey, todayKey } from './util.js';
 import { state, save, uid, ddayTarget, ddayDiff } from './store.js';
+import { ask } from './ui.js';
 
 const dialog = document.getElementById('dday-sheet');
 
@@ -108,8 +109,8 @@ export function openDdaySheet(dday = null) {
     close();
   };
 
-  const remove = () => {
-    if (!confirm(`Delete “${dday.title}”?`)) return;
+  const remove = async () => {
+    if (!await ask({ title: `Delete “${dday.title}”?`, ok: 'Delete', danger: true })) return;
     state.ddays = state.ddays.filter((x) => x !== dday);
     save();
     close();

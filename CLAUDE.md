@@ -38,7 +38,14 @@ laptop. So:
   to-do list on the left, hourly schedule timeline on the right. Tapping the
   selected date again, the month name, or swiping down returns to the month.
 - Design: **minimalist** — modern, clean, intuitive, small sizes, as few words as
-  possible (prefer icons/symbols over labels). **Default colors are black & white**;
+  possible (prefer icons/symbols over labels). **Never use iPhone system pop-ups**:
+  no `confirm` / `alert` / `prompt` and no native `<select>` — use `ask` / `tell` /
+  `askText` / `pick` / `selectButton` from `js/ui.js` (the app's own cards and menus;
+  red button for deletes).
+- Month ⇄ day transition must feel smooth: everything moves together with one
+  shared duration/easing (`--dur`, `--ease` in `styles.css`); the day's lists fade and
+  rise in slightly behind the calendar fold (app.js renders them before switching to
+  week mode). **Default colors are black & white**;
   the user can change the accent color and light/dark mode in Settings.
 - Typography: headings, dates and numbers use **Fraunces** (semi-bold, upright —
   **no italics**, the owner rejected them) via the `.display` class / `--display`
@@ -146,6 +153,7 @@ js/day.js              Day view: to-do folders (mark = done, text = edit) + hour
 js/editor.js           Bottom sheet to add/edit a to-do or event (folder, repeat/until, alert)
 js/folders.js          Bottom sheet to create/edit a folder: name + underline color
 js/dday.js             D-Day tab (countdown list) + its add/edit sheet
+js/ui.js               App-styled dialogs/menus: ask, tell, askText, pick, selectButton (no system pop-ups)
 js/haptics.js          Haptic tick on every button tap (iOS 18+ hidden-switch trick; Android vibrate)
 js/config.js           Supabase project URL + anon key (empty = no accounts)
 js/cloud.js            Supabase auth (sign up/in/out, reset) + whole-state cloud sync
@@ -248,7 +256,7 @@ and put the Project URL + anon (publishable) key in `js/config.js` (done: projec
 responses are never cached.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v27`; bump to `planner-v28`, …) and keep its `ASSETS` list in sync
+(currently `planner-v28`; bump to `planner-v29`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

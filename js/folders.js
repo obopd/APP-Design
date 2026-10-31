@@ -1,6 +1,7 @@
 // Small bottom sheet to create or edit a to-do folder: name + underline color.
 import { h, icon, ICONS } from './util.js';
 import { state, save, ensureCategoryPath, deleteCategory } from './store.js';
+import { ask } from './ui.js';
 
 const dialog = document.getElementById('folder-sheet');
 
@@ -63,8 +64,8 @@ export function openFolderSheet({ cat = null, parent = null, onDone = () => {}, 
     onDone(id);
   };
 
-  const remove = () => {
-    if (!confirm(`Delete folder “${cat.name}”? Its to-dos move up a level.`)) return;
+  const remove = async () => {
+    if (!await ask({ title: `Delete folder “${cat.name}”?`, message: 'Its to-dos move up a level.', ok: 'Delete', danger: true })) return;
     finished = true;
     close();
     deleteCategory(cat.id);

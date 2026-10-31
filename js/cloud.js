@@ -8,6 +8,7 @@
 // compare it with the local and remote stamps.
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 import { state, onChange, replaceAll, hasContent, clearData } from './store.js';
+import { ask } from './ui.js';
 
 const AUTH_KEY = 'planner.auth';
 const TABLE = 'planner_data';
@@ -218,7 +219,11 @@ async function afterSignIn() {
       applyRemote(remote.data);
     } else if (!hasContent(remote.data)) {
       await pushLocal();
-    } else if (confirm('Your account already has saved data.\n\nOK = use the account’s data on this phone\nCancel = keep this phone’s data and save it to the account')) {
+    } else if (await ask({
+      title: 'Which planner to keep?',
+      message: 'Your account already has saved data, and so does this phone.',
+      ok: 'Use account’s', cancel: 'Keep this phone’s',
+    })) {
       applyRemote(remote.data);
     } else {
       await pushLocal();

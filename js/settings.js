@@ -2,6 +2,7 @@
 import { h, icon, ICONS } from './util.js';
 import { state, save, replaceAll, categoryTree, deleteCategory } from './store.js';
 import { openFolderSheet } from './folders.js';
+import { ask, tell } from './ui.js';
 import { isConfigured, currentUser, syncStatus, syncNow, signOut, hasUnsyncedChanges } from './cloud.js';
 import { notificationsSupported, requestNotifications } from './reminders.js';
 
@@ -47,11 +48,11 @@ function importBackup() {
   input.addEventListener('change', async () => {
     try {
       const data = JSON.parse(await input.files[0].text());
-      if (!confirm('Replace all data with this backup?')) return;
+      if (!await ask({ title: 'Restore this backup?', message: 'It replaces everything currently in your planner.', ok: 'Restore', danger: true })) return;
       replaceAll(data);
       applyTheme();
     } catch {
-      alert('Not a Planner backup.');
+      tell('That file isn’t a Planner backup.');
     }
   });
   input.click();
@@ -70,10 +71,18 @@ function syncLabel() {
 // Sign out: save to the account first; the planner is then cleared from this phone.
 async function confirmSignOut() {
   await syncNow();
-  const msg = hasUnsyncedChanges()
-    ? 'Some changes haven’t reached your account yet (no connection). If you sign out now they’ll be lost.\n\nSign out anyway?'
-    : 'Sign out? Your planner is saved in your account and will be removed from this phone until you sign in again.';
-  if (confirm(msg)) await signOut();
+  const ok = hasUnsyncedChanges()
+    ? await ask({
+      title: 'Sign out anyway?',
+      message: 'Some changes haven’t reached your account yet (no connection). They’ll be lost if you sign out now.',
+      ok: 'Sign out', danger: true,
+    })
+    : await ask({
+      title: 'Sign out?',
+      message: 'Your planner is saved in your account and leaves this phone until you sign in again.',
+      ok: 'Sign out',
+    });
+  if (ok) await signOut();
 }
 
 // Account: email/password login (required when accounts are set up) that backs up and syncs.
@@ -96,7 +105,9 @@ function foldersSection() {
     h('button', { class: 'icon-btn', 'aria-label': `Add folder inside ${cat.name}`, onclick: () => openFolderSheet({ parent: cat.id }) }, icon(ICONS.plus)),
     h('button', {
       class: 'icon-btn', 'aria-label': `Delete ${cat.name}`,
-      onclick: () => { if (confirm(`Delete folder “${cat.name}”? Its to-dos move up a level.`)) deleteCategory(cat.id); },
+      onclick: async () => {
+        if (await ask({ title: `Delete folder “${cat.name}”?`, message: 'Its to-dos move up a level.', ok: 'Delete', danger: true })) deleteCategory(cat.id);
+      },
     }, icon(ICONS.trash))));
 
   return h('div', {},
