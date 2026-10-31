@@ -228,12 +228,12 @@ built-in email sender is heavily rate-limited, so the owner may turn off
 Authentication → Email → "Confirm email" (or add custom SMTP). Free projects pause
 after ~1 week of no activity; sync then fails until restored in the dashboard. Run `supabase/setup.sql` in its SQL editor,
 set Authentication → URL Configuration → Site URL / Redirect URLs to the Pages URL,
-and put the Project URL + anon (publishable) key in `js/config.js`. Never commit the
-service_role/secret key. The service worker only caches same-origin GETs, so API
+and put the Project URL + anon (publishable) key in `js/config.js` (done: project
+`rkpsjkssmfjuavdhayie`, table + RLS verified). Never commit the service_role/secret key. The service worker only caches same-origin GETs, so API
 responses are never cached.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v24`; bump to `planner-v25`, …) and keep its `ASSETS` list in sync
+(currently `planner-v25`; bump to `planner-v26`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
