@@ -7,6 +7,8 @@ import { renderSettings, applyTheme } from './settings.js';
 import { renderDdays, openDdaySheet, renderTodayDdays } from './dday.js';
 import { refreshReminders, setToast } from './reminders.js';
 import './haptics.js';
+import { onCloudChange, syncNow, handleAuthRedirect } from './cloud.js';
+import { openAccountSheet } from './account.js';
 
 const calendarView = document.getElementById('view-calendar');
 const calendarEl = document.getElementById('calendar');
@@ -119,3 +121,10 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 applyTheme();
 render();
 refreshReminders();
+
+// Account: keep Settings' sync status fresh, handle links from Supabase emails, sync on open.
+onCloudChange(() => { if (view.tab === 'settings') render(); });
+handleAuthRedirect()
+  .then((type) => { if (type === 'recovery') { view.tab = 'settings'; render(); openAccountSheet('new-password'); } })
+  .catch(() => {})
+  .finally(() => syncNow());

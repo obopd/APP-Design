@@ -16,7 +16,8 @@ laptop. So:
 - Anything the owner must do by hand must be doable in a mobile browser, and
   explained step by step in plain language.
 - The owner describes the design; build what they ask for, and check with
-  them before inventing large features. Don't add sharing/multi-user features.
+  them before inventing large features. Don't add sharing/multi-user features
+  (accounts exist only so one person can back up/sync their own data).
 
 ## Product requirements (from the owner)
 
@@ -84,6 +85,20 @@ laptop. So:
   on by default). iOS Safari has no vibration API, so `js/haptics.js` clicks the label
   of a hidden `<input type="checkbox" switch>` (iOS 18+ plays a system haptic); Android
   uses `navigator.vibrate`. No sound. Must be called inside the user's tap.
+- **Account (optional) — email + password login with cloud backup/sync** via
+  Supabase (`js/cloud.js`, sheet in `js/account.js`, Settings → Account). The app
+  stays fully usable signed out; data is always local-first in localStorage.
+  Signed in, the whole state is stored as one JSON row per user (`planner_data`,
+  RLS so users only reach their own row; schema in `supabase/setup.sql`) and synced
+  last-write-wins using `state.meta.updatedAt` vs the session's `lastSyncedAt`:
+  pushes ~1.5s after local edits, pulls on open / foreground / `online`. First sign-in
+  with data on both sides asks which to keep. Sign out keeps the phone's data.
+  Supabase REST is called directly with `fetch` (no SDK); requests time out after
+  12s so a hung request can't block later syncs. Passwords are never stored by the
+  app (Supabase Auth); the session tokens live in localStorage `planner.auth`.
+  Email links (confirm / reset password) return with `#access_token…` handled by
+  `handleAuthRedirect()`. `js/config.js` holds the project URL + anon/publishable key
+  (public by design); empty = accounts hidden ("Not set up yet").
 - **Tracking (opt-in per to-do)**: editor "Track" = Off | Count | Time. Only tracked
   to-dos show a number pill: Count → tap to enter a number; Time → tap to type
   minutes/h:mm, plus a ▶/■ stopwatch (stored as a start timestamp, so it keeps
@@ -118,6 +133,10 @@ js/editor.js           Bottom sheet to add/edit a to-do or event (folder, repeat
 js/folders.js          Bottom sheet to create/edit a folder: name + underline color
 js/dday.js             D-Day tab (countdown list) + its add/edit sheet
 js/haptics.js          Haptic tick on every button tap (iOS 18+ hidden-switch trick; Android vibrate)
+js/config.js           Supabase project URL + anon key (empty = no accounts)
+js/cloud.js            Supabase auth (sign up/in/out, reset) + whole-state cloud sync
+js/account.js          Sign in / create account / new password sheet
+supabase/setup.sql     Table + row-level-security policies to run once in Supabase
 js/settings.js         Settings tab: theme, accent color, folders, alerts, backup export/restore
 js/reminders.js        Alert timers, notifications, in-app toast, app icon badge
 icons/                 icon.svg (source) + 180/192/512 PNGs rendered from it
@@ -138,6 +157,7 @@ Stored in `localStorage` under `planner.v1`:
   //             timer: { key: dateKey, start: epochMs } | null
   categories: [{ id, name, parent: id | null, open, color: css color | null }],
   ddays: [{ id, title, date, yearly }],
+  meta: { updatedAt: epochMs },   // last local change (save() stamps it; cloud sync compares it)
   settings: { haptics: bool, theme: 'auto' | 'light' | 'dark', accent: 'mono' | 'blue' | 'red' | 'green' | 'orange' | 'purple' }
 }
 // repeat: 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'; until: '' = forever
@@ -151,6 +171,7 @@ Stored in `localStorage` under `planner.v1`:
 - All-day alerts fire at 9:00 AM minus the alert offset.
 - Changing the shape: bump the key and migrate old data in `load()`. Never drop user data.
 - Mutate `state`, then call `save()`; `save()` notifies listeners, and `app.js` re-renders.
+  Only cloud.js applies remote data, with `save({ touch: false })` / `replaceAll(data, { touch: false })`.
 
 ## Conventions
 
@@ -195,8 +216,14 @@ GitHub Pages serving the repo root (all paths are relative, so it works under
 `.nojekyll` makes Pages serve files as-is (no Jekyll build). Note: the repo is
 private, and free GitHub accounts only get Pages for public repos.
 
+Accounts: Supabase project (free tier). Run `supabase/setup.sql` in its SQL editor,
+set Authentication → URL Configuration → Site URL / Redirect URLs to the Pages URL,
+and put the Project URL + anon (publishable) key in `js/config.js`. Never commit the
+service_role/secret key. The service worker only caches same-origin GETs, so API
+responses are never cached.
+
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v21`; bump to `planner-v22`, …) and keep its `ASSETS` list in sync
+(currently `planner-v22`; bump to `planner-v23`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

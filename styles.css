@@ -390,5 +390,17 @@ textarea.notes {
 .pill { font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; background: var(--soft); }
 .status { color: var(--muted); font-size: 13px; }
 
+/* Account */
+.account-sheet .title-row input { font-family: inherit; font-size: 17px; font-weight: 500; padding: 10px 0; }
+.account-msg { margin: 0; font-size: 13px; color: var(--muted); min-height: 1em; }
+.account-msg.error { color: #e11d48; }
+.account-msg.ok { color: var(--fg); }
+.account-note { margin: 0; }
+.account-sheet .link-btn { justify-self: start; padding: 4px 0; font-size: 13px; color: var(--muted); font-weight: 500; }
+.account-hint { margin: -8px 0 0; }
+.account-email { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.sync-line { font-size: 12px; color: var(--muted); padding: 2px 0; text-align: left; }
+.sync-line.error { color: #e11d48; }
+
 /* Hidden switch used only to trigger iOS haptics (see js/haptics.js). */
 .haptic-switch { position: fixed; left: -9999px; top: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }

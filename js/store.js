@@ -1,4 +1,5 @@
-// All app data lives in localStorage on the device; there is no server.
+// App data lives in localStorage on the device. When signed in, js/cloud.js also
+// backs the whole state up to the user's Supabase account and syncs it.
 import { parseKey, daysBetween, todayKey } from './util.js';
 
 const KEY = 'planner.v1';
@@ -15,6 +16,7 @@ const KEY = 'planner.v1';
   repeat:   'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'
   until:    '' (forever) or last 'YYYY-MM-DD' a routine occurs
   dday:     { id, title, date: 'YYYY-MM-DD', yearly }   — countdowns (birthdays, graduation…)
+  meta:     { updatedAt: epoch ms }   — last local change, used by cloud sync
 */
 const DEFAULTS = { todos: [], events: [], categories: [], ddays: [], settings: { theme: 'auto', accent: 'mono', haptics: true } };
 
@@ -40,20 +42,26 @@ function load() {
   return structuredClone(DEFAULTS);
 }
 
-export function save() {
+// touch: stamp this as a local change (false when applying data that came from the cloud).
+export function save({ touch = true } = {}) {
+  if (touch) state.meta = { ...state.meta, updatedAt: Date.now() };
   localStorage.setItem(KEY, JSON.stringify(state));
   listeners.forEach((fn) => fn());
 }
 
-export function replaceAll(data) {
+export function replaceAll(data, { touch = true } = {}) {
   if (!data || !Array.isArray(data.todos) || !Array.isArray(data.events)) throw new Error('Not a Planner backup');
   state.todos = data.todos;
   state.events = data.events;
   state.categories = data.categories || [];
   state.ddays = data.ddays || [];
   state.settings = { ...DEFAULTS.settings, ...data.settings };
-  save();
+  state.meta = { ...data.meta };
+  save({ touch });
 }
+
+export const hasContent = (data = state) =>
+  [data.todos, data.events, data.categories, data.ddays].some((list) => list && list.length);
 
 export const onChange = (fn) => listeners.add(fn);
 

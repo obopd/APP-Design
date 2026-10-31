@@ -1,5 +1,5 @@
 // Bump CACHE whenever any file in ASSETS changes, so installed copies update.
-const CACHE = 'planner-v21';
+const CACHE = 'planner-v22';
 const ASSETS = [
   './',
   'index.html',
@@ -14,6 +14,9 @@ const ASSETS = [
   'js/folders.js',
   'js/dday.js',
   'js/haptics.js',
+  'js/config.js',
+  'js/cloud.js',
+  'js/account.js',
   'js/settings.js',
   'js/reminders.js',
   'fonts/fraunces-latin-wght-normal.woff2',
@@ -37,7 +40,8 @@ self.addEventListener('activate', (event) => {
 
 // Network first so updates appear when online; cache when offline.
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
+  // Only cache the app's own files — never Supabase/API responses.
+  if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return;
   event.respondWith(
     fetch(event.request)
       .then((res) => {

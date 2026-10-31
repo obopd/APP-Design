@@ -2,6 +2,8 @@
 import { h, icon, ICONS } from './util.js';
 import { state, save, replaceAll, categoryTree, deleteCategory } from './store.js';
 import { openFolderSheet } from './folders.js';
+import { isConfigured, currentUser, syncStatus, syncNow, signOut } from './cloud.js';
+import { openAccountSheet } from './account.js';
 import { notificationsSupported, requestNotifications } from './reminders.js';
 
 const media = matchMedia('(prefers-color-scheme: dark)');
@@ -56,6 +58,40 @@ function importBackup() {
   input.click();
 }
 
+function syncLabel() {
+  const { state: st, at, error } = syncStatus();
+  if (st === 'syncing') return 'Syncing…';
+  if (st === 'offline') return 'Offline · will sync later';
+  if (st === 'error') return `Sync failed · ${error}`;
+  if (!at) return 'Signed in';
+  const mins = Math.round((Date.now() - at) / 60000);
+  return `Synced ${mins < 1 ? 'just now' : mins < 60 ? `${mins} min ago` : `${Math.round(mins / 60)} h ago`}`;
+}
+
+// Account: optional email/password login that backs up and syncs everything.
+function accountSection() {
+  if (!isConfigured()) {
+    return h('div', {}, h('div', { class: 'set-row' }, h('span', {}, 'Account'), h('span', { class: 'status' }, 'Not set up yet')));
+  }
+  const user = currentUser();
+  if (!user) {
+    return h('div', {},
+      h('div', { class: 'set-row' }, h('span', {}, 'Account'),
+        h('button', { class: 'pill', onclick: () => openAccountSheet('signin') }, 'Sign in')),
+      h('p', { class: 'set-note account-hint' }, 'Back up and sync across devices.'));
+  }
+  return h('div', {},
+    h('div', { class: 'set-row' },
+      h('span', { class: 'account-email' }, user.email),
+      h('button', {
+        class: 'pill',
+        onclick: async () => {
+          if (confirm('Sign out? Your planner stays on this phone.')) await signOut();
+        },
+      }, 'Sign out')),
+    h('button', { class: `sync-line ${syncStatus().state}`, onclick: () => syncNow() }, syncLabel()));
+}
+
 function foldersSection() {
   const rows = categoryTree().map(({ cat, depth }) => h('div', { class: 'cat-row', style: `padding-left:${depth * 16}px` },
     h('span', { class: 'cat-dot', style: cat.color ? `background:${cat.color}` : null }),
@@ -90,6 +126,7 @@ export function renderSettings(root) {
 
   root.replaceChildren(h('div', { class: 'settings' },
     h('h1', { class: 'display' }, 'Settings'),
+    accountSection(),
     h('div', {},
       h('div', { class: 'set-row' }, h('span', {}, 'Theme'), theme),
       h('div', { class: 'set-row' }, h('span', {}, 'Color'), swatches)),
