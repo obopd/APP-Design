@@ -47,6 +47,8 @@ export function renderTodayDdays(root, onOpen) {
 
   root.replaceChildren(h('div', { class: 'today-dday' },
     h('span', { class: 'tdd-label' }, 'D-Day'), track));
+  // Start with the first D-Day centered (the row's 50% padding would otherwise leave it right of center).
+  track.scrollLeft = items[0].offsetLeft - (track.clientWidth - items[0].offsetWidth) / 2;
 }
 
 function row(d) {

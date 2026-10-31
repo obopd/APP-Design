@@ -76,7 +76,9 @@ laptop. So:
   above the centered calendar (`#top-slot`, `renderTodayDdays`); tapping it opens the
   D-Day tab. It fades out in week mode and never shifts the calendar.
   Several D-Days on the same day form a horizontal scroll-snap row: the centered one
-  is fully opaque, the next peeks in at the right edge at low opacity.
+  is fully opaque, the next peeks in at the right edge at low opacity. Items keep
+  their natural width (track has 50% side padding + 28px gap) and `renderTodayDdays`
+  sets `scrollLeft` so the first one starts exactly centered.
 - **Tracking (opt-in per to-do)**: editor "Track" = Off | Count | Time. Only tracked
   to-dos show a number pill: Count → tap to enter a number; Time → tap to type
   minutes/h:mm, plus a ▶/■ stopwatch (stored as a start timestamp, so it keeps
@@ -186,7 +188,7 @@ GitHub Pages serving the repo root (all paths are relative, so it works under
 `/APP-Design/`): repo Settings → Pages → Deploy from a branch → branch, `/ (root)`.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v17`; bump to `planner-v18`, …) and keep its `ASSETS` list in sync
+(currently `planner-v18`; bump to `planner-v19`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
