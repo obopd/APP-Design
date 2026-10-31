@@ -1,6 +1,6 @@
 {
-  "name": "Kairos",
-  "short_name": "Kairos",
+  "name": "Planner",
+  "short_name": "Planner",
   "description": "Personal calendar, to-dos and schedule.",
   "start_url": "./",
   "scope": "./",

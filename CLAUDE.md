@@ -4,8 +4,8 @@ Guidance for AI assistants (Claude Code and similar) working in this repository.
 
 ## What this is
 
-**Kairos** (Greek: "the right, opportune moment"; formerly "Planner") — a personal
-calendar / to-do / schedule app (the owner: film director, photographer, reader,
+**Planner** — a personal calendar / to-do / schedule app (it was briefly renamed
+"Kairos"; the owner switched back to Planner) (the owner: film director, photographer, reader,
 college student). It is a
 Progressive Web App (PWA) used on an **iPhone**, installed via Safari →
 Share → Add to Home Screen.
@@ -33,8 +33,9 @@ laptop. So:
   all sides, "Month Year" **centered** between ‹ › arrows. There is no date
   heading above the day view (the owner found it redundant).
 - **No date selected → only the calendar is on screen**, exactly centered in the space
-  below a small "Kairos" wordmark (`.brand`, ~19px display font) that is **always at the
-  top of the calendar screen**, in month and week mode (above today's D-Days too). When a
+  below the small app icon / logo (`.brand`, 30px `icons/icon.svg`, rounded corners) that
+  is **always at the top of the calendar screen**, in month and week mode (above today's
+  D-Days too). "Logo" means this calendar-outline app icon, not a wordmark. When a
   D-Day is shown above it, it sits slightly lower instead (`.has-dday`: top spacer
   1.3 : bottom 0.7). Tapping a date slides the card to the top, **rolls the month up into
   that date's week**, and the space below shows that day in **two columns**:
@@ -172,8 +173,8 @@ docs/                  Screenshots of the app
 
 ## Data model (`js/store.js`)
 
-Internal names (`planner.v1`, `planner.auth`, `planner_data`, `planner-vN`) predate the
-rename to Kairos — keep them, or existing users lose their data/session.
+Keep the internal names (`planner.v1`, `planner.auth`, `planner_data`, `planner-vN`) as they
+are, or existing users lose their data/session.
 
 Stored in `localStorage` under `planner.v1`:
 
@@ -246,10 +247,9 @@ in cloud sessions; `require('playwright')` works — don't reinstall). Use
 week roll-up and two-column day view, reload to confirm persistence, check
 dark mode, collect `pageerror` events, and look at screenshots.
 
-App icon = the "Kairos" wordmark (Fraunces 600, white #f5f5f7 on #0a0a0a). `icons/icon.svg`
-embeds the font as base64; render the 180/192/512 PNGs with Playwright (`page.setContent`
-with the font as a data: URL — file:// fonts don't load there — then `page.screenshot`).
-Logo images for other uses live in `docs/logo/`.
+App icon / logo = white calendar outline with a dot on near-black (`icons/icon.svg`).
+Render it to the 180/192/512 PNGs with Playwright (`page.setContent` + `page.screenshot`).
+Full-size logo images for other uses live in `docs/logo/`.
 
 ## Deployment
 
@@ -273,7 +273,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v35`; bump to `planner-v36`, …) and keep its `ASSETS` list in sync
+(currently `planner-v36`; bump to `planner-v37`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
