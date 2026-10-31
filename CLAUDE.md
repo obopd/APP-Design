@@ -79,6 +79,10 @@ laptop. So:
   is fully opaque, the next peeks in at the right edge at low opacity. Items keep
   their natural width (track has 50% side padding + 28px gap) and `renderTodayDdays`
   sets `scrollLeft` so the first one starts exactly centered.
+- **Haptics**: every button-like tap gives a light haptic tick (Settings → Haptics,
+  on by default). iOS Safari has no vibration API, so `js/haptics.js` clicks the label
+  of a hidden `<input type="checkbox" switch>` (iOS 18+ plays a system haptic); Android
+  uses `navigator.vibrate`. No sound. Must be called inside the user's tap.
 - **Tracking (opt-in per to-do)**: editor "Track" = Off | Count | Time. Only tracked
   to-dos show a number pill: Count → tap to enter a number; Time → tap to type
   minutes/h:mm, plus a ▶/■ stopwatch (stored as a start timestamp, so it keeps
@@ -112,6 +116,7 @@ js/day.js              Day view: to-do folders (mark = done, text = edit) + hour
 js/editor.js           Bottom sheet to add/edit a to-do or event (folder, repeat/until, alert)
 js/folders.js          Bottom sheet to create/edit a folder: name + underline color
 js/dday.js             D-Day tab (countdown list) + its add/edit sheet
+js/haptics.js          Haptic tick on every button tap (iOS 18+ hidden-switch trick; Android vibrate)
 js/settings.js         Settings tab: theme, accent color, folders, alerts, backup export/restore
 js/reminders.js        Alert timers, notifications, in-app toast, app icon badge
 icons/                 icon.svg (source) + 180/192/512 PNGs rendered from it
@@ -132,7 +137,7 @@ Stored in `localStorage` under `planner.v1`:
   //             timer: { key: dateKey, start: epochMs } | null
   categories: [{ id, name, parent: id | null, open, color: css color | null }],
   ddays: [{ id, title, date, yearly }],
-  settings: { theme: 'auto' | 'light' | 'dark', accent: 'mono' | 'blue' | 'red' | 'green' | 'orange' | 'purple' }
+  settings: { haptics: bool, theme: 'auto' | 'light' | 'dark', accent: 'mono' | 'blue' | 'red' | 'green' | 'orange' | 'purple' }
 }
 // repeat: 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'; until: '' = forever
 ```
@@ -188,7 +193,7 @@ GitHub Pages serving the repo root (all paths are relative, so it works under
 `/APP-Design/`): repo Settings → Pages → Deploy from a branch → branch, `/ (root)`.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v18`; bump to `planner-v19`, …) and keep its `ASSETS` list in sync
+(currently `planner-v19`; bump to `planner-v20`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

@@ -16,7 +16,7 @@ const KEY = 'planner.v1';
   until:    '' (forever) or last 'YYYY-MM-DD' a routine occurs
   dday:     { id, title, date: 'YYYY-MM-DD', yearly }   — countdowns (birthdays, graduation…)
 */
-const DEFAULTS = { todos: [], events: [], categories: [], ddays: [], settings: { theme: 'auto', accent: 'mono' } };
+const DEFAULTS = { todos: [], events: [], categories: [], ddays: [], settings: { theme: 'auto', accent: 'mono', haptics: true } };
 
 export const REPEATS = [
   ['none', 'Never'],

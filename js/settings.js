@@ -93,6 +93,12 @@ export function renderSettings(root) {
     h('div', {},
       h('div', { class: 'set-row' }, h('span', {}, 'Theme'), theme),
       h('div', { class: 'set-row' }, h('span', {}, 'Color'), swatches)),
+    h('div', {},
+      h('div', { class: 'set-row' }, h('span', {}, 'Haptics'),
+        h('input', {
+          type: 'checkbox', class: 'switch', 'aria-label': 'Haptics', checked: state.settings.haptics !== false,
+          onchange: (e) => { state.settings.haptics = e.target.checked; save(); },
+        }))),
     foldersSection(),
     h('div', {},
       h('div', { class: 'set-row' }, h('span', {}, 'Alerts'), alertsControl(rerender))),

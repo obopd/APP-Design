@@ -6,6 +6,7 @@ import { openEditor } from './editor.js';
 import { renderSettings, applyTheme } from './settings.js';
 import { renderDdays, openDdaySheet, renderTodayDdays } from './dday.js';
 import { refreshReminders, setToast } from './reminders.js';
+import './haptics.js';
 
 const calendarView = document.getElementById('view-calendar');
 const calendarEl = document.getElementById('calendar');
