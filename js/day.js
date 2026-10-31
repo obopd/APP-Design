@@ -6,6 +6,7 @@ import {
 } from './store.js';
 import { askText } from './ui.js';
 import { postponeTomorrow, postponePick } from './postpone.js';
+import { openFolderSheet } from './folders.js';
 
 const HOUR_PX = 48; // keep in sync with --hour in styles.css
 
@@ -182,6 +183,12 @@ function todoColumn(key, actions) {
     class: 'icon-btn section-add', 'aria-label': label,
     onclick: () => actions.create({ kind: 'todo', date: key, ...opts }),
   }, icon(ICONS.plus));
+  // New folder → then straight into adding its first to-do (an empty folder wouldn't show
+  // in the day's list yet).
+  const folderBtn = (label, opts) => h('button', {
+    class: 'icon-btn section-add section-folder', 'aria-label': label,
+    onclick: () => openFolderSheet({ onDone: (id) => actions.create({ kind: 'todo', date: key, category: id, ...opts }) }),
+  }, icon(ICONS.folderPlus));
 
   // If any routine is tracked, tapping "Routines" reveals how often each was done.
   const tracked = routines.filter(isTracked);
@@ -194,11 +201,11 @@ function todoColumn(key, actions) {
 
   return h('div', { class: 'col' }, h('div', { class: 'col-scroll', 'data-scroll': 'todos' },
     h('section', { class: 'todo-section routines' },
-      h('div', { class: 'section-head' }, routineTitle, plus('Add routine', { repeat: 'daily' })),
+      h('div', { class: 'section-head' }, routineTitle, folderBtn('New routine folder', { repeat: 'daily' }), plus('Add routine', { repeat: 'daily' })),
       tracked.length && showStats ? routineStatsList(tracked) : null,
       routines.length ? folderTree(routines, key, actions) : null),
     h('section', { class: 'todo-section' },
-      h('div', { class: 'section-head' }, h('h3', { class: 'section-label' }, 'To-do', count(regular)), plus('Add to-do')),
+      h('div', { class: 'section-head' }, h('h3', { class: 'section-label' }, 'To-do', count(regular)), folderBtn('New folder'), plus('Add to-do')),
       regular.length ? folderTree(regular, key, actions) : null)));
 }
 

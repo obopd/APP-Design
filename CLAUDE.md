@@ -55,7 +55,9 @@ laptop. So:
   **no italics**, the owner rejected them) via the `.display` class / `--display`
   variable; small UI text uses the system sans-serif.
 - Adding items: + next to "Routines" (new to-do preset to repeat daily), + next to
-  "To-do", + next to the "D-Day" title; events by tapping an empty hour in the timeline.
+  "To-do", + next to the "D-Day" title; a **folder-plus icon** sits left of each
+  section's + to create a folder (then the editor opens with that folder preselected,
+  since an empty folder doesn't show in a day); events by tapping an empty hour in the timeline.
   Opening any sheet must **not** focus a text field (no keyboard until the owner taps one).
 - **To-do folders (categories)**, nestable like computer folders (Academic →
   Biology, Chemistry). New folders start open; each folder's open/closed state is
@@ -286,7 +288,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v38`; bump to `planner-v39`, …) and keep its `ASSETS` list in sync
+(currently `planner-v39`; bump to `planner-v40`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

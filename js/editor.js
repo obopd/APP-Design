@@ -33,14 +33,14 @@ const select = (options, value) => selectButton(options, value);
  * openEditor({ kind: 'todo'|'event', item?, date?, hour?, repeat? })
  * With `item` it edits in place; otherwise it creates a new one.
  */
-export function openEditor({ kind, item = null, date = todayKey(), hour = null, repeat: presetRepeat = 'none', occurrence = null }) {
+export function openEditor({ kind, item = null, date = todayKey(), hour = null, repeat: presetRepeat = 'none', category: presetCategory = null, occurrence = null }) {
   const isNew = !item;
   let type = kind;
   const startHour = hour ?? Math.min(new Date().getHours() + 1, 23);
   const draft = item ? { ...item } : {
     title: '', date, important: false, notes: '',
     allDay: false, start: `${pad(startHour)}:00`, end: fromMinutes(Math.min(startHour * 60 + 60, 23 * 60 + 59)),
-    repeat: presetRepeat, until: '', alert: 'none', category: null,
+    repeat: presetRepeat, until: '', alert: 'none', category: presetCategory,
   };
 
   const title = h('input', { type: 'text', placeholder: 'Title', maxlength: '80', value: draft.title, autocomplete: 'off', enterkeyhint: 'done', 'aria-label': 'Title' });
