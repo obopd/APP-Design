@@ -22,7 +22,7 @@
   --cal-head: 44px;
   --cal-weekdays: 20px;
   /* The card is a square: width = 2*pad + head + weekdays + 6 rows. */
-  --cal-w: min(100vw - 2 * var(--gap), 480px);
+  --cal-w: min(100vw - 2 * var(--gap) - 16px, 464px);
   --cell: calc((var(--cal-w) - 2 * var(--cal-pad) - 2px - var(--cal-head) - var(--cal-weekdays)) / 6); /* 2px = border */
   --display: "Fraunces", ui-serif, "New York", Georgia, serif;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Apple SD Gothic Neo", sans-serif;
@@ -281,9 +281,9 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .tab { width: 48px; height: 100%; display: grid; place-items: center; color: var(--muted); position: relative; }
 .tab svg { width: 22px; height: 22px; }
 .tab.active { color: var(--fg); }
-.tab-add { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; transition: transform .12s; }
-.tab-add svg { width: 16px; height: 16px; stroke-width: 2.2; }
-.tab-add:active { transform: scale(.9); }
+.tab-add { width: 48px; height: 100%; display: grid; place-items: center; color: var(--fg); transition: transform .12s; }
+.tab-add svg { width: 24px; height: 24px; stroke-width: 1.8; }
+.tab-add:active { transform: scale(.88); }
 .tab.active::after { content: ""; position: absolute; bottom: 7px; width: 4px; height: 4px; border-radius: 50%; background: var(--fg); }
 
 /* ---------- Settings view ---------- */
