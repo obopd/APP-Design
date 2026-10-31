@@ -50,7 +50,7 @@ export function save({ touch = true } = {}) {
 }
 
 export function replaceAll(data, { touch = true } = {}) {
-  if (!data || !Array.isArray(data.todos) || !Array.isArray(data.events)) throw new Error('Not a Planner backup');
+  if (!data || !Array.isArray(data.todos) || !Array.isArray(data.events)) throw new Error('Not a Kairos backup');
   state.todos = data.todos;
   state.events = data.events;
   state.categories = data.categories || [];

@@ -4,8 +4,9 @@ Guidance for AI assistants (Claude Code and similar) working in this repository.
 
 ## What this is
 
-**Planner** — a personal calendar / to-do / schedule app for one person (the
-owner: film director, photographer, reader, college student). It is a
+**Kairos** (Greek: "the right, opportune moment"; formerly "Planner") — a personal
+calendar / to-do / schedule app (the owner: film director, photographer, reader,
+college student). It is a
 Progressive Web App (PWA) used on an **iPhone**, installed via Safari →
 Share → Add to Home Screen.
 
@@ -169,6 +170,9 @@ docs/                  Screenshots of the app
 
 ## Data model (`js/store.js`)
 
+Internal names (`planner.v1`, `planner.auth`, `planner_data`, `planner-vN`) predate the
+rename to Kairos — keep them, or existing users lose their data/session.
+
 Stored in `localStorage` under `planner.v1`:
 
 ```js
@@ -265,7 +269,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v31`; bump to `planner-v32`, …) and keep its `ASSETS` list in sync
+(currently `planner-v32`; bump to `planner-v33`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

@@ -37,7 +37,7 @@ function alertsControl(rerender) {
 
 function exportBackup() {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-  const a = h('a', { href: URL.createObjectURL(blob), download: `planner-${new Date().toISOString().slice(0, 10)}.json` });
+  const a = h('a', { href: URL.createObjectURL(blob), download: `kairos-${new Date().toISOString().slice(0, 10)}.json` });
   document.body.append(a);
   a.click();
   a.remove();
@@ -52,7 +52,7 @@ function importBackup() {
       replaceAll(data);
       applyTheme();
     } catch {
-      tell('That file isn’t a Planner backup.');
+      tell('That file isn’t a Kairos backup.');
     }
   });
   input.click();

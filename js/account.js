@@ -142,7 +142,7 @@ export function renderLoginGate(root, { mode = 'signin', email: presetEmail = ''
   };
 
   root.replaceChildren(h('div', { class: 'login' },
-    h('h1', { class: 'display login-title' }, 'Planner'),
+    h('h1', { class: 'display login-title' }, 'Kairos'),
     h('form', { class: 'login-form', onsubmit: submit },
       h('div', { class: 'title-row' }, email),
       h('div', { class: 'title-row' }, password),
