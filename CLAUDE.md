@@ -89,10 +89,12 @@ laptop. So:
   **On the day itself**, the starting screen (month mode) shows it in the free space
   above the centered calendar (`#top-slot`, `renderTodayDdays`); tapping it opens the
   D-Day tab. It fades out in week mode and never shifts the calendar.
-  Several D-Days on the same day form a horizontal scroll-snap row: the centered one
-  is fully opaque, the next peeks in at the right edge at low opacity. Items keep
-  their natural width (track has 50% side padding + 12px gap, so the next one is clearly visible) and `renderTodayDdays`
-  sets `scrollLeft` so the first one starts exactly centered.
+  Several D-Days on the same day form a horizontal row: the centered one is fully
+  opaque, neighbours peek in at low opacity (12px gap). The row is positioned with
+  `transform` and custom pointer-swipe handling (snap to next/previous; tapping a faded
+  one centers it), **not native scroll-snap** — iOS Safari mis-centered that and
+  wouldn't swipe. `place()` re-centers after layout, after `document.fonts.ready`
+  (Fraunces changes widths) and on resize.
 - **Haptics**: every button-like tap gives a light haptic tick (Settings → Haptics,
   on by default). iOS Safari has no vibration API, so `js/haptics.js` clicks the label
   of a hidden `<input type="checkbox" switch>` (iOS 18+ plays a system haptic); Android
@@ -256,7 +258,7 @@ and put the Project URL + anon (publishable) key in `js/config.js` (done: projec
 responses are never cached.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v28`; bump to `planner-v29`, …) and keep its `ASSETS` list in sync
+(currently `planner-v29`; bump to `planner-v30`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

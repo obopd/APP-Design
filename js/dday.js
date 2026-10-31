@@ -21,36 +21,80 @@ function nthOf(d, targetKey) {
 }
 
 // Shown above the calendar on the starting screen when a D-Day is today. Several
-// D-Days form a sideways snap row: the centered one is solid, the next peeks in faded.
-// Returns how many D-Days are shown.
+// D-Days form a sideways row: the centered one is solid, neighbours peek in faded.
+// The row is moved with a transform and our own swipe handling (not native scroll),
+// because iOS Safari handled the scroll-snap version unreliably. Returns the count.
+let placeCurrent = null;
+window.addEventListener('resize', () => placeCurrent && placeCurrent(false));
+
 export function renderTodayDdays(root, onOpen) {
   const today = todayKey();
   const hits = state.ddays.filter((d) => ddayDiff(d, today) === 0);
-  if (!hits.length) { root.replaceChildren(); return 0; }
+  if (!hits.length) { root.replaceChildren(); placeCurrent = null; return 0; }
 
-  const items = hits.map((d, i) => h('button', { class: `tdd-item${i === 0 ? ' active' : ''}`, onclick: onOpen },
-    h('span', { class: 'tdd-title display' }, d.title),
-    nthOf(d, today) ? h('span', { class: 'tdd-sub' }, nthOf(d, today)) : null));
-  const track = h('div', { class: 'tdd-track', 'aria-label': 'Today’s D-Days' }, items);
+  let index = 0;
+  let dragged = false;
+  const items = hits.map((d, i) => h('button', {
+    class: 'tdd-item',
+    onclick: () => {
+      if (dragged) return;
+      if (i === index) onOpen();
+      else { index = i; place(true); } // tapping a faded neighbour brings it to the center
+    },
+  },
+  h('span', { class: 'tdd-title display' }, d.title),
+  nthOf(d, today) ? h('span', { class: 'tdd-sub' }, nthOf(d, today)) : null));
+  const track = h('div', { class: 'tdd-track' }, items);
+  const viewport = h('div', { class: 'tdd-viewport', 'aria-label': 'Today’s D-Days' }, track);
 
-  // Whichever item is nearest the middle is the active (fully visible) one.
-  let frame = 0;
-  track.addEventListener('scroll', () => {
-    cancelAnimationFrame(frame);
-    frame = requestAnimationFrame(() => {
-      const mid = track.scrollLeft + track.clientWidth / 2;
-      let best = items[0];
-      for (const el of items) {
-        if (Math.abs(el.offsetLeft + el.offsetWidth / 2 - mid) < Math.abs(best.offsetLeft + best.offsetWidth / 2 - mid)) best = el;
-      }
-      items.forEach((el) => el.classList.toggle('active', el === best));
-    });
-  }, { passive: true });
+  let offset = 0;
+  const setOffset = (x, animate) => {
+    offset = x;
+    track.style.transition = animate ? '' : 'none';
+    track.style.transform = `translateX(${x}px)`;
+  };
+  // Center items[index] in the viewport, measured from the real layout.
+  function place(animate) {
+    const el = items[index];
+    setOffset(viewport.clientWidth / 2 - (el.offsetLeft + el.offsetWidth / 2), animate);
+    items.forEach((it, i) => it.classList.toggle('active', i === index));
+  }
 
-  root.replaceChildren(h('div', { class: 'today-dday' },
-    h('span', { class: 'tdd-label' }, 'D-Day'), track));
-  // Start with the first D-Day centered (the row's 50% padding would otherwise leave it right of center).
-  track.scrollLeft = items[0].offsetLeft - (track.clientWidth - items[0].offsetWidth) / 2;
+  // Swipe: follow the finger, then snap to the next/previous D-Day.
+  let start = null;
+  viewport.addEventListener('pointerdown', (e) => {
+    if (items.length < 2) return;
+    start = { x: e.clientX, y: e.clientY, base: offset, id: e.pointerId };
+    dragged = false;
+  });
+  viewport.addEventListener('pointermove', (e) => {
+    if (!start || e.pointerId !== start.id) return;
+    const dx = e.clientX - start.x;
+    if (!dragged && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(e.clientY - start.y)) {
+      dragged = true;
+      viewport.setPointerCapture(e.pointerId);
+    }
+    if (dragged) setOffset(start.base + dx, false);
+  });
+  const end = (e) => {
+    if (!start || e.pointerId !== start.id) return;
+    const dx = e.clientX - start.x;
+    start = null;
+    if (!dragged) return;
+    if (dx < -40 && index < items.length - 1) index += 1;
+    else if (dx > 40 && index > 0) index -= 1;
+    place(true);
+    setTimeout(() => { dragged = false; }, 0); // swallow the click that ends a swipe
+  };
+  viewport.addEventListener('pointerup', end);
+  viewport.addEventListener('pointercancel', end);
+
+  root.replaceChildren(h('div', { class: 'today-dday' }, h('span', { class: 'tdd-label' }, 'D-Day'), viewport));
+  placeCurrent = place;
+  place(false);
+  // Re-center once layout settles and the display font has loaded (it changes text widths).
+  requestAnimationFrame(() => place(false));
+  if (document.fonts) document.fonts.ready.then(() => { if (placeCurrent === place) place(false); });
   return hits.length;
 }
 
