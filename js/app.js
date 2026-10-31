@@ -1,7 +1,7 @@
 import { addDays, dateKey, parseKey, todayKey, h } from './util.js';
 import { onChange } from './store.js';
 import { renderCalendar } from './calendar.js';
-import { renderDay, currentLayout } from './day.js';
+import { renderDay, currentLayout, tickTimers } from './day.js';
 import { openEditor } from './editor.js';
 import { renderSettings, applyTheme } from './settings.js';
 import { refreshReminders, setToast } from './reminders.js';
@@ -46,6 +46,7 @@ const actions = {
   }),
   create: (opts) => openEditor(opts),
   edit: (kind, item) => openEditor({ kind, item }),
+  refresh: () => render(),
 };
 
 function render() {
@@ -102,6 +103,8 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') { render(); refreshReminders(); }
 });
 setInterval(() => { if (view.tab === 'calendar' && view.selected === todayKey()) render(); }, 60 * 1000); // move the "now" line
+
+setInterval(tickTimers, 1000); // running stopwatches
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 

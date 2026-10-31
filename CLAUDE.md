@@ -67,6 +67,13 @@ laptop. So:
   Routines sit in a shaded rounded box (`.todo-section.routines`), To-do below on
   the plain page; both have display-font headings with an open-item count.
   Headings only show when routines exist.
+- **Tracking (opt-in per to-do)**: editor "Track" = Off | Count | Time. Only tracked
+  to-dos show a number pill: Count → tap to enter a number; Time → tap to type
+  minutes/h:mm, plus a ▶/■ stopwatch (stored as a start timestamp, so it keeps
+  running while the app is closed; ticks via `tickTimers()` every second).
+  Values are per occurrence (`values[dateKey]`). "Times done" only increases by
+  checking off (routines: once per day). If a day has tracked routines, tapping the
+  "Routines" heading reveals per-routine stats: times done so far + total recorded.
 - **Important reminders** (e.g. a parent's birthday): items marked Important ★ get
   an accent-colored dot on the calendar and are counted in the home-screen icon badge.
 - **Alerts** at schedule times via notifications.
@@ -108,6 +115,8 @@ Stored in `localStorage` under `planner.v1`:
              repeat, until, done /* one-off */, doneOn: { 'YYYY-MM-DD': true } /* routines */ }],
   events: [{ id, title, date, allDay, start: 'HH:MM', end: 'HH:MM', repeat, until,
              alert: 'none' | '<minutes before>', important, notes }],
+  // todos also: track: 'none' | 'count' | 'time', values: { dateKey: number /* count or seconds */ },
+  //             timer: { key: dateKey, start: epochMs } | null
   categories: [{ id, name, parent: id | null, open, color: css color | null }],
   settings: { theme: 'auto' | 'light' | 'dark', accent: 'mono' | 'blue' | 'red' | 'green' | 'orange' | 'purple' }
 }
@@ -165,7 +174,7 @@ GitHub Pages serving the repo root (all paths are relative, so it works under
 `/APP-Design/`): repo Settings → Pages → Deploy from a branch → branch, `/ (root)`.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v9`; bump to `planner-v10`, …) and keep its `ASSETS` list in sync
+(currently `planner-v10`; bump to `planner-v11`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

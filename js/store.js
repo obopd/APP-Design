@@ -1,11 +1,14 @@
 // All app data lives in localStorage on the device; there is no server.
-import { parseKey, daysBetween } from './util.js';
+import { parseKey, daysBetween, todayKey } from './util.js';
 
 const KEY = 'planner.v1';
 
 /*
   todo:     { id, title, date: 'YYYY-MM-DD', important, notes, category: id | null,
-              repeat, until, done (one-off), doneOn: { 'YYYY-MM-DD': true } (routines) }
+              repeat, until, done (one-off), doneOn: { 'YYYY-MM-DD': true } (routines),
+              track: 'none' | 'count' | 'time',
+              values: { 'YYYY-MM-DD': number }   (count, or seconds for time)
+              timer: { key, start: epoch ms } | null   (running stopwatch) }
   event:    { id, title, date, allDay, start: 'HH:MM', end: 'HH:MM', repeat, until,
               alert: 'none' | '<minutes before>', important, notes }
   category: { id, name, parent: id | null, open, color: '#hex' | null }   — nestable to-do folders
@@ -143,4 +146,42 @@ export function deleteCategory(id) {
   for (const t of state.todos) if (t.category === id) t.category = parent;
   state.categories = state.categories.filter((c) => c.id !== id);
   save();
+}
+
+/* ---------- Tracking (count / time per occurrence) ---------- */
+
+export const TRACKS = [['none', 'Off'], ['count', 'Count'], ['time', 'Time']];
+
+export const isTracked = (todo) => todo.track === 'count' || todo.track === 'time';
+export const valueOn = (todo, key) => todo.values?.[key] || 0;
+
+export function setValue(todo, key, value) {
+  todo.values = { ...todo.values };
+  if (value > 0) todo.values[key] = value;
+  else delete todo.values[key];
+  save();
+}
+
+// The stopwatch is stored as a start time, so it keeps running while the app is closed.
+export function startTimer(todo, key) {
+  if (todo.timer) stopTimer(todo, false);
+  todo.timer = { key, start: Date.now() };
+  save();
+}
+
+export function stopTimer(todo, persist = true) {
+  if (!todo.timer) return;
+  const { key, start } = todo.timer;
+  todo.timer = null;
+  todo.values = { ...todo.values, [key]: valueOn(todo, key) + Math.round((Date.now() - start) / 1000) };
+  if (persist) save();
+}
+
+// Times a routine was checked off up to today, and the sum of everything recorded.
+export function routineStats(todo) {
+  const today = todayKey();
+  return {
+    times: Object.keys(todo.doneOn || {}).filter((k) => k <= today).length,
+    total: Object.values(todo.values || {}).reduce((a, b) => a + b, 0),
+  };
 }

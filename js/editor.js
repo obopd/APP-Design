@@ -1,6 +1,6 @@
 // Bottom sheet for creating / editing a to-do or a schedule item.
 import { h, icon, ICONS, todayKey, toMinutes, fromMinutes, pad } from './util.js';
-import { state, save, uid, REPEATS, categoryTree } from './store.js';
+import { state, save, uid, REPEATS, TRACKS, categoryTree } from './store.js';
 import { openFolderSheet } from './folders.js';
 
 const dialog = document.getElementById('editor');
@@ -61,6 +61,7 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null }
   const repeat = select(REPEATS, draft.repeat || 'none');
   const until = h('input', { type: 'date', value: draft.until || '', 'aria-label': 'Until' });
   const alert = select(ALERTS, draft.alert || 'none');
+  const track = select(TRACKS, draft.track || 'none');
 
   // Folder picker; "New…" opens the folder sheet (name + underline color).
   const category = h('select', {});
@@ -83,7 +84,7 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null }
 
   const timeRow = field('Time', h('span', { class: 'times' }, start, '–', end));
   const untilRow = field('Until', until);
-  const todoRows = [field('Folder', category)];
+  const todoRows = [field('Folder', category), field('Track', track)];
   const eventRows = [field('All-day', allDay), timeRow, field('Alert', alert)];
 
   const sync = () => {
@@ -115,7 +116,7 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null }
     };
 
     if (type === 'todo') {
-      const data = { ...base, category: category.value && category.value !== '__new' ? category.value : null };
+      const data = { ...base, category: category.value && category.value !== '__new' ? category.value : null, track: track.value };
       if (isNew) state.todos.push({ id: uid(), ...data });
       else Object.assign(item, data);
     } else {

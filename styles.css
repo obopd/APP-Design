@@ -164,6 +164,20 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .mark { color: var(--muted); font-size: 10px; margin-left: 4px; vertical-align: 1px; font-weight: 400; }
 .mark.star { color: var(--accent); }
 
+/* Tracking: a small number pill (count or time) and a stopwatch button. */
+.tracker { display: flex; align-items: center; gap: 2px; flex-shrink: 0; padding: 5px 0 0 4px; }
+.track-pill {
+  min-width: 30px; height: 24px; padding: 0 8px; border-radius: 12px;
+  font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--muted);
+  background: var(--soft); border: 1px solid var(--line);
+}
+.routines .track-pill { background: var(--bg); }
+.track-pill.has { color: var(--fg); }
+.track-pill.running { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.track-btn { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); }
+.track-btn svg { width: 12px; height: 12px; stroke-width: 2; fill: currentColor; }
+.track-btn.running { color: var(--accent); }
+
 /* Routines / To-do sections: routines live in a shaded box, to-dos below on the plain page. */
 .todo-section.routines { background: var(--soft); border-radius: 14px; margin: 0 6px 0 8px; padding: 10px 0 6px; }
 .todo-section.routines .todos.root { padding-left: 4px; }
@@ -173,6 +187,15 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   margin: 0; padding: 0 14px 4px;
   font-family: var(--display); font-size: 16px; font-weight: 600; color: var(--fg);
 }
+.stats-toggle { width: 100%; text-align: left; }
+.stats-toggle svg { width: 12px; height: 12px; stroke-width: 2.2; color: var(--muted); margin-left: auto; margin-right: 2px; transition: transform .2s; align-self: center; }
+.stats-toggle.open svg { transform: rotate(90deg); }
+.routine-stats { list-style: none; margin: 2px 12px 8px; padding: 6px 10px; background: var(--bg); border-radius: 10px; }
+.routine-stats li { display: flex; align-items: baseline; gap: 10px; padding: 5px 0; font-size: 13px; }
+.routine-stats li + li { border-top: 1px solid var(--line); }
+.rs-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rs-times { font-weight: 600; font-variant-numeric: tabular-nums; }
+.rs-total { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 44px; text-align: right; }
 .section-count { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; font-weight: 500; color: var(--muted); }
 
 /* Category folders: same font as the to-dos, with a thin underline separating the name. */

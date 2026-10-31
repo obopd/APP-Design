@@ -1,8 +1,67 @@
 // The area below the calendar when a day is selected: to-dos + hourly schedule.
-import { h, icon, ICONS, todayKey, toMinutes, shortTime } from './util.js';
-import { state, save, eventsOn, todosOn, isDone, isRoutine, toggleDone, childCategories } from './store.js';
+import { h, icon, ICONS, todayKey, toMinutes, shortTime, formatDuration, formatClock, formatNumber } from './util.js';
+import {
+  state, save, eventsOn, todosOn, isDone, isRoutine, toggleDone, childCategories,
+  isTracked, valueOn, setValue, startTimer, stopTimer, routineStats,
+} from './store.js';
 
 const HOUR_PX = 48; // keep in sync with --hour in styles.css
+
+// "1:30" → 90 minutes, "45" → 45 minutes; returns seconds (0 to clear).
+function parseMinutes(text) {
+  const t = text.trim();
+  if (!t) return 0;
+  const [a, b] = t.split(':');
+  const mins = b !== undefined ? Number(a) * 60 + Number(b) : Number(a);
+  return Number.isFinite(mins) && mins > 0 ? Math.round(mins * 60) : null;
+}
+
+// Number shown next to a tracked to-do: tap to record it; time also gets a stopwatch.
+function tracker(t, key) {
+  const value = valueOn(t, key);
+
+  if (t.track === 'count') {
+    return h('span', { class: 'tracker' }, h('button', {
+      class: `track-pill${value ? ' has' : ''}`, 'aria-label': `Count for ${t.title}: ${value || 'none'}`,
+      onclick: () => {
+        const input = prompt(`${t.title} — count`, value ? String(value) : '');
+        if (input === null) return;
+        const n = Number(input.trim() || 0);
+        if (Number.isFinite(n) && n >= 0) setValue(t, key, n);
+      },
+    }, value ? formatNumber(value) : '0'));
+  }
+
+  const running = t.timer && t.timer.key === key;
+  const pill = h('button', {
+    class: `track-pill${value || running ? ' has' : ''}${running ? ' running' : ''}`,
+    'aria-label': `Time for ${t.title}: ${value ? formatDuration(value) : 'none'}`,
+    onclick: () => {
+      if (running) return;
+      const mins = value ? `${Math.floor(value / 3600)}:${String(Math.round((value % 3600) / 60)).padStart(2, '0')}` : '';
+      const input = prompt(`${t.title} — time spent\n(minutes, or h:mm)`, mins);
+      if (input === null) return;
+      const secs = parseMinutes(input);
+      if (secs !== null) setValue(t, key, secs);
+    },
+  }, running ? formatClock(value + (Date.now() - t.timer.start) / 1000) : value ? formatDuration(value) : '0m');
+  if (running) {
+    pill.dataset.liveStart = String(t.timer.start);
+    pill.dataset.liveBase = String(value);
+  }
+  const watch = h('button', {
+    class: `track-btn${running ? ' running' : ''}`, 'aria-label': running ? 'Stop stopwatch' : 'Start stopwatch',
+    onclick: () => (running ? stopTimer(t) : startTimer(t, key)),
+  }, icon(running ? ICONS.stop : ICONS.play));
+  return h('span', { class: 'tracker' }, pill, watch);
+}
+
+// Update running stopwatches in place (called every second by app.js).
+export function tickTimers() {
+  document.querySelectorAll('[data-live-start]').forEach((el) => {
+    el.textContent = formatClock(Number(el.dataset.liveBase) + (Date.now() - Number(el.dataset.liveStart)) / 1000);
+  });
+}
 
 // The slim mark checks a to-do off; tapping the text opens it for editing.
 function todoItem(t, key, actions) {
@@ -14,7 +73,8 @@ function todoItem(t, key, actions) {
     }, h('span', { class: 'dash' })),
     h('button', { class: 'todo-title', onclick: () => actions.edit('todo', t) },
       t.title,
-      t.important ? h('span', { class: 'mark star', 'aria-hidden': 'true' }, '★') : null));
+      t.important ? h('span', { class: 'mark star', 'aria-hidden': 'true' }, '★') : null),
+    isTracked(t) ? tracker(t, key) : null);
 }
 
 // One section's to-dos grouped into (nested) category folders. A folder only shows
@@ -46,6 +106,19 @@ function folderTree(todos, key, actions) {
   return h('ul', { class: 'todos root' }, branch(null));
 }
 
+let showStats = false;
+
+function routineStatsList(tracked) {
+  return h('ul', { class: 'routine-stats' }, tracked.map((t) => {
+    const { times, total } = routineStats(t);
+    const amount = t.track === 'time' ? formatDuration(total) : formatNumber(total);
+    return h('li', {},
+      h('span', { class: 'rs-name' }, t.title),
+      h('span', { class: 'rs-times' }, `${times}×`),
+      h('span', { class: 'rs-total' }, total ? amount : '—'));
+  }));
+}
+
 // Routines on top, regular to-dos below. Labels only appear when there are routines.
 function todoColumn(key, actions) {
   const todos = todosOn(key);
@@ -57,10 +130,20 @@ function todoColumn(key, actions) {
     text, left(list) ? h('span', { class: 'section-count' }, String(left(list))) : null);
 
   // Routines sit in a shaded box so the two sections read as clearly separate.
+  // If any routine is tracked, tapping "Routines" reveals how often each was done.
   const sections = [];
   if (routines.length) {
+    const tracked = routines.filter(isTracked);
+    const heading = tracked.length
+      ? h('button', {
+        class: `section-label stats-toggle${showStats ? ' open' : ''}`, 'aria-expanded': String(showStats),
+        onclick: () => { showStats = !showStats; actions.refresh(); },
+      }, 'Routines', left(routines) ? h('span', { class: 'section-count' }, String(left(routines))) : null, icon(ICONS.right))
+      : label('Routines', routines);
     sections.push(h('section', { class: 'todo-section routines' },
-      label('Routines', routines), folderTree(routines, key, actions)));
+      heading,
+      tracked.length && showStats ? routineStatsList(tracked) : null,
+      folderTree(routines, key, actions)));
   }
   if (regular.length) {
     sections.push(h('section', { class: 'todo-section' },
