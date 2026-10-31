@@ -90,14 +90,20 @@ laptop. So:
   on by default). iOS Safari has no vibration API, so `js/haptics.js` clicks the label
   of a hidden `<input type="checkbox" switch>` (iOS 18+ plays a system haptic); Android
   uses `navigator.vibrate`. No sound. Must be called inside the user's tap.
-- **Account (optional) — email + password login with cloud backup/sync** via
-  Supabase (`js/cloud.js`, sheet in `js/account.js`, Settings → Account). The app
-  stays fully usable signed out; data is always local-first in localStorage.
+- **Account required — email + password login with cloud backup/sync** via
+  Supabase (`js/cloud.js`, login page + new-password sheet in `js/account.js`,
+  Settings → Account shows the email, sync status and Sign out). When accounts are
+  configured, a full-screen **login page appears first** (`#view-login`, `body.gated`
+  hides the dock) until the user signs in or creates an account; the session persists,
+  so it's only shown again after signing out. **Signing out syncs first, warns if
+  edits haven't reached the account, then clears the planner from the device**
+  (`clearData`, device prefs kept) so the next person on that phone can't see it.
+  Data is still local-first in localStorage while signed in.
   Signed in, the whole state is stored as one JSON row per user (`planner_data`,
   RLS so users only reach their own row; schema in `supabase/setup.sql`) and synced
   last-write-wins using `state.meta.updatedAt` vs the session's `lastSyncedAt`:
   pushes ~1.5s after local edits, pulls on open / foreground / `online`. First sign-in
-  with data on both sides asks which to keep. Sign out keeps the phone's data.
+  with data on both sides asks which to keep.
   Supabase REST is called directly with `fetch` (no SDK); requests time out after
   12s so a hung request can't block later syncs. Passwords are never stored by the
   app (Supabase Auth); the session tokens live in localStorage `planner.auth`.
@@ -125,7 +131,7 @@ laptop. So:
 ## Codebase structure
 
 ```
-index.html             Shell: calendar / D-Day / settings views, bottom bar, toast, sheets (editor, folder, D-Day)
+index.html             Shell: login / calendar / D-Day / settings views, bottom bar, toast, sheets (editor, folder, D-Day, account)
 styles.css             All styles. Theme via CSS variables; html[data-theme] light/dark, html[data-accent].
                        Square card size comes from --cal-w / --cell; .month-mode/.week-mode drive layout
 fonts/                 Fraunces variable font (latin, upright woff2) + OFL.txt license
@@ -142,7 +148,7 @@ js/dday.js             D-Day tab (countdown list) + its add/edit sheet
 js/haptics.js          Haptic tick on every button tap (iOS 18+ hidden-switch trick; Android vibrate)
 js/config.js           Supabase project URL + anon key (empty = no accounts)
 js/cloud.js            Supabase auth (sign up/in/out, reset) + whole-state cloud sync
-js/account.js          Sign in / create account / new password sheet
+js/account.js          Login page (sign in / create account / forgot password) + new-password sheet
 supabase/setup.sql     Table + row-level-security policies to run once in Supabase
 js/settings.js         Settings tab: theme, accent color, folders, alerts, backup export/restore
 js/reminders.js        Alert timers, notifications, in-app toast, app icon badge
@@ -207,6 +213,12 @@ Stored in `localStorage` under `planner.v1`:
 ES modules and service workers need `http://localhost` or HTTPS; opening
 `index.html` as a file won't work.
 
+Because `js/config.js` points at the real Supabase project, the app opens on the
+login page. For UI tests either route `**/js/config.js` to empty values (accounts off)
+or route it to a fake URL and mock the Supabase REST endpoints with `context.route`.
+Never create real accounts in the owner's project from tests (confirmation emails
+are sent to the address); a wrong-password sign-in is a safe connectivity check.
+
 Verify every UI change in a phone-sized browser with Playwright (pre-installed
 in cloud sessions; `require('playwright')` works — don't reinstall). Use
 `devices['iPhone 13']`, add items through the UI, tap a date to check the
@@ -233,7 +245,7 @@ and put the Project URL + anon (publishable) key in `js/config.js` (done: projec
 responses are never cached.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v25`; bump to `planner-v26`, …) and keep its `ASSETS` list in sync
+(currently `planner-v26`; bump to `planner-v27`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

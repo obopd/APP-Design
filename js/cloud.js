@@ -7,7 +7,7 @@
 // state.meta.updatedAt; we remember the stamp of the last successful sync and
 // compare it with the local and remote stamps.
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
-import { state, onChange, replaceAll, hasContent } from './store.js';
+import { state, onChange, replaceAll, hasContent, clearData } from './store.js';
 
 const AUTH_KEY = 'planner.auth';
 const TABLE = 'planner_data';
@@ -133,12 +133,20 @@ export async function signIn(email, password) {
   await afterSignIn();
 }
 
+// True when local edits haven't reached the account yet.
+export const hasUnsyncedChanges = () => !!session && (state.meta?.updatedAt || 0) > (session.lastSyncedAt || 0);
+
+// Signing out also clears the planner from this device (accounts are required, and
+// another person may sign in here next). Callers sync first and warn about unsynced edits.
 export async function signOut() {
+  clearTimeout(pushTimer);
   if (session) {
     try { await api('/auth/v1/logout', { method: 'POST', auth: true }); } catch { /* still sign out locally */ }
   }
   session = null;
   persist();
+  applyingRemote = true;
+  try { clearData(); } finally { applyingRemote = false; }
   setStatus({ state: 'idle', at: null, error: null });
 }
 

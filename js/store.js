@@ -60,6 +60,17 @@ export function replaceAll(data, { touch = true } = {}) {
   save({ touch });
 }
 
+// Used on sign-out: remove this user's planner from the device (it lives on in their
+// account). Device preferences (theme, accent, haptics) stay.
+export function clearData() {
+  state.todos = [];
+  state.events = [];
+  state.categories = [];
+  state.ddays = [];
+  state.meta = {};
+  save({ touch: false });
+}
+
 export const hasContent = (data = state) =>
   [data.todos, data.events, data.categories, data.ddays].some((list) => list && list.length);
 

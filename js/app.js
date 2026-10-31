@@ -7,14 +7,15 @@ import { renderSettings, applyTheme } from './settings.js';
 import { renderDdays, renderTodayDdays } from './dday.js';
 import { refreshReminders, setToast } from './reminders.js';
 import './haptics.js';
-import { onCloudChange, syncNow, handleAuthRedirect } from './cloud.js';
-import { openAccountSheet } from './account.js';
+import { onCloudChange, syncNow, handleAuthRedirect, isConfigured, currentUser } from './cloud.js';
+import { openAccountSheet, renderLoginGate } from './account.js';
 
 const calendarView = document.getElementById('view-calendar');
 const calendarEl = document.getElementById('calendar');
 const panelEl = document.getElementById('panel');
 const settingsEl = document.getElementById('view-settings');
 const ddayEl = document.getElementById('view-dday');
+const loginEl = document.getElementById('view-login');
 const toastEl = document.getElementById('toast');
 const topSlot = document.getElementById('top-slot');
 
@@ -50,7 +51,28 @@ const actions = {
   refresh: () => render(),
 };
 
+// Accounts are required: while signed out, only the login page shows (no dock).
+const isGated = () => isConfigured() && !currentUser();
+let gateShown = false;
+
 function render() {
+  const gated = isGated();
+  document.body.classList.toggle('gated', gated);
+  loginEl.hidden = !gated;
+  if (gated) {
+    calendarView.hidden = settingsEl.hidden = ddayEl.hidden = true;
+    if (!gateShown) renderLoginGate(loginEl); // once per visit, so typing isn't wiped
+    gateShown = true;
+    return;
+  }
+  if (gateShown) {
+    // Just signed in: start fresh on the month calendar.
+    gateShown = false;
+    loginEl.replaceChildren();
+    Object.assign(view, { tab: 'calendar', selected: null });
+    prevView = null;
+  }
+
   document.querySelectorAll('.tab').forEach((t) => {
     const on = t.dataset.view === view.tab;
     t.classList.toggle('active', on);
@@ -116,7 +138,10 @@ render();
 refreshReminders();
 
 // Account: keep Settings' sync status fresh, handle links from Supabase emails, sync on open.
-onCloudChange(() => { if (view.tab === 'settings') render(); });
+onCloudChange(() => {
+  // Signing in/out swaps between the login page and the app; otherwise only Settings shows sync status.
+  if (isGated() !== gateShown || view.tab === 'settings') render();
+});
 handleAuthRedirect()
   .then((type) => { if (type === 'recovery') { view.tab = 'settings'; render(); openAccountSheet('new-password'); } })
   .catch(() => {})

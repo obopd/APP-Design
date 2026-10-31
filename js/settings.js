@@ -2,8 +2,7 @@
 import { h, icon, ICONS } from './util.js';
 import { state, save, replaceAll, categoryTree, deleteCategory } from './store.js';
 import { openFolderSheet } from './folders.js';
-import { isConfigured, currentUser, syncStatus, syncNow, signOut } from './cloud.js';
-import { openAccountSheet } from './account.js';
+import { isConfigured, currentUser, syncStatus, syncNow, signOut, hasUnsyncedChanges } from './cloud.js';
 import { notificationsSupported, requestNotifications } from './reminders.js';
 
 const media = matchMedia('(prefers-color-scheme: dark)');
@@ -68,27 +67,25 @@ function syncLabel() {
   return `Synced ${mins < 1 ? 'just now' : mins < 60 ? `${mins} min ago` : `${Math.round(mins / 60)} h ago`}`;
 }
 
-// Account: optional email/password login that backs up and syncs everything.
+// Sign out: save to the account first; the planner is then cleared from this phone.
+async function confirmSignOut() {
+  await syncNow();
+  const msg = hasUnsyncedChanges()
+    ? 'Some changes haven’t reached your account yet (no connection). If you sign out now they’ll be lost.\n\nSign out anyway?'
+    : 'Sign out? Your planner is saved in your account and will be removed from this phone until you sign in again.';
+  if (confirm(msg)) await signOut();
+}
+
+// Account: email/password login (required when accounts are set up) that backs up and syncs.
 function accountSection() {
-  if (!isConfigured()) {
-    return h('div', {}, h('div', { class: 'set-row' }, h('span', {}, 'Account'), h('span', { class: 'status' }, 'Not set up yet')));
-  }
   const user = currentUser();
-  if (!user) {
-    return h('div', {},
-      h('div', { class: 'set-row' }, h('span', {}, 'Account'),
-        h('button', { class: 'pill', onclick: () => openAccountSheet('signin') }, 'Sign in')),
-      h('p', { class: 'set-note account-hint' }, 'Back up and sync across devices.'));
+  if (!isConfigured() || !user) {
+    return h('div', {}, h('div', { class: 'set-row' }, h('span', {}, 'Account'), h('span', { class: 'status' }, 'Not set up yet')));
   }
   return h('div', {},
     h('div', { class: 'set-row' },
       h('span', { class: 'account-email' }, user.email),
-      h('button', {
-        class: 'pill',
-        onclick: async () => {
-          if (confirm('Sign out? Your planner stays on this phone.')) await signOut();
-        },
-      }, 'Sign out')),
+      h('button', { class: 'pill', onclick: confirmSignOut }, 'Sign out')),
     h('button', { class: `sync-line ${syncStatus().state}`, onclick: () => syncNow() }, syncLabel()));
 }
 

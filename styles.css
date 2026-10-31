@@ -409,5 +409,20 @@ textarea.notes {
 .sync-line { font-size: 12px; color: var(--muted); padding: 2px 0; text-align: left; }
 .sync-line.error { color: #e11d48; }
 
+/* Login page (shown before the app while signed out) */
+body.gated .tabbar { display: none; }
+#view-login { padding-bottom: calc(env(safe-area-inset-bottom) + var(--gap)); justify-content: center; }
+.login { width: min(100% - 2 * var(--gap), 360px); margin: 0 auto; display: grid; gap: 18px; padding-bottom: 8vh; }
+.login-title { margin: 0 0 10px; font-size: 40px; text-align: center; }
+.login-form { display: grid; gap: 10px; }
+.login .title-row input { font-family: inherit; font-size: 17px; font-weight: 500; padding: 12px 0; }
+.login-submit {
+  margin-top: 8px; height: 48px; border-radius: 14px; font-size: 16px; font-weight: 600;
+  background: var(--accent); color: var(--on-accent);
+}
+.login-submit:disabled { opacity: .5; }
+.login .link-btn { justify-self: center; padding: 8px; font-size: 13.5px; color: var(--muted); font-weight: 500; }
+.login .login-switch { color: var(--fg); font-weight: 600; }
+
 /* Hidden switch used only to trigger iOS haptics (see js/haptics.js). */
 .haptic-switch { position: fixed; left: -9999px; top: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
