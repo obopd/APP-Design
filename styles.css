@@ -17,7 +17,7 @@
   --on-accent: var(--bg);
   --hour: 48px;
   /* Floating rounded dock at the bottom (like the iPhone dock). --tabbar = space it takes. */
-  --dock-h: 62px;
+  --dock-h: 52px;
   --dock-bottom: max(12px, calc(env(safe-area-inset-bottom) - 8px));
   --tabbar: calc(var(--dock-h) + var(--dock-bottom));
   --dock-bg: rgba(242, 242, 244, .78);
@@ -275,22 +275,22 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 /* ---------- Tab bar ---------- */
 .tabbar {
   position: fixed; z-index: 5;
-  left: max(14px, env(safe-area-inset-left)); right: max(14px, env(safe-area-inset-right));
+  left: 50%; transform: translateX(-50%);  /* hugs its icons, centered */
   bottom: var(--dock-bottom); height: var(--dock-h);
-  display: flex; justify-content: space-evenly; align-items: center; padding-inline: 10px;
-  border-radius: 30px;
+  display: flex; align-items: center; gap: 14px; padding-inline: 12px;
+  border-radius: 26px;
   background: var(--dock-bg);
   backdrop-filter: blur(24px) saturate(1.4); -webkit-backdrop-filter: blur(24px) saturate(1.4);
   border: 1px solid color-mix(in srgb, var(--fg) 7%, transparent);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, .10);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .10);
 }
-.tab { width: 48px; height: 100%; display: grid; place-items: center; color: var(--muted); position: relative; }
+.tab { width: 44px; height: 100%; display: grid; place-items: center; color: var(--muted); position: relative; }
 .tab svg { width: 22px; height: 22px; }
 .tab.active { color: var(--fg); }
-.tab-add { width: 48px; height: 100%; display: grid; place-items: center; color: var(--fg); transition: transform .12s; }
+.tab-add { width: 44px; height: 100%; display: grid; place-items: center; color: var(--fg); transition: transform .12s; }
 .tab-add svg { width: 24px; height: 24px; stroke-width: 1.8; }
 .tab-add:active { transform: scale(.88); }
-.tab.active::after { content: ""; position: absolute; bottom: 9px; width: 4px; height: 4px; border-radius: 50%; background: var(--fg); }
+.tab.active::after { content: ""; position: absolute; bottom: 5px; width: 4px; height: 4px; border-radius: 50%; background: var(--fg); }
 
 /* ---------- Settings view ---------- */
 .settings { padding: 18px 18px 24px; overflow-y: auto; display: grid; gap: 22px; align-content: start; }

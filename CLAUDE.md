@@ -20,8 +20,8 @@ laptop. So:
 
 ## Product requirements (from the owner)
 
-- **Bottom bar** = a floating rounded dock like the iPhone home-screen dock (inset
-  from the edges, frosted `--dock-bg`, radius 30px; icon-only, evenly spaced): Calendar · D-Day · **+** (a plain + icon,
+- **Bottom bar** = a floating rounded dock like the iPhone home-screen dock (compact,
+  hugs its icons and is centered; frosted `--dock-bg`, 52px tall, radius 26px; icon-only): Calendar · D-Day · **+** (a plain + icon,
   no circle; on the D-Day tab it adds a D-Day) · Settings. More tabs will be added later; a tab = a `.tab[data-view]` button in
   `index.html` + a `#view-<name>` container, switched by `view.tab` in `js/app.js`.
 - The calendar is a **perfect square card** (always 6 week rows) with space on
@@ -186,7 +186,7 @@ GitHub Pages serving the repo root (all paths are relative, so it works under
 `/APP-Design/`): repo Settings → Pages → Deploy from a branch → branch, `/ (root)`.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v16`; bump to `planner-v17`, …) and keep its `ASSETS` list in sync
+(currently `planner-v17`; bump to `planner-v18`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
