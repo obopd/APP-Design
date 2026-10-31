@@ -259,8 +259,13 @@ and put the Project URL + anon (publishable) key in `js/config.js` (done: projec
 `rkpsjkssmfjuavdhayie`, table + RLS verified). Never commit the service_role/secret key. The service worker only caches same-origin GETs, so API
 responses are never cached.
 
+Updates reach phones quickly: the service worker installs with `cache: 'reload'` and
+fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the app calls
+`registration.update()` when it returns to the foreground, and reloads once on
+`controllerchange`. So the owner only needs to close and reopen the app once.
+
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v30`; bump to `planner-v31`, …) and keep its `ASSETS` list in sync
+(currently `planner-v31`; bump to `planner-v32`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

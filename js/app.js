@@ -134,7 +134,22 @@ setInterval(() => { if (view.tab === 'calendar' && view.selected === todayKey())
 
 setInterval(tickTimers, 1000); // running stopwatches
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+// Updates: check for a new version on open and whenever the app comes back to the
+// foreground; when a new service worker takes over, reload once to show it.
+if ('serviceWorker' in navigator) {
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading) return; // first install: nothing old to replace
+    reloading = true;
+    location.reload();
+  });
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') reg.update().catch(() => {});
+    });
+  });
+}
 
 applyTheme();
 render();

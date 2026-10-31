@@ -1,5 +1,5 @@
 // Bump CACHE whenever any file in ASSETS changes, so installed copies update.
-const CACHE = 'planner-v30';
+const CACHE = 'planner-v31';
 const ASSETS = [
   './',
   'index.html',
@@ -28,7 +28,9 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)));
+  // cache: 'reload' skips the browser's HTTP cache (GitHub Pages sends max-age=600),
+  // so a new version never installs stale copies of the files.
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS.map((url) => new Request(url, { cache: 'reload' })))));
   self.skipWaiting();
 });
 
@@ -44,7 +46,8 @@ self.addEventListener('fetch', (event) => {
   // Only cache the app's own files — never Supabase/API responses.
   if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return;
   event.respondWith(
-    fetch(event.request)
+    // 'no-cache' revalidates with the server instead of trusting the 10-minute HTTP cache.
+    fetch(event.request.url, { cache: 'no-cache', credentials: 'same-origin' })
       .then((res) => {
         const copy = res.clone();
         caches.open(CACHE).then((cache) => cache.put(event.request, copy));
