@@ -93,7 +93,8 @@ laptop. So:
 - **Account required — email + password login with cloud backup/sync** via
   Supabase (`js/cloud.js`, login page + new-password sheet in `js/account.js`,
   Settings → Account shows the email, sync status and Sign out). When accounts are
-  configured, a full-screen **login page appears first** (`#view-login`, `body.gated`
+  configured, a full-screen, compact and minimal **login page appears first** (280px
+  wide, small type, lots of empty space; `#view-login`, `body.gated`
   hides the dock) until the user signs in or creates an account; the session persists,
   so it's only shown again after signing out. **Signing out syncs first, warns if
   edits haven't reached the account, then clears the planner from the device**
@@ -197,6 +198,8 @@ Stored in `localStorage` under `planner.v1`:
 - Colors only through CSS variables (`--bg --fg --muted --line --soft --accent --on-accent`);
   new accents need a `:root[data-accent=…]` rule in `styles.css` and an entry in `ACCENTS`/`SWATCH` in `settings.js`.
 - Mobile first: touch targets ≥ 40px, respect `env(safe-area-inset-*)`, check light + dark.
+  The viewport has `maximum-scale=1` so iOS doesn't auto-zoom when focusing inputs
+  smaller than 16px (pinch-zoom still works on iOS).
 - `HOUR_PX` in `js/day.js` must match `--hour` in `styles.css`.
 - Comments only where the *why* isn't obvious.
 
@@ -245,7 +248,7 @@ and put the Project URL + anon (publishable) key in `js/config.js` (done: projec
 responses are never cached.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v26`; bump to `planner-v27`, …) and keep its `ASSETS` list in sync
+(currently `planner-v27`; bump to `planner-v28`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
