@@ -100,16 +100,16 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 /* Snap row: items keep their natural width with a gap; 50% side padding lets the first
    and last items reach the center. JS centers the first item on render. */
 .tdd-track {
-  width: 100%; display: flex; gap: 28px; overflow-x: auto; overscroll-behavior-x: contain;
+  width: 100%; display: flex; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory; padding-inline: 50%; scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
 }
 .tdd-track::-webkit-scrollbar { display: none; }
 .tdd-item {
   flex: 0 0 auto; max-width: 76vw; scroll-snap-align: center;
   display: flex; align-items: baseline; justify-content: center; gap: 6px; padding: 2px 4px;
-  opacity: .28; transition: opacity .25s;
+  opacity: .35; transition: opacity .25s;
 }
 .tdd-item.active { opacity: 1; }
 .tdd-title { font-size: 22px; line-height: 1.2; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -77,7 +77,7 @@ laptop. So:
   D-Day tab. It fades out in week mode and never shifts the calendar.
   Several D-Days on the same day form a horizontal scroll-snap row: the centered one
   is fully opaque, the next peeks in at the right edge at low opacity. Items keep
-  their natural width (track has 50% side padding + 28px gap) and `renderTodayDdays`
+  their natural width (track has 50% side padding + 12px gap, so the next one is clearly visible) and `renderTodayDdays`
   sets `scrollLeft` so the first one starts exactly centered.
 - **Haptics**: every button-like tap gives a light haptic tick (Settings → Haptics,
   on by default). iOS Safari has no vibration API, so `js/haptics.js` clicks the label
@@ -193,7 +193,7 @@ GitHub Pages serving the repo root (all paths are relative, so it works under
 `/APP-Design/`): repo Settings → Pages → Deploy from a branch → branch, `/ (root)`.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v19`; bump to `planner-v20`, …) and keep its `ASSETS` list in sync
+(currently `planner-v20`; bump to `planner-v21`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
