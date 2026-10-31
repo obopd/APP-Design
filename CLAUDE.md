@@ -246,8 +246,10 @@ in cloud sessions; `require('playwright')` works — don't reinstall). Use
 week roll-up and two-column day view, reload to confirm persistence, check
 dark mode, collect `pageerror` events, and look at screenshots.
 
-Icons: edit `icons/icon.svg`, then render it to 180/192/512 px PNGs with
-Playwright (`page.setContent` + `page.screenshot`).
+App icon = the "Kairos" wordmark (Fraunces 600, white #f5f5f7 on #0a0a0a). `icons/icon.svg`
+embeds the font as base64; render the 180/192/512 PNGs with Playwright (`page.setContent`
+with the font as a data: URL — file:// fonts don't load there — then `page.screenshot`).
+Logo images for other uses live in `docs/logo/`.
 
 ## Deployment
 
@@ -271,7 +273,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v34`; bump to `planner-v35`, …) and keep its `ASSETS` list in sync
+(currently `planner-v35`; bump to `planner-v36`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
