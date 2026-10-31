@@ -77,6 +77,22 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .grow { flex: 1 1 0; transition: flex-grow .4s cubic-bezier(.2,.8,.2,1); }
 .week-mode .grow { flex-grow: 0; }
 
+/* Today's D-Days sit in the free space above the centered calendar (month mode only).
+   The slot keeps flex-basis 0, so its content never pushes the calendar off center. */
+.top-slot { min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+.today-dday {
+  display: grid; justify-items: center; gap: 4px; margin-bottom: 22px; padding: 4px 16px;
+  transition: opacity .25s;
+}
+.week-mode .today-dday { opacity: 0; pointer-events: none; }
+.tdd-label {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--on-accent); background: var(--accent); border-radius: 999px; padding: 3px 9px 2px;
+}
+.tdd-item { display: flex; align-items: baseline; gap: 6px; }
+.tdd-title { font-size: 22px; line-height: 1.2; }
+.tdd-sub { font-size: 12px; color: var(--muted); }
+
 /* ---------- Calendar ---------- */
 .calendar {
   flex: none;

@@ -12,12 +12,31 @@ const ordinal = (n) => {
   return `${n}${s[(v - 20) % 10] || s[v] || s[0]}`;
 };
 
+// "58th" for yearly D-Days whose start year is known, else null.
+function nthOf(d, targetKey) {
+  const year = parseKey(targetKey).getFullYear();
+  const startYear = parseKey(d.date).getFullYear();
+  return d.yearly && year > startYear ? ordinal(year - startYear) : null;
+}
+
+// Shown above the calendar on the starting screen when a D-Day is today.
+export function renderTodayDdays(root, onOpen) {
+  const today = todayKey();
+  const hits = state.ddays.filter((d) => ddayDiff(d, today) === 0);
+  root.replaceChildren(hits.length
+    ? h('button', { class: 'today-dday', 'aria-label': 'Open D-Day', onclick: onOpen },
+      h('span', { class: 'tdd-label' }, 'D-Day'),
+      hits.map((d) => h('span', { class: 'tdd-item' },
+        h('span', { class: 'tdd-title display' }, d.title),
+        nthOf(d, today) ? h('span', { class: 'tdd-sub' }, nthOf(d, today)) : null)))
+    : '');
+}
+
 function row(d) {
   const target = ddayTarget(d);
   const diff = ddayDiff(d);
   const date = parseKey(target);
-  const startYear = parseKey(d.date).getFullYear();
-  const nth = d.yearly && date.getFullYear() > startYear ? ordinal(date.getFullYear() - startYear) : null;
+  const nth = nthOf(d, target);
   const when = date.toLocaleDateString(undefined, {
     month: 'short', day: 'numeric', year: date.getFullYear() === new Date().getFullYear() ? undefined : 'numeric',
   });

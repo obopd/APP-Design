@@ -71,6 +71,9 @@ laptop. So:
   shows title, date (+ ↻ and "58th" for yearly ones) and a big "D-12" / "D-Day" /
   "D+30". Upcoming sorted soonest first; past one-off dates count up under "Since".
   Yearly entries roll to the next occurrence (`ddayTarget`). Tap a row to edit/delete.
+  **On the day itself**, the starting screen (month mode) shows it in the free space
+  above the centered calendar (`#top-slot`, `renderTodayDdays`); tapping it opens the
+  D-Day tab. It fades out in week mode and never shifts the calendar off center.
 - **Tracking (opt-in per to-do)**: editor "Track" = Off | Count | Time. Only tracked
   to-dos show a number pill: Count → tap to enter a number; Time → tap to type
   minutes/h:mm, plus a ▶/■ stopwatch (stored as a start timestamp, so it keeps
@@ -180,7 +183,7 @@ GitHub Pages serving the repo root (all paths are relative, so it works under
 `/APP-Design/`): repo Settings → Pages → Deploy from a branch → branch, `/ (root)`.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v11`; bump to `planner-v12`, …) and keep its `ASSETS` list in sync
+(currently `planner-v12`; bump to `planner-v13`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

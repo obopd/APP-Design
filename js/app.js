@@ -4,7 +4,7 @@ import { renderCalendar } from './calendar.js';
 import { renderDay, currentLayout, tickTimers } from './day.js';
 import { openEditor } from './editor.js';
 import { renderSettings, applyTheme } from './settings.js';
-import { renderDdays, openDdaySheet } from './dday.js';
+import { renderDdays, openDdaySheet, renderTodayDdays } from './dday.js';
 import { refreshReminders, setToast } from './reminders.js';
 
 const calendarView = document.getElementById('view-calendar');
@@ -13,6 +13,7 @@ const panelEl = document.getElementById('panel');
 const settingsEl = document.getElementById('view-settings');
 const ddayEl = document.getElementById('view-dday');
 const toastEl = document.getElementById('toast');
+const topSlot = document.getElementById('top-slot');
 
 // view.selected = 'YYYY-MM-DD' → week mode; null → month mode.
 const now = new Date();
@@ -65,6 +66,7 @@ function render() {
   if (view.tab === 'dday') { renderDdays(ddayEl); return; }
 
   renderCalendar(calendarEl, view, prevView, actions);
+  renderTodayDdays(topSlot, () => { view.tab = 'dday'; render(); });
   // Month mode shows only the calendar, centered; the panel's old content just fades out.
   calendarView.classList.toggle('week-mode', !!view.selected);
   calendarView.classList.toggle('month-mode', !view.selected);
