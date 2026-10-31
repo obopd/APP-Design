@@ -548,8 +548,11 @@ body.gated .tabbar { display: none; }
 .menu-check { width: 18px; display: grid; place-items: center; flex-shrink: 0; }
 .menu-check svg { width: 15px; height: 15px; stroke-width: 2.4; }
 
+/* Week → month: slower, with a soft start and soft finish. */
+#view-calendar.closing { --dur: .75s; --ease: cubic-bezier(.45, .05, .2, 1); }
+
 @media (prefers-reduced-motion: reduce) {
-  :root { --dur: .01s; }
+  :root, #view-calendar.closing { --dur: .01s; }
 }
 
 /* Hidden switch used only to trigger iOS haptics (see js/haptics.js). */

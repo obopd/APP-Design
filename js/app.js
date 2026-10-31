@@ -75,7 +75,12 @@ function flip(first, opening, panelFirst) {
     if (opening) setStyle(panelEl, { transition: '', transform: '', opacity: '' });
     else if (panelFirst) setStyle(panelEl, { transition: '', opacity: '0', transform: 'translateY(28px)' });
   });
-  if (!opening) flipTimer = setTimeout(() => setStyle(panelEl, PANEL_RESET), 650);
+  if (!opening) {
+    flipTimer = setTimeout(() => {
+      setStyle(panelEl, PANEL_RESET);
+      calendarView.classList.remove('closing');
+    }, 850);
+  }
 }
 
 // Accounts are required: while signed out, only the login page shows (no dock).
@@ -125,6 +130,8 @@ function render() {
   calendarView.classList.toggle('has-dday', ddaysToday > 0);
   if (view.selected) renderDay(panelEl, view.selected, actions);
   if (animate) void calendarEl.offsetHeight; // commit the start state so CSS transitions run
+  // Going back to the month uses a slower, gentler timing (.closing in styles.css).
+  if (animate) calendarView.classList.toggle('closing', !willWeek);
   calendarView.classList.toggle('week-mode', willWeek);
   calendarView.classList.toggle('month-mode', !willWeek);
   if (animate) flip(first, willWeek, panelFirst);

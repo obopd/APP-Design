@@ -55,7 +55,8 @@ laptop. So:
   Inside the card, `.cal-rows-inner` slides to the selected week and is masked with
   `clip-path`; the rounded outline is two pseudo-elements (`::before` clipped, `::after`
   translated by `--frame-cut`). The card has a solid background + `z-index: 1` so the
-  fading panel never shows through. All parts share `--dur` / `--ease`. Intl formatters
+  fading panel never shows through. All parts share `--dur` / `--ease`; going back to the month is slower and eased in-out
+  (`#view-calendar.closing`: .75s, added in `render()` and removed by `flip()`'s timer). Intl formatters
   are cached (`fmt()` in util.js) because creating them on every render made the tap
   itself slow. Measure with CDP CPU throttling (4×) and rAF frame times before/after. **Default colors are black & white**;
   the user can change the accent color and light/dark mode in Settings.
@@ -70,8 +71,9 @@ laptop. So:
 - **To-do folders (categories)**, nestable like computer folders (Academic →
   Biology, Chemistry). New folders start open; each folder's open/closed state is
   saved (`category.open`) and must survive closing/reopening the tab or app.
-  A folder shows in a day only if it contains that day's to-dos. Managed in
-  Settings (rename, add sub-folder, delete) or via "New…" in the editor;
+  A folder shows in a day only if it contains that day's to-dos. New folders come from the folder-plus icons in the calendar (no "New" button in
+  Settings); Settings lists existing folders (rename/recolor, add sub-folder, delete)
+  and hides the Folders row when there are none; "New…" in the editor also works;
   "Academic/Biology" creates nested folders. Folder names use the same font as
   the to-dos (one unified font in the list) and have an underline whose color is
   chosen when the folder is created from 20 colors (`FOLDER_COLORS`, 2 rows of 10; `category.color`, sheet in `js/folders.js`;
@@ -296,7 +298,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v42`; bump to `planner-v43`, …) and keep its `ASSETS` list in sync
+(currently `planner-v43`; bump to `planner-v44`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

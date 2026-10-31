@@ -110,9 +110,11 @@ function foldersSection() {
       },
     }, icon(ICONS.trash))));
 
+  // New folders are made from the calendar (folder icon next to each section's +).
+  if (!rows.length) return null;
   return h('div', {},
-    h('div', { class: 'set-row' }, h('span', {}, 'Folders'), h('button', { class: 'pill', onclick: () => openFolderSheet() }, 'New')),
-    rows.length ? h('div', { class: 'cat-list' }, rows) : null);
+    h('div', { class: 'set-row' }, h('span', {}, 'Folders')),
+    h('div', { class: 'cat-list' }, rows));
 }
 
 export function renderSettings(root) {
