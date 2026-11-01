@@ -221,7 +221,7 @@ laptop. So:
   replaceAll / clearData). Friends' shared items and the Share rows are hidden in film mode.
   **Collaborators** = accepted friends the owner invites; they get full access and are
   added to the project's single **group chat** (created with the project); in film mode
-  the Chat tab opens that chat directly (no back button, dock stays). While typing in any page field (not sheets) the dock fades out (`body.typing`, set on focusin; removed only once the keyboard has folded). The layout is otherwise left alone while typing: iOS slides the page up with the keyboard and back down in one motion. Don't resize / re-pin the chat to the visual viewport — that fought iOS's own scroll and made it jump and bounce. Invites show in the
+  the Chat tab opens that chat directly (no back button, dock stays). While typing in any page field (not sheets) the dock fades out (`body.typing`, set on focusin; removed only once the keyboard has folded). The layout is otherwise left alone while typing: iOS slides the page up with the keyboard and back down in one motion. Don't resize / re-pin the chat to the visual viewport — that fought iOS's own scroll and made it jump and bounce. Because iOS lifts the page by the whole keyboard height, the space under the box (home-bar padding, the dock's room in film mode) eases to 0 while typing so the box sits on the keyboard, and messages stack from the bottom of the list (`.msg-scroll::before` spacer) so short chats stay visible. Invites show in the
   bell ("@x added you to the film project …"). **Write** = Theme (theme, message, notes;
   stored under the `story` section key) · Plot (acts of scene cards, ▲▼ moves across acts) · Script
   (screenplay blocks scene / action / character / dialogue / ( ) / transition; Enter = next
@@ -412,7 +412,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v62`; bump to `planner-v63`, …) and keep its `ASSETS` list in sync
+(currently `planner-v63`; bump to `planner-v64`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
