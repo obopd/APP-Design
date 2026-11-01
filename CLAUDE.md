@@ -29,7 +29,11 @@ to Home Screen). The owner (film director, photographer, reader, college student
 - **Opening any sheet or card must not focus a text field** (no keyboard until tapped).
 - **No haptics** (removed at the owner's request).
 - Animations only animate `transform` / `opacity` (FLIP), never layout. Measure with CDP
-  4× CPU throttling and rAF frame times.
+  4× CPU throttling and rAF frame times. Sheets (`js/motion.js`) slide away on close, fade
+  their backdrop and can be dragged down by the grabber / header; tabs fade in
+  (`.view-enter`); buttons give a small press scale; all respect `prefers-reduced-motion`.
+- Dark mode: sheets sit on a raised surface (`--bg #1c1c1e`, fields `#2c2c2e`); the selected
+  segment is a lighter pill. Small controls get invisible enlarged tap areas (`::after`).
 - **Dock**: floating rounded bar like the iPhone dock (52px, radius 26px, frosted, icons
   only, no +). Normal: Calendar · D-Day · Chat · Settings. Film mode: Calendar · Write ·
   Organize · Preview · Chat · Settings. A tab = `.tab[data-view]` in `index.html` + a
@@ -178,6 +182,7 @@ js/util.js   h() DOM helper, ICONS, date helpers (local 'YYYY-MM-DD'), fmt()
 js/store.js  state, save/storeItem, routines (occursOn, isDone), queries, folders, cur()/useLists
 js/calendar.js  js/day.js  js/editor.js  js/folders.js  js/dday.js  js/postpone.js
 js/ui.js     app dialogs and menus (ask, tell, askText, askDate, pick, pickMany, snack…)
+js/motion.js sheet close animation + drag-down to close
 js/config.js Supabase URL + publishable key + VAPID public key (all public)
 js/cloud.js  auth, sync + merge, storage helpers   js/account.js  login page
 js/settings.js  js/reminders.js (local alerts, badge)  js/push.js  js/live.js  js/search.js
@@ -247,12 +252,14 @@ every `supabase/*.sql` on top of `db/stub.sql` (stand-ins for Supabase auth / st
 vault / pg_net / pg_cron) and `db/seed.sql` (users a@x, b@x, c@x, password `secret1`; alice
 is friends with bob and carol; an alice↔bob chat), runs `mock-server.js` on :54321
 (PostgREST + GoTrue + Storage + RPC + Realtime stand-in with real RLS; `Bearer service` =
-service role) and the app on :8765. Suites: `sync`, `storage`, `preview`, `shoot`,
+service role) and the app on :8765. Suites: `sync`, `storage`, `motion`, `preview`, `shoot`,
 `app-features` (push sign-up, instant chat, search, backups, clean-up, ping) and
 `push-function` (the Edge Function in Node, decrypting real Web Push). Write tests with
 `helpers.js` (`phone`, `inApp`, `sql`, `check`, `filmProject`). **Add a test with each
 feature and run the suite before pushing.** Also look at screenshots of UI changes
-(iPhone 13, light and dark). Never create real accounts in the owner's Supabase project;
+(iPhone 13, light and dark). `node tests/audit.js` (after `start.sh`) walks every screen
+in light and dark: page / console errors, content wider than the screen, small tap targets,
+screenshots in `tests/out/audit/`. Never create real accounts in the owner's Supabase project;
 anon-key requests are safe checks.
 
 ## Deployment
@@ -267,7 +274,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v78`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v79`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 

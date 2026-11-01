@@ -122,6 +122,9 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   transition: transform .5s cubic-bezier(.3, .7, .2, 1), opacity .2s linear;
 }
 /* Calendar logo flips away, the clapperboard flips in, then its arm claps shut. */
+/* The drawings inside the logo never take taps (the button does), so mid-animation they can't
+   cover the project name below. */
+.brand > * { pointer-events: none; }
 .brand-slate { transform: rotateY(-180deg); opacity: 0; }
 .film .brand-cal { transform: rotateY(180deg); opacity: 0; transition-delay: 0s, .12s; }
 .film .brand-slate { transform: rotateY(0); opacity: 1; transition-delay: .05s, .05s; }
@@ -404,7 +407,11 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .tab { width: 44px; height: 100%; display: grid; place-items: center; color: var(--muted); position: relative; }
 .tab svg { width: 22px; height: 22px; }
 .tab.active { color: var(--fg); }
-.tab.active::after { content: ""; position: absolute; bottom: 5px; width: 4px; height: 4px; border-radius: 50%; background: var(--fg); }
+/* The dot under the open tab grows in instead of popping. */
+.tab::after { content: ""; position: absolute; bottom: 5px; width: 4px; height: 4px; border-radius: 50%; background: var(--fg); opacity: 0; transform: scale(.2); transition: opacity .2s, transform .28s cubic-bezier(.2, .8, .2, 1); }
+.tab.active::after { opacity: 1; transform: none; }
+.tab svg { transition: transform .14s ease-out, color .2s; }
+.tab:active svg { transform: scale(.86); }
 
 /* ---------- Settings view ---------- */
 .settings { padding: 18px 18px 24px; overflow-y: auto; display: grid; gap: 22px; align-content: start; }
@@ -447,6 +454,9 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 }
 .sheet[open] { animation: sheet-up .26s cubic-bezier(.2,.8,.2,1); }
 .sheet::backdrop { background: rgba(0,0,0,.35); }
+.sheet[open]::backdrop { animation: fade-in .26s ease-out; }
+.sheet.closing::backdrop { animation: fade-out .22s ease-in forwards; }
+@keyframes fade-out { to { opacity: 0; } }
 @keyframes sheet-up { from { transform: translateY(100%); } }
 
 .sheet form { padding: 8px 16px calc(16px + env(safe-area-inset-bottom)); display: grid; gap: 12px; }
@@ -1116,3 +1126,49 @@ body.typing #view-chat { padding-bottom: 0; }
 .shoot-card .muted { color: var(--muted); }
 .shoot-copy { justify-self: start; display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; }
 .shoot-copy svg { width: 15px; height: 15px; }
+
+/* ---------- Bigger tap areas (no visual change) ---------- */
+/* Small controls get an invisible margin that also takes taps, so they're easy to hit
+   with a thumb (aim: ~40px) without looking bigger. */
+.segmented button, .swatch, .track-pill, .stats-toggle, .sync-line, .my-handle, .my-id,
+.film-chip, .pv-yt { position: relative; }
+.segmented button::after { content: ""; position: absolute; inset: -8px 0; }
+.track-pill::after, .stats-toggle::after, .sync-line::after, .my-handle::after, .my-id::after, .pv-yt::after {
+  content: ""; position: absolute; inset: -10px -4px;
+}
+.swatch::after { content: ""; position: absolute; inset: -9px -6px; border-radius: 50%; }
+
+/* ---------- Motion polish ---------- */
+/* Switching tabs: the new page fades in (opacity only, so fixed buttons inside don't move). */
+.view.view-enter { animation: fade-in .2s ease-out; }
+/* Pressing buttons gives a small, quick give. */
+.pill, .ask-btn, .select-btn, .page-add, .search-row, .shoot-copy { transition: transform .12s ease-out, background-color .15s; }
+.pill:active, .ask-btn:active, .select-btn:active, .shoot-copy:active { transform: scale(.96); }
+.page-add:active { transform: scale(.9); }
+/* Cards and menus shrink a touch as they fade away. */
+.layer .ask-card, .layer .menu-card, .layer .search-card { transition: transform .15s ease-in; }
+.layer.closing .ask-card, .layer.closing .menu-card { transform: scale(.96); }
+.layer.closing .search-card { transform: translateY(-8px); }
+/* Search drops in from the top. */
+.layer.search-layer .search-card { animation: search-in .24s cubic-bezier(.2, .8, .2, 1); }
+@keyframes search-in { from { opacity: 0; transform: translateY(-12px); } }
+/* Grabber looks draggable (sheets can be pulled down to close). */
+.sheet .grabber { cursor: grab; touch-action: none; }
+.sheet .sheet-head { touch-action: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .view.view-enter, .sheet[open], .sheet[open]::backdrop, .layer.search-layer .search-card,
+  .ask-card, .menu-card, .pv-stage.from-left, .pv-stage.from-right { animation-duration: .01s !important; }
+  .tab::after, .tab svg, .pill, .ask-btn, .select-btn, .page-add { transition-duration: .01s !important; }
+}
+.sheet .grabber { position: relative; }
+.sheet .grabber::after { content: ""; position: absolute; inset: -12px -70px; }
+
+/* ---------- Dark mode depth ---------- */
+/* Sheets sit on a raised surface (like iOS) instead of the page's pure black, with their
+   fields and lines one step lighter, so their edge and contents read clearly. */
+:root[data-theme="dark"] .sheet { --bg: #1c1c1e; --soft: #2c2c2e; --line: #333336; }
+/* The near-black logo tile gets a clearer outline on the black page. */
+:root[data-theme="dark"] .brand { box-shadow: 0 0 0 1px #2c2c2e; }
+/* Selected segment is a lighter pill in dark mode (it was darker than its track). */
+:root[data-theme="dark"] .segmented button[aria-checked="true"] { background: #3a3a3c; box-shadow: none; }

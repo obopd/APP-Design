@@ -8,6 +8,7 @@ import { renderOrganize } from './organize.js';
 import { renderPreview, leavePreview } from './preview.js';
 import { syncPush } from './push.js';
 import { openSearch } from './search.js';
+import { setupSheets } from './motion.js';
 import './live.js';
 import { renderDay, tickTimers } from './day.js';
 import { openEditor } from './editor.js';
@@ -270,6 +271,11 @@ function render() {
     t.classList.toggle('active', on);
     if (on) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
   });
+  // A newly opened tab fades in (not on the first draw).
+  if (prevView && prevView.tab !== view.tab) {
+    const el = document.getElementById(`view-${view.tab}`);
+    if (el) { el.classList.remove('view-enter'); void el.offsetWidth; el.classList.add('view-enter'); }
+  }
   calendarView.hidden = view.tab !== 'calendar';
   paintBell();
   settingsEl.hidden = view.tab !== 'settings';
@@ -484,6 +490,7 @@ if ('serviceWorker' in navigator) {
 applyTheme();
 render();
 refreshReminders();
+setupSheets();
 
 // Notification taps open the right tab (the service worker sends the view, or #view= on a cold start).
 function openFromNotification(target) {
