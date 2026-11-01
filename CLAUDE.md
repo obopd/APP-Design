@@ -147,8 +147,16 @@ laptop. So:
   Data is still local-first in localStorage while signed in.
   Signed in, the whole state is stored as one JSON row per user (`planner_data`,
   RLS so users only reach their own row; schema in `supabase/setup.sql`) and synced
-  last-write-wins using `state.meta.updatedAt` vs the session's `lastSyncedAt`:
-  pushes ~1.5s after local edits, pulls on open / foreground / `online`. First sign-in
+  using `state.meta.updatedAt` vs the session's `lastSyncedAt`: pushes ~1.5s after local
+  edits, pulls on open / foreground / `online`. When **both** the phone and the account
+  changed since the last sync, cloud.js `mergeStates` does a three-way merge against the last
+  synced copy (localStorage `planner.syncbase`, per user, removed on sign-out): to-dos /
+  events / folders / D-Days are matched by id and merged field by field (nested maps like
+  `doneOn` / `values` too), deletions apply unless the other side edited the item (then it's
+  kept), and only the same field changed on both sides goes to the newer edit. Writes after a
+  pull are conditional (`PATCH … updated_at=eq.<read value>`); if another device wrote in
+  between, the sync re-pulls and merges again (up to 3 tries). A restored backup
+  (`replaceAll` with touch → `meta.replacedAt`) overwrites the account instead of merging. First sign-in
   with data on both sides asks which to keep.
   Supabase REST is called directly with `fetch` (no SDK); requests time out after
   12s so a hung request can't block later syncs. Passwords are never stored by the
@@ -360,7 +368,7 @@ docs/                  Screenshots of the app
 
 ## Data model (`js/store.js`)
 
-Keep the internal names (`planner.v1`, `planner.auth`, `planner.social`, `planner.friendsopen`, `planner.chat`, `planner.expand`, `planner.film`, `planner.filmdata`, `planner.filmsection`, `planner.orgsection`, `planner.previewsection`, `planner.previewurls`, `planner_data`, `planner-vN`) as they
+Keep the internal names (`planner.v1`, `planner.auth`, `planner.social`, `planner.friendsopen`, `planner.chat`, `planner.expand`, `planner.film`, `planner.filmdata`, `planner.filmsection`, `planner.orgsection`, `planner.previewsection`, `planner.previewurls`, `planner.syncbase`, `planner_data`, `planner-vN`) as they
 are, or existing users lose their data/session.
 
 Stored in `localStorage` under `planner.v1`:
@@ -465,7 +473,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v73`; bump to `planner-v74`, …) and keep its `ASSETS` list in sync
+(currently `planner-v74`; bump to `planner-v75`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
