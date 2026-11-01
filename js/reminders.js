@@ -5,7 +5,7 @@
 // alerts fire from timers that only run while the app is open or recently used.
 import { addDays, dateKey, todayKey, toMinutes, formatTime } from './util.js';
 import { eventsOn, todosOn, isDone, isStarred, inFilm } from './store.js';
-import { pushActive } from './push.js';
+import { serverHasAlert } from './push.js';
 
 let timers = [];
 const fired = new Set(JSON.parse(sessionStorage.getItem('planner.fired') || '[]'));
@@ -33,8 +33,9 @@ async function fire(event, key, showToast) {
 
   const when = event.allDay ? (key === todayKey() ? 'Today' : 'Tomorrow') : formatTime(event.start);
   const body = `${when}${event.notes ? ` · ${event.notes}` : ''}`;
-  // With push on, the server sends personal alerts itself (film project alerts stay local).
-  if (notificationsSupported() && Notification.permission === 'granted' && !(pushActive() && !inFilm())) {
+  // The server sends personal alerts it has received; anything else (offline edits, film
+  // project alerts) is shown from here, so no alert is ever skipped.
+  if (notificationsSupported() && Notification.permission === 'granted' && !(serverHasAlert(id) && !inFilm())) {
     const reg = await navigator.serviceWorker.ready;
     reg.showNotification(event.title, { body, tag: id, icon: 'icons/icon-192.png' });
   }

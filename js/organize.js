@@ -302,7 +302,8 @@ function budgetView() {
 // ({ location, scenes: [{ id, label }], cast: [actor id] }), so it also shows on the
 // project calendar and timeline. Titles are "Shoot day N" in date order.
 
-const shootDays = () => cur().events.filter((e) => e.shoot).sort((a, b) => (a.date + (a.start || '')).localeCompare(b.date + (b.start || '')));
+// Ties (same date and time) break by id, so every collaborator numbers the days the same.
+const shootDays = () => cur().events.filter((e) => e.shoot).sort((a, b) => (a.date + (a.start || '')).localeCompare(b.date + (b.start || '')) || String(a.id).localeCompare(String(b.id)));
 const dayNo = (ev) => shootDays().indexOf(ev) + 1;
 function renumber() {
   let changed = false;

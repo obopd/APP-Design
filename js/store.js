@@ -60,7 +60,8 @@ export function useLists(lists) {
 
 // Caches the app can download again. When the phone's storage for the app is full, they're
 // cleared one by one until the write fits (the sync copy only makes merges less precise).
-const DISPOSABLE = ['planner.chat', 'planner.filmdata', 'planner.previewurls', 'planner.social', 'planner.syncbase'];
+// (Not planner.filmdata: it can hold project entries that haven't reached the account yet.)
+const DISPOSABLE = ['planner.chat', 'planner.previewurls', 'planner.social', 'planner.syncbase'];
 export function storeItem(key, value) {
   try { localStorage.setItem(key, value); return true; } catch { /* full: make room */ }
   for (const k of DISPOSABLE) {

@@ -282,7 +282,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v82`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v83`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 

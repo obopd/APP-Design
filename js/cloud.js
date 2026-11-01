@@ -96,7 +96,7 @@ function friendly(code, msg, status) {
 
 const storageBase = () => SUPABASE_URL.replace(/\/$/, '') + '/storage/v1';
 export const uploadFile = (bucket, path, blob) => api(`/storage/v1/object/${bucket}/${path}`, {
-  method: 'POST', auth: true, body: blob, timeout: 60_000, headers: { 'cache-control': '31536000', 'x-upsert': 'true' },
+  method: 'POST', auth: true, body: blob, timeout: 60_000, headers: { 'cache-control': 'max-age=31536000', 'x-upsert': 'true' },
 });
 /** Signed links (valid `seconds`) for private files: { path: url }. */
 export async function signFiles(bucket, paths, seconds) {
@@ -235,7 +235,10 @@ function writeBase(data) {
 }
 
 const LISTS = ['todos', 'events', 'categories', 'ddays'];
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+// Key order doesn't count: the account's copy (jsonb) comes back with keys reordered.
+const sorted = (v) => JSON.stringify(v, (k, x) => (x && typeof x === 'object' && !Array.isArray(x)
+  ? Object.fromEntries(Object.keys(x).sort().map((key) => [key, x[key]])) : x));
+const same = (a, b) => sorted(a) === sorted(b);
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
 function merge3(base, mine, theirs, mineWins) {

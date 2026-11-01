@@ -15,7 +15,7 @@ const { browser, phone, check, wait, done } = require('./helpers');
   check('editor opens', await isOpen());
   await p.click('#editor button[aria-label=Cancel], #editor button[aria-label=Close]');
   await wait(60);
-  const mid = await editor.evaluate((d) => ({ open: d.open, closing: d.classList.contains('closing'), t: getComputedStyle(d).transform }));
+  const mid = await editor.evaluate((d) => ({ open: d.hasAttribute('open'), closing: d.classList.contains('closing'), t: getComputedStyle(d).transform }));
   check('close slides the sheet away (not instant)', mid.open && mid.closing && mid.t !== 'none', mid.t);
   await wait(300);
   check('…and then it is closed', !await isOpen());
@@ -37,6 +37,11 @@ const { browser, phone, check, wait, done } = require('./helpers');
   check('reopening while it slides away keeps it open', await isOpen() && !await editor.evaluate((d) => d.classList.contains('closing')));
   await p.keyboard.press('Escape'); await wait(300);
 
+  await p.click('#bell'); await wait(400);
+  await p.click('#social-sheet button[aria-label=Close]'); await wait(60);
+  await p.click('#bell'); await wait(500);
+  check('reopening the bell sheet right after closing keeps it open', await p.locator('#social-sheet').evaluate((d) => d.hasAttribute('open') && !d.classList.contains('closing')));
+  await p.keyboard.press('Escape'); await wait(300);
   await p.click('.tab[data-view=settings]');
   check('a new tab fades in', await p.locator('#view-settings.view-enter').count() === 1);
   // Entering film mode plays the clapperboard show, then leaves film mode switched on.
@@ -47,7 +52,9 @@ const { browser, phone, check, wait, done } = require('./helpers');
     await page.mouse.move(bx.x + 15, bx.y + 15); await page.mouse.down(); await wait(1000); await page.mouse.up();
   };
   // Default switch = the logo flip only (the owner is choosing a full-screen style).
-  await hold(p); await wait(300);
+  await hold(p); await wait(60);
+  check('the logo flips into the clapperboard (animated, not instant)', await p.evaluate(() => document.querySelector('#brand .brand-slate').getAnimations().length > 0));
+  await wait(300);
   check('default switch: logo flip, no full-screen effect', await p.locator('.fx').count() === 0 && await p.evaluate(() => document.documentElement.classList.contains('film')));
   await hold(p); await wait(300);
   // Every candidate style plays, switches the mode under cover, and cleans up.

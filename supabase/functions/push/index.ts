@@ -83,11 +83,13 @@ Deno.serve(async (req) => {
   }
 
   if (input.alerts) {
+    // Take the due alerts in one step (delete + return them), so two overlapping runs can
+    // never both send the same alert.
     const now = encodeURIComponent(new Date().toISOString());
-    const due = await rest(`push_alerts?select=id,user_id,fire_at,title,body,tag&fire_at=lte.${now}&order=fire_at&limit=500`);
+    const due = await rest(`push_alerts?fire_at=lte.${now}&select=id,user_id,fire_at,title,body,tag`, {
+      method: 'DELETE', headers: { Prefer: 'return=representation' },
+    }) || [];
     if (due.length) {
-      // Claim them first so an overlapping run can't send them twice.
-      await rest(`push_alerts?id=${inList(due.map((a: { id: number }) => a.id))}`, { method: 'DELETE' });
       const fresh = due.filter((a: { fire_at: string }) => Date.now() - Date.parse(a.fire_at) < 30 * 60_000); // skip ones >30 min late
       const subs = await subsOf([...new Set<string>(fresh.map((a: { user_id: string }) => a.user_id))]);
       for (const a of fresh) {

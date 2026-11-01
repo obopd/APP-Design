@@ -97,7 +97,11 @@ const server = http.createServer(async (req, res) => {
     const prefer = req.headers.prefer || '';
     let r;
     if (req.method === 'GET') r = await asUser(uid, `select ${select} from ${table}${w}${order}${limit}`, params);
-    else if (req.method === 'DELETE') r = await asUser(uid, `delete from ${table}${w}`, params);
+    else if (req.method === 'DELETE') {
+      const back = prefer.includes('return=representation');
+      r = await asUser(uid, `delete from ${table}${w}${back ? ` returning ${select}` : ''}`, params);
+      if (back) return send(res, 200, r.rows);
+    }
     else if (req.method === 'PATCH') {
       const cols = Object.keys(json);
       const sets = cols.map((c, i) => `${ident(c)} = $${params.length + i + 1}`);

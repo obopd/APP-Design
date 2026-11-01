@@ -5,7 +5,7 @@ import { openFolderSheet } from './folders.js';
 import { ask, tell, pick } from './ui.js';
 import { isConfigured, currentUser, syncStatus, syncNow, signOut, hasUnsyncedChanges, api } from './cloud.js';
 import { notificationsSupported, requestNotifications } from './reminders.js';
-import { pushSupported, pushActive, enablePush, pushSignOut } from './push.js';
+import { pushSupported, pushActive, pushStatus, enablePush, pushSignOut } from './push.js';
 import { peopleSection } from './people.js';
 
 const media = matchMedia('(prefers-color-scheme: dark)');
@@ -35,11 +35,22 @@ function alertsControl(rerender) {
   // Granted but this phone isn't subscribed for push yet (e.g. turned on before push existed).
   if (Notification.permission === 'granted' && (pushActive() || !pushSupported())) return h('span', { class: 'status' }, 'On');
   if (Notification.permission === 'denied') return h('span', { class: 'status' }, 'Off in iPhone Settings');
-  if (pushSupported()) return h('button', { class: 'pill', onclick: async () => { await enablePush().catch(() => {}); await requestNotifications(); rerender(); } }, 'Turn on');
+  if (pushSupported()) {
+    return h('button', { class: 'pill', onclick: async () => {
+      await enablePush().catch(() => {});
+      await requestNotifications();
+      if (Notification.permission === 'granted' && !pushActive()) {
+        tell('Alerts work while the app is open', pushStatus() === 'missing'
+          ? 'Notifications with the app closed need the push setup step in Supabase.'
+          : 'This phone couldn’t sign up for notifications with the app closed. Try again later.');
+      }
+      rerender();
+    } }, 'Turn on');
+  }
   return h('button', { class: 'pill', onclick: async () => { await requestNotifications(); rerender(); } }, 'Turn on');
 }
 
-// Weekly copies kept in the account (supabase/backups.sql): pick one to restore.
+// Weekly copies kept in the account (supabase/maintenance.sql): pick one to restore.
 async function accountBackups(e) {
   const anchor = e.currentTarget;
   let list;

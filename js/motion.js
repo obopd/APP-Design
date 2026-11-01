@@ -10,29 +10,33 @@ function enhance(sheet) {
   const realClose = sheet.close.bind(sheet);
   const realShow = sheet.showModal.bind(sheet);
   let timer = 0;
+  // While sliding away it already counts as closed, so `if (!sheet.open) showModal()` works.
+  const openDesc = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'open');
+  Object.defineProperty(sheet, 'open', {
+    configurable: true,
+    get() { return openDesc.get.call(sheet) && !sheet.classList.contains('closing'); },
+    set(v) { openDesc.set.call(sheet, v); },
+  });
+  const finish = (value) => {
+    clearTimeout(timer);
+    sheet.classList.remove('closing');
+    sheet.style.transition = '';
+    sheet.style.transform = '';
+    realClose(value);
+  };
 
   sheet.close = (value) => {
-    if (!sheet.open || sheet.classList.contains('closing')) return;
+    if (!sheet.open) return; // (also false while already sliding away)
     if (reduced.matches) { realClose(value); return; }
     sheet.classList.add('closing');
     sheet.style.transition = `transform ${CLOSE_MS}ms cubic-bezier(.4, 0, 1, 1)`;
     sheet.style.transform = 'translateY(100%)';
-    timer = setTimeout(() => {
-      sheet.classList.remove('closing');
-      sheet.style.transition = '';
-      sheet.style.transform = '';
-      realClose(value);
-    }, CLOSE_MS);
+    timer = setTimeout(() => finish(value), CLOSE_MS);
   };
-  // Reopened while still sliding away: stay open.
+  // Reopened while still sliding away: finish closing properly (its 'close' listeners run),
+  // then open fresh.
   sheet.showModal = () => {
-    if (sheet.classList.contains('closing')) {
-      clearTimeout(timer);
-      sheet.classList.remove('closing');
-      sheet.style.transition = 'transform .2s cubic-bezier(.2, .8, .2, 1)';
-      sheet.style.transform = '';
-      return;
-    }
+    if (sheet.classList.contains('closing')) finish();
     realShow();
   };
 

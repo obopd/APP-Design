@@ -100,6 +100,13 @@ function upcoming() {
   return out.sort((a, b) => a.fire_at.localeCompare(b.fire_at)).slice(0, 200);
 }
 
+/** True if this alert is in the list the account last received (so the server will send it). */
+export function serverHasAlert(tag) {
+  const saved = read();
+  if (!pushActive() || saved.alertsUid !== currentUser()?.id || !saved.alerts) return false;
+  try { return JSON.parse(saved.alerts).some((a) => a.tag === tag); } catch { return false; }
+}
+
 let timer = 0;
 async function uploadAlerts() {
   clearTimeout(timer);

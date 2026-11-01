@@ -33,6 +33,16 @@ const { browser, phone, inApp, check, wait, done } = require('./helpers');
   await inApp(A, (s) => s.replaceAll({ todos: [{ id: 'r', title: 'Restored', date: '2026-11-01', repeat: 'none' }], events: [] }));
   await wait(1700); await sync(A); await sync(B);
   check('a restored backup replaces everything', await summary(A) === 'Restored' && await summary(B) === 'Restored');
+  // A deletion must stick even though the account's copy (jsonb) has its keys reordered.
+  await inApp(A, (s) => { s.state.todos.push({ title: 'Delete me', repeat: 'none', id: 'del', date: '2026-11-02', notes: '' }); s.save(); });
+  await wait(1700); await sync(A); await sync(B);
+  await inApp(B, (s) => { s.state.todos.find((t) => t.id === 'r').title = 'Restored (edited on B)'; s.save(); });
+  await wait(1700); await sync(B);
+  await inApp(A, (s) => { s.state.todos = s.state.todos.filter((t) => t.id !== 'del'); s.save(); });
+  await wait(1700); await sync(A); await sync(B); await sync(A);
+  const gone = async (p) => !(await inApp(p, (s) => s.state.todos.some((t) => t.id === 'del')));
+  check('a deletion sticks after the other phone edited something else', await gone(A) && await gone(B));
+  check('…and that other edit is kept', (await summary(A)).includes('edited on B'));
   check('no page errors', !A.errors.length && !B.errors.length, [...A.errors, ...B.errors].join('; '));
   await done(b);
 })();

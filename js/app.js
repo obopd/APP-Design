@@ -374,7 +374,8 @@ setupBrand(document.getElementById('brand'), () => {
 });
 onFilmChange(() => {
   // The film look follows the mode even when it changes without the logo (e.g. signing out).
-  if (document.documentElement.classList.contains('film') !== filmOn()) paintBrand(false);
+  // Checked after this turn, so the logo's own animated switch (paintBrand(true)) goes first.
+  setTimeout(() => { if (document.documentElement.classList.contains('film') !== filmOn()) paintBrand(false); }, 0);
   if (!isGated()) render();
 });
 document.addEventListener('visibilitychange', () => {
