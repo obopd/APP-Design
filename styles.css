@@ -833,8 +833,8 @@ body.typing #view-chat { padding-bottom: 0; }
 
 /* ---------- Film Production Mode ---------- */
 /* The dock swaps D-Day for Write. */
-.tab[data-view="write"] { display: none; }
-.film .tab[data-view="write"] { display: grid; }
+.tab[data-view="write"], .tab[data-view="organize"] { display: none; }
+.film .tab[data-view="write"], .film .tab[data-view="organize"] { display: grid; }
 .film .tab[data-view="dday"] { display: none; }
 
 /* Project name above the month (where today's D-Days sit in normal mode). */
@@ -925,3 +925,57 @@ body.typing #view-chat { padding-bottom: 0; }
 }
 .chat-under::after { content: ""; position: absolute; inset: 0; background: rgba(0, 0, 0, .08); opacity: var(--dim, 1); pointer-events: none; transition: opacity .42s cubic-bezier(.32, .72, 0, 1); }
 .chat-under.dragging::after { transition: none; } /* follows the finger exactly */
+
+/* ---------- Organize tab (film mode) ---------- */
+#view-organize { padding-bottom: calc(var(--tabbar) + 8px); }
+.organize-page { gap: 14px; }
+.org-project { font-size: 24px !important; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.org-tabs { justify-self: stretch; display: grid; grid-template-columns: repeat(4, 1fr); }
+.org-tabs button { padding: 5px 4px; }
+.org-body { display: grid; gap: 16px; padding-bottom: 20px; }
+.org-sum { margin: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.org-sum span { display: grid; gap: 1px; }
+.org-sum small { font-size: 10.5px; font-weight: 600; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+.org-due { color: var(--accent); }
+.org-over { color: var(--sun); }
+.org-empty { margin: 0; }
+.org-group { display: grid; gap: 4px; }
+.org-group-h { margin: 0; font-family: var(--display); font-weight: 600; font-size: 15px; }
+.org-list { list-style: none; margin: 0; padding: 0; }
+.org-list li + li { border-top: 1px solid var(--line); }
+.org-row { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 6px 2px; cursor: pointer; }
+.org-row:active { background: var(--soft); }
+.org-row.static { cursor: default; }
+.org-row.static:active { background: none; }
+.org-main { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.org-main b { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.org-main small { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.org-note { font-size: 12px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.org-amt { flex-shrink: 0; display: grid; justify-items: end; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.org-amt.paid { color: var(--muted); }
+.org-paid { font-size: 10px; font-weight: 600; color: var(--muted); }
+.org-row.done .org-main b { color: var(--muted); text-decoration: line-through; }
+.org-row.done .org-amt { color: var(--muted); }
+.org-mark { flex-shrink: 0; margin-left: -6px; }
+.org-mark[aria-checked="true"] .dash { background: var(--accent); opacity: 1; }
+.org-link { flex-shrink: 0; width: 34px; height: 34px; color: var(--muted); }
+.org-link svg { width: 17px; height: 17px; }
+.org-dot { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; margin: 0 6px 0 4px; background: var(--muted); }
+.org-row.confirmed .org-dot { background: var(--accent); }
+.org-row.rejected { opacity: .5; }
+.org-row.rejected .org-dot { background: transparent; box-shadow: inset 0 0 0 1.5px var(--muted); }
+.org-avatar { width: 36px; height: 36px; font-size: 15px; }
+.org-sign { flex-shrink: 0; width: 24px; text-align: center; font-weight: 700; color: var(--accent); }
+.org-row.income .org-amt { color: var(--accent); }
+.org-budget-card { display: grid; gap: 12px; padding: 14px; border-radius: 16px; background: var(--soft); }
+.org-budget-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.org-budget-total { display: grid; justify-items: start; gap: 2px; text-align: left; }
+.org-budget-total small { font-size: 11px; color: var(--muted); }
+.org-budget-total b { font-size: 28px; line-height: 1.1; font-variant-numeric: lining-nums tabular-nums; }
+.org-budget-card .pill { background: var(--bg); }
+.org-bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.org-bar i { display: block; height: 100%; border-radius: 3px; background: var(--accent); transition: width .4s var(--ease); }
+.org-bar.over i { background: var(--sun); }
+.org-input { font: inherit; font-size: 16px; color: var(--fg); background: var(--soft); border: 0; border-radius: 7px; padding: 5px 8px; min-height: 30px; width: 58%; text-align: right; outline: none; }
+.org-sheet-title { font-family: var(--display); font-weight: 600; font-size: 17px; }
+#org-sheet .fields .segmented { justify-self: end; }

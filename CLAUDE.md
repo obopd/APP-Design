@@ -209,7 +209,7 @@ laptop. So:
   hold the logo** (`#brand`, a button) ~0.9s → `html.film`; the calendar logo flips into a
   clapperboard whose arm claps shut (`.brand-cal` / `.brand-slate` / `.slate-arm`, CSS
   only); hold again (or "Exit film mode" in the projects card) to leave. Saved per device
-  (`planner.film` = { on, project }). In film mode the dock is Calendar · **Write** · Chat ·
+  (`planner.film` = { on, project }). In film mode the dock is Calendar · **Write** · **Organize** · Chat ·
   Settings (D-Day hidden); the project name sits above the month (`renderProjectChip`,
   where D-Days go) and tapping it or the clapperboard opens the **projects card**
   (choose / New project / Invite / Rename / Delete or Leave / Exit). The calendar, day view,
@@ -236,6 +236,24 @@ laptop. So:
   (own friends), renames, deletes, removes; members edit items; doc saves need the lock;
   removed members lose access at once. Note: `project_items` grants update on project_id/id
   too because PostgREST's upsert sets every column it sends.
+- **Organize tab** (film mode; `js/organize.js`, `#view-organize`, sheet `#org-sheet`):
+  Supplies · Locations · Cast · Budget for the chosen project (section saved in
+  `planner.orgsection`). Entries are project items with kinds `supply` (name, group, qty,
+  price each, link, bought ✓, notes; grouped by "group"), `location` (place, status
+  scouting/confirmed/rejected, address, map link — else a Google Maps search of the address —
+  contact, fee, paid, notes), `actor` (name, role, contact, profile link, payment, paid,
+  availability, notes), `expense` (budget lines: expense or income, group, amount, paid,
+  notes) and one `budget` item (id `budget`: `currency` KRW/USD/EUR/JPY/GBP/CNY chosen per
+  project, `total`). In film.js they live in `lists.org[kind]` (calendar kinds stay in
+  todos/events/categories); same row-per-item sync and merge, so collaborators can edit
+  different entries at once (last write wins per entry). Budget = total + income;
+  planned = supplies (qty × price) + non-rejected location fees + cast payments + expense
+  lines; spent = bought / paid ones; shows planned / spent / left (or over) / unpaid, a
+  bar, and a breakdown by Supplies / Locations / Cast / expense group. Links open in a new
+  tab (https:// added when missing). No photos yet (text + links only, by choice). The
+  database's `project_items_kind_check` must allow the Organize kinds (film.sql re-creates
+  it); until then (`23514`) Organize entries stay on the phone with a notice
+  (`orgNeedsSetup`), calendar items keep syncing, and they upload on a later refresh.
 - **Postpone a to-do** (`js/postpone.js`): swipe a to-do left to reveal **Tmrw** and
   **Date** (date card from `askDate`), or use the editor's "Postpone" row (Tomorrow /
   Pick date). A "Moved to …" snack with **Undo** appears (`snack` in ui.js). One-off
@@ -298,6 +316,7 @@ js/chatview.js         Chat tab: chat list, conversation (bubbles + composer), g
 js/film.js             Film Production Mode data: mode, projects, collaborators, project items (sync), writing locks
 js/filmui.js           Film mode UI: logo press-and-hold + clapperboard, projects card, project name chip
 js/write.js            Write tab: Theme / Plot / Script read + edit (one editor at a time)
+js/organize.js         Organize tab: Supplies / Locations / Cast / Budget (film mode), entry sheet, totals
 supabase/film.sql      Tables + RLS for projects, project_members, project_items, project_docs
 supabase/chat.sql      Tables + RLS for chats, chat_members, messages (run once after social.sql)
 supabase/social.sql    Tables + RLS for profiles, friendships, shares, share_checks (run once after setup.sql)
@@ -307,7 +326,7 @@ docs/                  Screenshots of the app
 
 ## Data model (`js/store.js`)
 
-Keep the internal names (`planner.v1`, `planner.auth`, `planner.social`, `planner.chat`, `planner.expand`, `planner.film`, `planner.filmdata`, `planner.filmsection`, `planner_data`, `planner-vN`) as they
+Keep the internal names (`planner.v1`, `planner.auth`, `planner.social`, `planner.chat`, `planner.expand`, `planner.film`, `planner.filmdata`, `planner.filmsection`, `planner.orgsection`, `planner_data`, `planner-vN`) as they
 are, or existing users lose their data/session.
 
 Stored in `localStorage` under `planner.v1`:
@@ -412,7 +431,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v67`; bump to `planner-v68`, …) and keep its `ASSETS` list in sync
+(currently `planner-v68`; bump to `planner-v69`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

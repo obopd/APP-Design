@@ -85,12 +85,25 @@ export function chooseProject(pid) {
 
 /* ---------- The project's to-dos / schedule / folders ---------- */
 
+// Item kinds: to-dos / events / folders feed the calendar (store.js); the Organize tab's
+// kinds (supplies, locations, cast, budget lines, budget settings) live in lists.org.
+const CAL = { todo: 'todos', event: 'events', category: 'categories' };
+export const ORG_KINDS = ['supply', 'location', 'actor', 'expense', 'budget'];
+const blankLists = () => ({ todos: [], events: [], categories: [], org: Object.fromEntries(ORG_KINDS.map((k) => [k, []])) });
+function listFor(l, kind) {
+  if (CAL[kind]) return l[CAL[kind]];
+  return (l.org[kind] ||= []);
+}
+function entries(l) {
+  return [
+    ...Object.entries(CAL).flatMap(([kind, key]) => l[key].map((obj) => [kind, obj])),
+    ...Object.entries(l.org).flatMap(([kind, list]) => list.map((obj) => [kind, obj])),
+  ];
+}
+
 function rowsToLists(rows) {
-  const out = { todos: [], events: [], categories: [] };
-  for (const r of rows) {
-    const list = r.kind === 'todo' ? out.todos : r.kind === 'event' ? out.events : out.categories;
-    list.push({ ...r.data, id: r.id });
-  }
+  const out = blankLists();
+  for (const r of rows) listFor(out, r.kind).push({ ...r.data, id: r.id });
   return out;
 }
 
@@ -109,12 +122,11 @@ function applyLists() {
   useLists(lists);
 }
 
-const kindOf = (l, item) => (l.todos.includes(item) ? 'todo' : l.events.includes(item) ? 'event' : 'category');
 const dataOf = (item) => { const { id, ...rest } = item; return rest; };
 
 function localRows() {
   if (!lists) return [];
-  return [...lists.todos, ...lists.events, ...lists.categories].map((item) => ({ id: item.id, kind: kindOf(lists, item), data: dataOf(item) }));
+  return entries(lists).map(([kind, item]) => ({ id: item.id, kind, data: dataOf(item) }));
 }
 
 function schedulePush() {
@@ -131,7 +143,10 @@ async function pushItems() {
   if (!p || !lists || !canSync()) return;
   const rows = localRows();
   const now = new Date().toISOString();
-  const changed = rows.filter((r) => synced[r.id] !== JSON.stringify({ kind: r.kind, data: r.data }));
+  // Organize entries need the database to accept their kinds (film.sql's newer check);
+  // until that setup step has run they stay on this phone and the rest still syncs.
+  const changed = rows.filter((r) => synced[r.id] !== JSON.stringify({ kind: r.kind, data: r.data }))
+    .filter((r) => !orgMissing || retryOrg || CAL[r.kind]);
   const ids = new Set(rows.map((r) => r.id));
   const removed = Object.keys(synced).filter((id) => !ids.has(id));
   try {
@@ -142,12 +157,26 @@ async function pushItems() {
       });
     }
     if (removed.length) await rest(`project_items?project_id=eq.${p.id}&id=in.(${removed.map(encodeURIComponent).join(',')})`, { method: 'DELETE' });
+    if (retryOrg && changed.some((r) => !CAL[r.kind])) { orgMissing = false; notify(); }
+    retryOrg = false;
     changed.forEach((r) => { synced[r.id] = JSON.stringify({ kind: r.kind, data: r.data }); });
     removed.forEach((id) => { delete synced[id]; });
     data.items[p.id] = rows.map((r) => ({ ...r, updated_at: now }));
     writeCache();
-  } catch { schedulePushLater(); }
+  } catch (e) {
+    if (e.code === '23514' && changed.some((r) => !CAL[r.kind])) {
+      orgMissing = true;
+      retryOrg = false;
+      notify();
+      pushItems();
+      return;
+    }
+    schedulePushLater();
+  }
 }
+let orgMissing = false;
+let retryOrg = false;
+export const orgNeedsSetup = () => orgMissing;
 function schedulePushLater() { clearTimeout(pushTimer); pushTimer = setTimeout(pushItems, 10000); }
 
 // Bring in collaborators' changes without losing my unsent ones (kept by object identity,
@@ -157,9 +186,9 @@ function mergeRemote(pid, remote) {
   if (!lists || pid !== currentProject()?.id) return;
   const local = new Map(localRows().map((r) => [r.id, r]));
   const dirty = new Set([...local.values()].filter((r) => synced[r.id] !== JSON.stringify({ kind: r.kind, data: r.data })).map((r) => r.id));
-  const objects = new Map([...lists.todos, ...lists.events, ...lists.categories].map((o) => [o.id, o]));
-  const next = { todos: [], events: [], categories: [] };
-  const put = (kind, obj) => next[kind === 'todo' ? 'todos' : kind === 'event' ? 'events' : 'categories'].push(obj);
+  const objects = new Map(entries(lists).map(([, o]) => [o.id, o]));
+  const next = blankLists();
+  const put = (kind, obj) => listFor(next, kind).push(obj);
   const seen = new Set();
   for (const r of remote) {
     seen.add(r.id);
@@ -178,6 +207,7 @@ function mergeRemote(pid, remote) {
   lists.todos = next.todos;
   lists.events = next.events;
   lists.categories = next.categories;
+  lists.org = next.org;
 }
 
 /* ---------- Loading ---------- */
@@ -188,6 +218,7 @@ export function refreshFilm() {
   // A refresh asked for mid-run (e.g. film mode just switched on) runs once more after.
   if (running) { again = true; return running; }
   running = (async () => {
+    if (orgMissing && lists) { retryOrg = true; schedulePush(); } // try Organize again (the setup may have run)
     try {
       const u = me();
       if (data.uid !== u) data = blank(u);

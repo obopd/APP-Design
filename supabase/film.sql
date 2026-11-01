@@ -3,7 +3,7 @@
 --
 -- projects          a film project (its group chat lives in chats, linked by chat_id)
 -- project_members   owner + invited collaborators (full access to everything in the project)
--- project_items     the project's to-dos, schedule items and folders (one row each)
+-- project_items     the project's to-dos, schedule items, folders and Organize entries (one row each)
 -- project_docs      Theme (key 'story') / Plot / Script, each editable by one person at a time (lock)
 
 create table if not exists public.projects (
@@ -25,12 +25,18 @@ create table if not exists public.project_members (
 create table if not exists public.project_items (
   project_id uuid not null references public.projects (id) on delete cascade,
   id         text not null,
-  kind       text not null check (kind in ('todo', 'event', 'category')),
+  kind       text not null,
   data       jsonb not null,
   updated_by uuid not null default auth.uid() references auth.users (id) on delete cascade,
   updated_at timestamptz not null default now(),
   primary key (project_id, id)
 );
+
+-- Kinds: calendar items (todo, event, category) and the Organize tab's entries
+-- (supply, location, actor, expense, budget). Re-created so older setups accept the new kinds.
+alter table public.project_items drop constraint if exists project_items_kind_check;
+alter table public.project_items add constraint project_items_kind_check
+  check (kind in ('todo', 'event', 'category', 'supply', 'location', 'actor', 'expense', 'budget'));
 
 create table if not exists public.project_docs (
   project_id uuid not null references public.projects (id) on delete cascade,
