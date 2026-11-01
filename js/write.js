@@ -83,6 +83,26 @@ function paintBanner() {
 
 /* ---------- Small editors ---------- */
 
+const fit = (el) => { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px`; };
+
+// Rebuilding a list (new card, new script line…) must not move the page. Keep the scroll
+// position, size the new text boxes at once (sizing them a frame later briefly shortened
+// the page, which threw the scroll back up), then just bring `reveal` into view if it's
+// below the screen (above the dock).
+function steady(holder, rebuild, reveal) {
+  if (!holder.isConnected) { rebuild(); return; }
+  const sc = holder.closest('.write-page');
+  const top = sc ? sc.scrollTop : 0;
+  rebuild();
+  holder.querySelectorAll('textarea').forEach(fit);
+  if (sc) sc.scrollTop = top;
+  const el = typeof reveal === 'function' ? reveal() : reveal;
+  if (!el || !sc) return;
+  const r = el.getBoundingClientRect();
+  const limit = window.innerHeight - 110; // keep clear of the dock / keyboard bar
+  if (r.bottom > limit) sc.scrollTop += r.bottom - limit;
+}
+
 function area(value, placeholder, onInput, cls = '') {
   const el = h('textarea', { class: `write-area ${cls}`, rows: '1', placeholder });
   el.value = value;
@@ -96,7 +116,18 @@ function line(value, placeholder, onInput, cls = '') {
   el.addEventListener('input', () => { onInput(el.value); changed(); });
   return el;
 }
-const tiny = (label, svg, onclick) => h('button', { type: 'button', class: 'icon-btn write-tiny', 'aria-label': label, onclick }, icon(svg));
+// Editing buttons must not take the focus from the box you're typing in: on iPhone that
+// folds the keyboard and the page scrolls away. On a touch, the tap is handled here and
+// its default cancelled; `typing` says whether a text box had the focus (keyboard up).
+const isField = (el) => !!el && /^(TEXTAREA|INPUT)$/.test(el.tagName);
+function tapBtn(props, fn, ...kids) {
+  const el = h('button', { type: 'button', ...props }, ...kids);
+  el.addEventListener('touchend', (e) => { e.preventDefault(); fn(isField(document.activeElement)); });
+  el.addEventListener('mousedown', (e) => e.preventDefault());
+  el.addEventListener('click', () => fn(isField(document.activeElement)));
+  return el;
+}
+const tiny = (label, svg, fn) => tapBtn({ class: 'icon-btn write-tiny', 'aria-label': label }, fn, icon(svg));
 
 /* ---------- Theme (the film's message) ---------- */
 
@@ -127,37 +158,79 @@ function plotRead(b) {
 
 function plotEdit(b) {
   const root = h('div', { class: 'w-doc editing' });
-  const draw = () => root.replaceChildren(
-    ...b.acts.map((act, ai) => h('section', { class: 'w-part' },
+  // Indexes are looked up when a button is used, so single cards can be added in place.
+  const card = (act, c) => h('div', { class: 'w-card edit', 'data-card': c.id },
+    h('div', { class: 'w-row' },
+      line(c.title, 'Scene / beat', (v) => { c.title = v; }, 'w-card-title'),
+      tiny('Move up', ICONS.up, () => move(act, c, -1)),
+      tiny('Move down', ICONS.down, () => move(act, c, 1)),
+      tiny('Delete card', ICONS.close, () => {
+        act.cards.splice(act.cards.indexOf(c), 1);
+        changed();
+        root.querySelector(`[data-card="${c.id}"]`)?.remove();
+      })),
+    area(c.note || '', 'What happens', (v) => { c.note = v; }));
+
+  const actEl = (act) => {
+    const cards = h('div', { class: 'w-cards-edit' }, act.cards.map((c) => card(act, c)));
+    return h('section', { class: 'w-part', 'data-act': act.id },
       h('div', { class: 'w-row' },
         line(act.title, 'Act title', (v) => { act.title = v; }, 'w-act-title'),
         tiny('Delete act', ICONS.trash, () => {
           if (act.cards.length) { tell('Move or delete its cards first.'); return; }
-          b.acts.splice(ai, 1); changed(); draw();
+          b.acts.splice(b.acts.indexOf(act), 1);
+          changed();
+          root.querySelector(`[data-act="${act.id}"]`)?.remove();
         })),
-      h('div', { class: 'w-cards-edit' }, act.cards.map((c, ci) => h('div', { class: 'w-card edit' },
-        h('div', { class: 'w-row' },
-          line(c.title, 'Scene / beat', (v) => { c.title = v; }, 'w-card-title'),
-          tiny('Move up', ICONS.up, () => { move(ai, ci, -1); }),
-          tiny('Move down', ICONS.down, () => { move(ai, ci, 1); }),
-          tiny('Delete card', ICONS.close, () => { act.cards.splice(ci, 1); changed(); draw(); })),
-        area(c.note || '', 'What happens', (v) => { c.note = v; })))),
-      h('button', { type: 'button', class: 'pill w-add', onclick: () => { act.cards.push({ id: newId(), title: '', note: '' }); changed(); draw(); } }, '+ Card'))),
-    h('button', { type: 'button', class: 'pill w-add', onclick: () => { b.acts.push({ id: newId(), title: `Act ${b.acts.length + 1}`, cards: [] }); changed(); draw(); } }, '+ Act'));
+      cards,
+      tapBtn({ class: 'pill w-add' }, (typing) => {
+        // Add just this card (no rebuild), so nothing on the page moves.
+        const c = { id: newId(), title: '', note: '' };
+        act.cards.push(c);
+        changed();
+        const el = card(act, c);
+        cards.append(el);
+        el.querySelectorAll('textarea').forEach(fit);
+        reveal(el);
+        if (typing) el.querySelector('input').focus({ preventScroll: true });
+      }, '+ Card'));
+  };
+
+  const addAct = tapBtn({ class: 'pill w-add' }, () => {
+    const act = { id: newId(), title: `Act ${b.acts.length + 1}`, cards: [] };
+    b.acts.push(act);
+    changed();
+    const el = actEl(act);
+    root.insertBefore(el, addAct);
+    reveal(el);
+  }, '+ Act');
+
   // Up/down moves within an act, and across into the previous / next act at its edges.
-  const move = (ai, ci, dir) => {
-    const cards = b.acts[ai].cards;
+  const move = (act, c, dir) => {
+    const ai = b.acts.indexOf(act);
+    const cards = act.cards;
+    const ci = cards.indexOf(c);
     const j = ci + dir;
     if (j >= 0 && j < cards.length) [cards[ci], cards[j]] = [cards[j], cards[ci]];
     else if (b.acts[ai + dir]) {
-      const [card] = cards.splice(ci, 1);
-      if (dir < 0) b.acts[ai - 1].cards.push(card); else b.acts[ai + 1].cards.unshift(card);
+      cards.splice(ci, 1);
+      if (dir < 0) b.acts[ai - 1].cards.push(c); else b.acts[ai + 1].cards.unshift(c);
     } else return;
     changed();
-    draw();
+    steady(root, build, () => root.querySelector(`[data-card="${c.id}"]`));
   };
-  draw();
+  const build = () => root.replaceChildren(...b.acts.map(actEl), addAct);
+  build();
   return root;
+}
+
+// Bring a new / moved element into view only if it's below the visible area.
+function reveal(el) {
+  const sc = el.closest('.write-page');
+  if (!sc) return;
+  const r = el.getBoundingClientRect();
+  const limit = (window.visualViewport?.height || window.innerHeight) - 110;
+  if (r.bottom > limit) sc.scrollTop += r.bottom - limit;
 }
 
 /* ---------- Script (screenplay blocks) ---------- */
@@ -179,57 +252,83 @@ function scriptRead(b) {
 }
 
 function scriptEdit(b) {
-  let focus = 0;
   const list = h('div', { class: 'screenplay editing' });
   const bar = h('div', { class: 'sp-bar' });
+  let current = b.blocks[0];
   const paintBar = () => bar.replaceChildren(...TYPES.map(([t, label]) => h('button', {
-    type: 'button', class: `sp-type${b.blocks[focus]?.t === t ? ' on' : ''}`,
+    type: 'button', class: `sp-type${current?.t === t ? ' on' : ''}`,
     // Keep the keyboard up: change the type without taking focus from the line.
     onpointerdown: (e) => e.preventDefault(),
-    onclick: () => { b.blocks[focus].t = t; changed(); draw(focus); },
+    onclick: () => {
+      if (!current) return;
+      current.t = t;
+      changed();
+      const el = list.querySelector(`[data-id="${current.id}"]`);
+      if (el) { el.className = `sp sp-${t}`; el.placeholder = PLACE[t]; fit(el); }
+      paintBar();
+    },
   }, label)));
 
-  const draw = (focusAt = null, caret = null) => {
-    list.replaceChildren(...b.blocks.map((blk, i) => {
-      const el = h('textarea', { class: `sp sp-${blk.t}`, rows: '1', placeholder: PLACE[blk.t], 'data-i': String(i) });
-      el.value = blk.x;
-      const grow = () => { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px`; };
-      el.addEventListener('focus', () => { focus = i; paintBar(); });
-      el.addEventListener('input', () => {
-        blk.x = el.value.replace(/\n/g, ' ');
-        if (blk.t === 'action' && /^(int|ext|int\/ext|i\/e)[.\s]/i.test(blk.x)) { blk.t = 'scene'; el.className = 'sp sp-scene'; paintBar(); }
-        grow();
-        changed();
-      });
-      el.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          // A new line is a new block, of the type that usually comes next.
-          e.preventDefault();
-          const pos = el.selectionStart;
-          const rest = blk.x.slice(pos);
-          blk.x = blk.x.slice(0, pos);
-          b.blocks.splice(i + 1, 0, { id: newId(), t: NEXT[blk.t], x: rest });
-          changed();
-          draw(i + 1, 0);
-        } else if (e.key === 'Backspace' && el.selectionStart === 0 && el.selectionEnd === 0 && i > 0 && !blk.x) {
-          e.preventDefault();
-          b.blocks.splice(i, 1);
-          changed();
-          draw(i - 1, b.blocks[i - 1].x.length);
-        }
-      });
-      requestAnimationFrame(grow);
-      return el;
-    }));
-    paintBar();
-    if (focusAt !== null) {
-      const el = list.children[focusAt];
-      if (el) { el.focus(); const c = caret ?? el.value.length; el.setSelectionRange(c, c); focus = focusAt; paintBar(); }
-    }
+  const focusAt = (el, caret) => {
+    el.focus({ preventScroll: true });
+    const c = caret ?? el.value.length;
+    el.setSelectionRange(c, c);
+    reveal(el);
   };
-  draw();
+
+  // One textarea per block; lines are added / removed in place (never a full rebuild),
+  // so the keyboard stays up and the page doesn't move.
+  const blockEl = (blk) => {
+    const el = h('textarea', { class: `sp sp-${blk.t}`, rows: '1', placeholder: PLACE[blk.t], 'data-id': blk.id });
+    el.value = blk.x;
+    el.addEventListener('focus', () => { current = blk; paintBar(); });
+    el.addEventListener('input', () => {
+      blk.x = el.value.replace(/\n/g, ' ');
+      if (blk.t === 'action' && /^(int|ext|int\/ext|i\/e)[.\s]/i.test(blk.x)) { blk.t = 'scene'; el.className = 'sp sp-scene'; paintBar(); }
+      fit(el);
+      changed();
+    });
+    el.addEventListener('keydown', (e) => {
+      const i = b.blocks.indexOf(blk);
+      if (e.key === 'Enter' && !e.shiftKey) {
+        // A new line is a new block, of the type that usually comes next.
+        e.preventDefault();
+        const pos = el.selectionStart;
+        const next = { id: newId(), t: NEXT[blk.t], x: blk.x.slice(pos) };
+        blk.x = blk.x.slice(0, pos);
+        el.value = blk.x;
+        fit(el);
+        b.blocks.splice(i + 1, 0, next);
+        changed();
+        const nel = blockEl(next);
+        el.after(nel);
+        fit(nel);
+        focusAt(nel, 0);
+      } else if (e.key === 'Backspace' && el.selectionStart === 0 && el.selectionEnd === 0 && i > 0 && !blk.x) {
+        e.preventDefault();
+        b.blocks.splice(i, 1);
+        changed();
+        const prev = el.previousElementSibling;
+        el.remove();
+        if (prev) focusAt(prev);
+      }
+    });
+    requestAnimationFrame(() => fit(el));
+    return el;
+  };
+
+  list.append(...b.blocks.map(blockEl));
+  paintBar();
   return h('div', { class: 'w-doc editing' }, bar, list,
-    h('button', { type: 'button', class: 'pill w-add', onclick: () => { b.blocks.push({ id: newId(), t: 'scene', x: '' }); changed(); draw(b.blocks.length - 1); } }, '+ Scene'));
+    tapBtn({ class: 'pill w-add' }, () => {
+      const blk = { id: newId(), t: 'scene', x: '' };
+      b.blocks.push(blk);
+      changed();
+      const el = blockEl(blk);
+      list.append(el);
+      fit(el);
+      focusAt(el);
+    }, '+ Scene'));
 }
 
 /* ---------- Page ---------- */
