@@ -22,7 +22,7 @@ export function chatShown(on) {
   if (on === shown) return;
   shown = on;
   clearInterval(pollTimer);
-  if (!on) { document.body.classList.remove('chatting'); return; }
+  if (!on) { document.body.classList.remove('chatting', 'chat-leaving'); return; }
   refreshChats();
   // An open chat checks every 3s (new messages only); the list every 10s.
   let tick = 0;
@@ -182,7 +182,7 @@ function slideOut(root, page, under = null, fromPx = 0) {
     page.style.transform = `translateX(${fromPx}px)`;
     void page.offsetWidth;
   }
-  document.body.classList.remove('chatting'); // the dock fades back in during the slide
+  document.body.classList.add('chat-leaving'); // the dock fades back in during the slide
   requestAnimationFrame(() => {
     page.style.transition = PUSH_EASE;
     page.style.transform = 'translateX(100%)';
@@ -191,6 +191,7 @@ function slideOut(root, page, under = null, fromPx = 0) {
   setTimeout(() => {
     const list = under.firstChild; // keep the list that's already on screen (no redraw flash)
     leaving = false;
+    document.body.classList.remove('chatting', 'chat-leaving');
     openId = null;
     conv = null;
     if (list) root.replaceChildren(list); else rerender();
