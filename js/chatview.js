@@ -197,13 +197,23 @@ function convView(root, id, fixed = false) {
   const sendBtn = h('button', { class: 'composer-send', 'aria-label': 'Send', disabled: !input.value.trim() }, icon(ICONS.send));
   const grow = () => { input.style.height = 'auto'; input.style.height = `${Math.min(input.scrollHeight, 120)}px`; };
   input.addEventListener('input', () => { drafts[id] = input.value; sendBtn.disabled = !input.value.trim(); grow(); });
-  sendBtn.addEventListener('click', () => {
+  const send = () => {
     const text = input.value;
     if (!text.trim()) return;
     input.value = ''; drafts[id] = ''; sendBtn.disabled = true; grow();
     sendMessage(id, text).then(() => { conv.list.scrollTop = conv.list.scrollHeight; });
     conv.list.scrollTop = conv.list.scrollHeight;
+  };
+  // Sending keeps the keyboard up: on a touch, the tap is handled here and its default
+  // (which would take focus from the message box and fold the keyboard) is cancelled.
+  sendBtn.addEventListener('touchend', (e) => {
+    if (sendBtn.disabled) return;
+    e.preventDefault();
+    send();
+    input.focus();
   });
+  sendBtn.addEventListener('mousedown', (e) => e.preventDefault());
+  sendBtn.addEventListener('click', send);
 
   const items = h('ul', { class: 'msgs' });
   const earlier = h('button', {
@@ -217,6 +227,12 @@ function convView(root, id, fixed = false) {
   }, 'Earlier messages');
   earlier.hidden = messagesOf(id).length < 50;
   const list = h('div', { class: 'msg-scroll' }, earlier, items);
+  // Swipe down on the messages to fold the keyboard (it otherwise stays up).
+  let dragY = null;
+  list.addEventListener('touchstart', (e) => { dragY = e.touches[0].clientY; }, { passive: true });
+  list.addEventListener('touchmove', (e) => {
+    if (dragY !== null && e.touches[0].clientY - dragY > 40 && document.activeElement === input) { input.blur(); dragY = null; }
+  }, { passive: true });
   const titleEl = h('span', { class: 'conv-title display' }, title);
   const convRoot = h('div', { class: 'conv' },
     h('div', { class: 'conv-head' },

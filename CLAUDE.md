@@ -193,7 +193,8 @@ laptop. So:
   friend, made on first open, reused after) and **group** chats (named; creator or any
   member adds their own friends; the creator removes people; anyone renames or leaves).
   Text only, 1–1000 characters; press and hold your own message to delete it (for
-  everyone). Opening a chat hides the dock (`body.chatting`); the composer sits at the
+  everyone). Sending keeps the keyboard up (the send button's touchend is handled and its
+  default cancelled so the box keeps focus); swiping down on the messages folds it. Opening a chat hides the dock (`body.chatting`); the composer sits at the
   bottom and `--vvh` (visualViewport height) keeps it above the iPhone keyboard. No read
   receipts; unread = messages after `chat_members.last_read` (a message id). Polling, no
   websockets: open chat every 3s (`pollChat`: only ids newer than the newest cached, plus
@@ -411,7 +412,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v60`; bump to `planner-v61`, …) and keep its `ASSETS` list in sync
+(currently `planner-v61`; bump to `planner-v62`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
