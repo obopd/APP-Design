@@ -174,6 +174,7 @@ export async function signOut() {
   }
   session = null;
   persist();
+  localStorage.removeItem(BASE_KEY);
   applyingRemote = true;
   try { clearData(); } finally { applyingRemote = false; }
   setStatus({ state: 'idle', at: null, error: null });
@@ -209,21 +210,98 @@ export async function handleAuthRedirect() {
 }
 
 /* ---------- Sync ---------- */
+//
+// Two devices can both change the planner before they sync. Each device keeps a copy of
+// what it last synced (the "base"); when both sides changed, every to-do / event / folder /
+// D-Day is compared with the base and the changes from both sides are combined, field by
+// field (a check-off on one phone and a new to-do on the other both survive). Only the
+// same field changed on both sides falls back to the newer edit. An item deleted on one
+// side but edited on the other is kept. Writes are conditional on the row being unchanged
+// since it was read, so two phones pushing at the same moment re-merge instead of overwriting.
+
+const BASE_KEY = 'planner.syncbase';
+function readBase() {
+  try {
+    const b = JSON.parse(localStorage.getItem(BASE_KEY));
+    if (b && b.uid === session?.user?.id) return b.data;
+  } catch { /* none */ }
+  return null;
+}
+function writeBase(data) {
+  try { localStorage.setItem(BASE_KEY, JSON.stringify({ uid: session.user.id, data })); } catch { /* storage full */ }
+}
+
+const LISTS = ['todos', 'events', 'categories', 'ddays'];
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+
+function merge3(base, mine, theirs, mineWins) {
+  if (same(mine, theirs)) return mine;
+  if (same(mine, base)) return theirs;
+  if (same(theirs, base)) return mine;
+  if (isObj(mine) && isObj(theirs)) {
+    const out = {};
+    for (const k of new Set([...Object.keys(mine), ...Object.keys(theirs)])) {
+      const v = merge3(isObj(base) ? base[k] : undefined, mine[k], theirs[k], mineWins);
+      if (v !== undefined) out[k] = v;
+    }
+    return out;
+  }
+  return mineWins ? mine : theirs;
+}
+
+function mergeList(base = [], mine = [], theirs = [], mineWins) {
+  const b = new Map(base.map((x) => [x.id, x]));
+  const t = new Map(theirs.map((x) => [x.id, x]));
+  const out = [];
+  const pick = (id, m, th) => {
+    const was = b.get(id);
+    // Deleted on one side, changed on the other: keep it (never lose an edit).
+    if (!m && th) return same(th, was) ? undefined : th;
+    if (m && !th) return !was || !same(m, was) ? m : undefined;
+    return merge3(was, m, th, mineWins);
+  };
+  for (const m of mine) { const v = pick(m.id, m, t.get(m.id)); if (v) out.push(v); }
+  const mineIds = new Set(mine.map((x) => x.id));
+  for (const th of theirs) { if (!mineIds.has(th.id)) { const v = pick(th.id, undefined, th); if (v) out.push(v); } }
+  return out;
+}
+
+/** Combine this device's planner with the account's, using the last synced copy as the base. */
+export function mergeStates(base, mine, theirs, mineWins) {
+  base ||= {}; // no base yet: nothing is treated as deleted
+  const out = merge3(base, mine, theirs, mineWins);
+  LISTS.forEach((k) => { out[k] = mergeList(base[k], mine[k], theirs[k], mineWins); });
+  return out;
+}
 
 async function pullRemote() {
   const rows = await api(`/rest/v1/${TABLE}?select=data,updated_at`, { auth: true });
   return rows && rows[0] ? rows[0] : null;
 }
 
-async function pushLocal() {
+class Conflict extends Error {}
+
+// expect: the row's updated_at when it was read (write only if nobody wrote since).
+async function pushLocal(expect = null) {
   const at = state.meta?.updatedAt || Date.now();
-  await api(`/rest/v1/${TABLE}?on_conflict=user_id`, {
-    method: 'POST', auth: true,
-    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: { user_id: session.user.id, data: state, updated_at: new Date(at).toISOString() },
-  });
+  const data = JSON.parse(JSON.stringify(state));
+  const updatedAt = new Date(at).toISOString();
+  if (expect) {
+    const rows = await api(`/rest/v1/${TABLE}?user_id=eq.${session.user.id}&updated_at=eq.${encodeURIComponent(expect)}`, {
+      method: 'PATCH', auth: true, headers: { Prefer: 'return=representation' }, body: { data, updated_at: updatedAt },
+    });
+    if (!rows || !rows.length) throw new Conflict('changed meanwhile');
+  } else {
+    await api(`/rest/v1/${TABLE}?on_conflict=user_id`, {
+      method: 'POST', auth: true,
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: { user_id: session.user.id, data, updated_at: updatedAt },
+    });
+  }
   session.lastSyncedAt = at;
   persist();
+  writeBase(data);
 }
 
 function applyRemote(data) {
@@ -231,6 +309,7 @@ function applyRemote(data) {
   try { replaceAll(data, { touch: false }); } finally { applyingRemote = false; }
   session.lastSyncedAt = data.meta?.updatedAt || 0;
   persist();
+  writeBase(data);
 }
 
 const remoteStamp = (row) => row.data?.meta?.updatedAt || Date.parse(row.updated_at) || 0;
@@ -262,21 +341,31 @@ async function afterSignIn() {
   }
 }
 
+async function syncOnce() {
+  const remote = await pullRemote();
+  const last = session.lastSyncedAt || 0;
+  const localAt = state.meta?.updatedAt || 0;
+  if (!remote) { await pushLocal(); return; }
+  const remoteAt = remoteStamp(remote);
+  const localChanged = localAt > last;
+  const remoteChanged = remoteAt > last;
+  if (!localChanged) { if (remoteChanged) applyRemote(remote.data); return; }
+  if (!remoteChanged || (state.meta?.replacedAt || 0) > last) { await pushLocal(remote.updated_at); return; }
+  // Both changed: combine, show the result here, then send it.
+  const merged = mergeStates(readBase(), JSON.parse(JSON.stringify(state)), remote.data, localAt > remoteAt);
+  merged.meta = { ...merged.meta, updatedAt: Math.max(Date.now(), localAt, remoteAt) + 1 };
+  delete merged.meta.replacedAt;
+  applyingRemote = true;
+  try { replaceAll(merged, { touch: false }); } finally { applyingRemote = false; }
+  await pushLocal(remote.updated_at);
+}
+
 async function runSync() {
   try {
     if (!navigator.onLine) { setStatus({ state: 'offline' }); return; }
     setStatus({ state: 'syncing', error: null });
-    const remote = await pullRemote();
-    const last = session.lastSyncedAt || 0;
-    const localAt = state.meta?.updatedAt || 0;
-    if (!remote) {
-      await pushLocal();
-    } else {
-      const remoteAt = remoteStamp(remote);
-      const localChanged = localAt > last;
-      const remoteChanged = remoteAt > last;
-      if (remoteChanged && (!localChanged || remoteAt > localAt)) applyRemote(remote.data);
-      else if (localChanged) await pushLocal();
+    for (let i = 0; ; i++) {
+      try { await syncOnce(); break; } catch (e) { if (!(e instanceof Conflict) || i >= 3) throw e; }
     }
     setStatus({ state: 'synced', at: Date.now() });
   } catch (e) {

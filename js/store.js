@@ -76,7 +76,8 @@ export function replaceAll(data, { touch = true } = {}) {
   state.categories = data.categories || [];
   state.ddays = data.ddays || [];
   state.settings = { ...DEFAULTS.settings, ...data.settings };
-  state.meta = { ...data.meta };
+  // A restored backup replaces everything, also in the account (cloud.js won't merge it).
+  state.meta = touch ? { ...data.meta, replacedAt: Date.now() } : { ...data.meta };
   save({ touch, personal: true });
 }
 
