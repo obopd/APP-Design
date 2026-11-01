@@ -220,7 +220,7 @@ laptop. So:
   replaceAll / clearData). Friends' shared items and the Share rows are hidden in film mode.
   **Collaborators** = accepted friends the owner invites; they get full access and are
   added to the project's single **group chat** (created with the project); in film mode
-  the Chat tab opens that chat directly (no back button, dock stays). While typing in any page field (not sheets) the dock hides (`body.typing`, set on focusin) so it doesn't ride up on the keyboard. Invites show in the
+  the Chat tab opens that chat directly (no back button, dock stays). While typing in any page field (not sheets) the dock fades out (`body.typing`, set on focusin; removed only once the keyboard has folded, so nothing jumps) and the composer drops its home-bar padding. `#view-chat` / `#view-write` are always `position: fixed` to the visual viewport (`--vvtop` / `--vvh`) with a height transition, so they glide with the keyboard. Invites show in the
   bell ("@x added you to the film project …"). **Write** = Theme (theme, message, notes;
   stored under the `story` section key) · Plot (acts of scene cards, ▲▼ moves across acts) · Script
   (screenplay blocks scene / action / character / dialogue / ( ) / transition; Enter = next
@@ -411,7 +411,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v59`; bump to `planner-v60`, …) and keep its `ASSETS` list in sync
+(currently `planner-v60`; bump to `planner-v61`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

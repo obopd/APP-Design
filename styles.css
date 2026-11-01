@@ -738,12 +738,22 @@ body.gated .tabbar { display: none; }
 }
 .tab-badge[hidden] { display: none; }
 /* Inside a conversation the dock steps aside; the composer takes the bottom. */
-body.chatting .tabbar, body.typing .tabbar { display: none; }
-#view-chat { padding-bottom: calc(var(--tabbar) + 8px); }
-body.chatting #view-chat, body.typing #view-chat, body.typing #view-write {
-  position: fixed; left: 0; right: 0; top: var(--vvtop, 0px);
-  padding-bottom: 0; height: var(--vvh, 100dvh);
+body.chatting .tabbar { display: none; }
+/* Typing: the dock fades away (it would otherwise ride up on the keyboard) and fades back
+   once the keyboard has folded. */
+.tabbar { transition: opacity .25s ease, transform .3s cubic-bezier(.2, .8, .2, 1); }
+body.typing .tabbar { opacity: 0; transform: translateX(-50%) translateY(16px); pointer-events: none; }
+/* Chat and Write always fill exactly the visible area (above the keyboard when it's up,
+   following iOS's own scroll), and glide as it opens and folds. */
+#view-chat, #view-write {
+  position: fixed; left: 0; right: 0; top: var(--vvtop, 0px); height: var(--vvh, 100dvh);
+  transition: height .3s cubic-bezier(.2, .8, .2, 1), padding-bottom .3s cubic-bezier(.2, .8, .2, 1);
 }
+#view-chat { padding-bottom: calc(var(--tabbar) + 8px); }
+body.chatting #view-chat, body.typing #view-chat, body.typing #view-write { padding-bottom: 0; }
+/* The home-bar space under the message box isn't needed while the keyboard is up. */
+.composer { transition: padding-bottom .3s cubic-bezier(.2, .8, .2, 1); }
+body.typing .composer { padding-bottom: 8px; }
 
 .chat-page { min-height: 0; }
 .chat-empty { display: grid; justify-items: start; gap: 10px; margin: 4px 0 0; }

@@ -411,9 +411,19 @@ setInterval(() => { if (document.visibilityState === 'visible') { refreshSocial(
 // doesn't ride up on top of the keyboard; it returns when the keyboard closes.
 const isField = (el) => !!el && el.matches?.('textarea, input:not([type="checkbox"]):not([type="radio"]):not([type="file"])') && !el.closest('dialog');
 document.addEventListener('focusin', (e) => { if (isField(e.target)) document.body.classList.add('typing'); });
+// Keyboard folding: keep the typing layout until the keyboard is actually down (the
+// visible area is full height again), so nothing jumps while it slides away.
+let unTypeTimer = 0;
+const keyboardDown = () => !window.visualViewport || visualViewport.height > window.innerHeight * 0.85;
+function endTyping() {
+  clearTimeout(unTypeTimer);
+  if (isField(document.activeElement)) return; // focus moved to the next field
+  if (keyboardDown()) { document.body.classList.remove('typing'); return; }
+  unTypeTimer = setTimeout(endTyping, 60); // still folding; check again (gives up via the cap below)
+}
 document.addEventListener('focusout', () => {
-  // Focus moving to the next field (e.g. Enter in the script) shouldn't flash the dock.
-  setTimeout(() => { if (!isField(document.activeElement)) document.body.classList.remove('typing'); }, 80);
+  setTimeout(endTyping, 80);
+  setTimeout(() => { if (!isField(document.activeElement)) document.body.classList.remove('typing'); }, 900);
 });
 
 // iPhone keyboard: when it opens, iOS both shrinks the visible area and scrolls the page.
