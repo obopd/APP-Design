@@ -40,7 +40,7 @@ laptop. So:
   is **always at the top of the calendar screen**, in month and week mode (above today's
   D-Days too). "Logo" means this calendar-outline app icon, not a wordmark. When a
   D-Day is shown above it, it sits slightly lower instead (`.has-dday`: top spacer
-  1.3 : bottom 0.7). Tapping a date slides the card to the top, **rolls the month up into
+  1.3 : bottom 0.7; in film mode the project name + calendar sit higher, 1 : 1). Tapping a date slides the card to the top, **rolls the month up into
   that date's week**, and the space below shows that day in **two columns**:
   to-do list on the left, hourly schedule timeline on the right. Tapping the
   selected date again, the month name, or swiping down returns to the month.
@@ -411,7 +411,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v56`; bump to `planner-v57`, …) and keep its `ASSETS` list in sync
+(currently `planner-v57`; bump to `planner-v58`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

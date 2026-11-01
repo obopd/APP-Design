@@ -92,6 +92,9 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
    (the top spacer takes more of the free space); otherwise it's exactly centered. */
 .month-mode.has-dday .top-slot { flex-grow: 1.3; }
 .month-mode.has-dday .grow:last-child { flex-grow: 0.7; }
+/* Film mode: the project name + calendar sit a bit higher than with a D-Day. */
+.film .month-mode.has-dday .top-slot { flex-grow: 1; }
+.film .month-mode.has-dday .grow:last-child { flex-grow: 1; }
 
 /* Today's D-Days sit in the free space above the calendar (month mode only).
    The slot keeps flex-basis 0, so its content never pushes the calendar around. */
