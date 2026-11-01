@@ -968,8 +968,8 @@ body.typing #view-chat { padding-bottom: 0; }
 #view-organize { padding-bottom: calc(var(--tabbar) + 8px); }
 .organize-page { gap: 14px; }
 .org-project { font-size: 24px !important; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.org-tabs { justify-self: stretch; display: grid; grid-template-columns: repeat(4, 1fr); }
-.org-tabs button { padding: 5px 4px; }
+.org-tabs { justify-self: stretch; display: grid; grid-template-columns: repeat(5, auto); }
+.org-tabs button { padding: 5px 2px; font-size: 12.5px; }
 .org-body { display: grid; gap: 16px; padding-bottom: 20px; }
 .org-sum { margin: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .org-sum span { display: grid; gap: 1px; }
@@ -1105,3 +1105,14 @@ body.typing #view-chat { padding-bottom: 0; }
 .pv-move .icon-btn { color: #fff; }
 .pv-move .icon-btn:disabled { opacity: .25; }
 .pv-move .icon-btn svg { width: 18px; height: 18px; }
+
+/* Organize → Shoot: one card per shooting day */
+.shoot-card { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 2px; cursor: pointer; }
+.shoot-card:active { background: var(--soft); }
+.shoot-card.past { opacity: .45; }
+.shoot-date { flex-shrink: 0; width: 44px; display: grid; justify-items: center; line-height: 1.1; }
+.shoot-date b { font-size: 22px; }
+.shoot-date small { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+.shoot-card .muted { color: var(--muted); }
+.shoot-copy { justify-self: start; display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; }
+.shoot-copy svg { width: 15px; height: 15px; }

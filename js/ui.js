@@ -145,3 +145,35 @@ export function snack(text, { action, onAction } = {}) {
   document.body.append(el);
   toastTimer = setTimeout(() => { el.classList.add('leaving'); setTimeout(() => el.remove(), 250); }, 4500);
 }
+
+/**
+ * Card with a checklist. options: [[value, label, sub?]]. Resolves the chosen values in the
+ * options' order, or null when cancelled.
+ */
+export function pickMany(options, selected = [], { title = 'Choose', message = '', empty = 'Nothing to choose yet.', ok = 'Done' } = {}) {
+  return new Promise((resolve) => {
+    const chosen = new Set(selected);
+    let layer;
+    const done = (v) => { layer.close(); resolve(v); };
+    const rows = options.map(([value, label, sub]) => {
+      const mark = h('span', { class: 'menu-check' }, chosen.has(value) ? icon(ICONS.check) : null);
+      const btn = h('button', {
+        type: 'button', class: 'menu-item', role: 'checkbox', 'aria-checked': String(chosen.has(value)),
+        onclick: () => {
+          if (chosen.has(value)) chosen.delete(value); else chosen.add(value);
+          btn.setAttribute('aria-checked', String(chosen.has(value)));
+          mark.replaceChildren(...(chosen.has(value) ? [icon(ICONS.check)] : []));
+        },
+      }, mark, h('span', { class: 'pick-name' }, label, sub ? h('small', {}, sub) : null));
+      return btn;
+    });
+    layer = openLayer('ask', h('div', { class: 'ask-card' },
+      h('p', { class: 'ask-title display' }, title),
+      rows.length ? (message ? h('p', { class: 'ask-message' }, message) : null) : h('p', { class: 'ask-message' }, empty),
+      h('div', { class: 'friend-pick' }, rows),
+      h('div', { class: 'ask-actions' },
+        h('button', { type: 'button', class: 'ask-btn', autofocus: true, onclick: () => done(null) }, 'Cancel'),
+        h('button', { type: 'button', class: 'ask-btn primary', onclick: () => done(options.map(([v]) => v).filter((v) => chosen.has(v))) }, ok))),
+    { onBackdrop: () => done(null) });
+  });
+}

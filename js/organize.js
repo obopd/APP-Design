@@ -1,12 +1,12 @@
 // Film mode "Organize" tab: Supplies · Locations · Cast · Budget for the chosen project.
 // Entries are project items (film.js: cur().org[kind]), one row each, so collaborators
 // can work on different entries at once; the budget adds everything up.
-import { h, icon, ICONS } from './util.js';
+import { h, icon, ICONS, fmt, parseKey, todayKey } from './util.js';
 import { cur, save, uid } from './store.js';
-import { ask, pick } from './ui.js';
-import { currentProject, filmStatus, orgNeedsSetup } from './film.js';
+import { ask, pick, pickMany, snack } from './ui.js';
+import { currentProject, filmStatus, orgNeedsSetup, docOf } from './film.js';
 
-const SECTIONS = [['supply', 'Supplies'], ['location', 'Locations'], ['actor', 'Cast'], ['budget', 'Budget']];
+const SECTIONS = [['supply', 'Supplies'], ['location', 'Locations'], ['actor', 'Cast'], ['budget', 'Budget'], ['shoot', 'Shoot']];
 let section = localStorage.getItem('planner.orgsection') || 'supply';
 const dialog = document.getElementById('org-sheet');
 dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
@@ -297,7 +297,176 @@ function budgetView() {
         h('span', { class: 'org-amt' }, money(x.amount))))) : empty('Tap + for food, transport, rentals — or income like a grant.')));
 }
 
-const VIEWS = { supply: suppliesView, location: locationsView, actor: castView, budget: budgetView };
+/* ---------- Shoot (shooting days) ---------- */
+// A shooting day is one of the project's calendar events with a `shoot` part
+// ({ location, scenes: [{ id, label }], cast: [actor id] }), so it also shows on the
+// project calendar and timeline. Titles are "Shoot day N" in date order.
+
+const shootDays = () => cur().events.filter((e) => e.shoot).sort((a, b) => (a.date + (a.start || '')).localeCompare(b.date + (b.start || '')));
+const dayNo = (ev) => shootDays().indexOf(ev) + 1;
+function renumber() {
+  shootDays().forEach((e, i) => { const t = `Shoot day ${i + 1}`; if (e.title !== t) e.title = t; });
+}
+
+// Scenes to choose from: the script's scene headings (numbered), else the Plot's cards.
+function sceneOptions() {
+  const blocks = docOf('script')?.body?.blocks || [];
+  const out = [];
+  let n = 0;
+  let cur0 = null;
+  for (const b of blocks) {
+    if (b.t === 'scene') {
+      n += 1;
+      cur0 = b.x?.trim() ? { id: b.id, label: `${n}. ${b.x.trim()}`, chars: new Set() } : null;
+      if (cur0) out.push(cur0);
+    } else if (b.t === 'character' && cur0 && b.x?.trim()) {
+      cur0.chars.add(b.x.replace(/\(.*\)/g, '').trim().toUpperCase());
+    }
+  }
+  if (out.length) return out;
+  for (const act of docOf('plot')?.body?.acts || []) {
+    for (const c of act.cards || []) if (c.title?.trim()) out.push({ id: c.id, label: c.title.trim(), chars: new Set() });
+  }
+  return out;
+}
+
+const locName = (id) => org('location').find((x) => x.id === id) || null;
+const actor = (id) => org('actor').find((x) => x.id === id) || null;
+const mapOf = (loc) => (loc ? loc.link || (loc.address ? `https://maps.google.com/?q=${encodeURIComponent(loc.address)}` : '') : '');
+const longDay = (key) => fmt({ weekday: 'short', month: 'short', day: 'numeric' }).format(parseKey(key));
+
+function callSheet(ev) {
+  const p = currentProject();
+  const loc = locName(ev.shoot.location);
+  const lines = [`${p?.name || 'Film'} — ${ev.title}`, `${longDay(ev.date)} · Call ${ev.start || '—'}${ev.end ? ` · Wrap ${ev.end}` : ''}`];
+  if (loc) lines.push(`Location: ${loc.name}${loc.address ? `, ${loc.address}` : ''}${mapOf(loc) ? `\n${mapOf(loc)}` : ''}`);
+  if (ev.shoot.scenes?.length) lines.push(`Scenes: ${ev.shoot.scenes.map((x) => x.label).join('; ')}`);
+  const cast = (ev.shoot.cast || []).map(actor).filter(Boolean);
+  if (cast.length) lines.push(`Cast: ${cast.map((a) => (a.role ? `${a.name} (${a.role})` : a.name)).join(', ')}`);
+  if (ev.notes) lines.push(`Notes: ${ev.notes}`);
+  return lines.join('\n');
+}
+
+function openShootDay(item = null) {
+  const isNew = !item;
+  const draft = item ? { ...item, shoot: structuredClone(item.shoot) } : {
+    date: todayKey(), start: '07:00', end: '19:00', notes: '', shoot: { location: null, scenes: [], cast: [] },
+  };
+  const date = h('input', { type: 'date', class: 'org-input', value: draft.date, 'aria-label': 'Date' });
+  const call = h('input', { type: 'time', class: 'org-input', value: draft.start || '', 'aria-label': 'Call time' });
+  const wrap = h('input', { type: 'time', class: 'org-input', value: draft.end || '', 'aria-label': 'Wrap time' });
+  const notes = h('textarea', { class: 'notes', rows: '3', placeholder: 'Parking, meals, weather backup…', 'aria-label': 'Notes' });
+  notes.value = draft.notes || '';
+
+  const label = (text) => h('span', { class: 'select-label' }, text);
+  const locLabel = label('');
+  const sceneLabel = label('');
+  const castLabel = label('');
+  const paint = () => {
+    locLabel.textContent = locName(draft.shoot.location)?.name || 'Choose';
+    sceneLabel.textContent = draft.shoot.scenes.length ? `Sc ${draft.shoot.scenes.map((x) => x.label.split('.')[0]).join(', ')}` : 'Choose';
+    const names = draft.shoot.cast.map(actor).filter(Boolean).map((a) => a.name);
+    castLabel.textContent = names.length ? names.join(', ') : 'Choose';
+  };
+  paint();
+  const chooseLoc = async (e) => {
+    const list = org('location').filter((x) => x.status !== 'rejected');
+    if (!list.length) { snack('Add places in Locations first.'); return; }
+    const v = await pick(e.currentTarget, [['', 'None'], ...list.map((x) => [x.id, x.name])], draft.shoot.location || '');
+    if (v === undefined) return;
+    draft.shoot.location = v || null;
+    paint();
+  };
+  const chooseScenes = async () => {
+    const opts = sceneOptions();
+    const known = new Map(opts.map((o) => [o.id, o]));
+    const v = await pickMany(opts.map((o) => [o.id, o.label]), draft.shoot.scenes.map((x) => x.id),
+      { title: 'Scenes', empty: 'Write scene headings in Write → Script (or cards in Plot) to pick them here.' });
+    if (!v) return;
+    draft.shoot.scenes = v.map((id) => ({ id, label: known.get(id).label }));
+    // Actors whose role speaks in these scenes are added for you.
+    const speaking = new Set(v.flatMap((id) => [...known.get(id).chars]));
+    for (const a of org('actor')) {
+      if (a.role && speaking.has(a.role.trim().toUpperCase()) && !draft.shoot.cast.includes(a.id)) draft.shoot.cast.push(a.id);
+    }
+    paint();
+  };
+  const chooseCast = async () => {
+    const v = await pickMany(org('actor').map((a) => [a.id, a.name, a.role || '']), draft.shoot.cast,
+      { title: 'Cast', empty: 'Add actors in Cast first.' });
+    if (!v) return;
+    draft.shoot.cast = v;
+    paint();
+  };
+  const row = (name, el) => h('div', { class: 'field' }, h('span', {}, name), el);
+  const btn = (lbl, fn) => h('button', { type: 'button', class: 'select-btn', onclick: fn }, lbl);
+
+  const close = () => dialog.close();
+  const collect = () => ({ date: date.value || todayKey(), start: call.value, end: wrap.value, notes: notes.value.trim() });
+  const submit = (ev) => {
+    ev.preventDefault();
+    const v = collect();
+    const data = { ...v, allDay: !v.start, start: v.start || '09:00', end: v.end || v.start || '10:00', shoot: draft.shoot };
+    if (isNew) cur().events.push({ id: uid(), title: 'Shoot day', repeat: 'none', until: '', alert: 'none', important: false, ...data });
+    else Object.assign(item, data);
+    renumber();
+    save();
+    close();
+  };
+  const remove = async () => {
+    if (!await ask({ title: `Delete ${item.title}?`, message: 'It’s also removed from the calendar.', ok: 'Delete', danger: true })) return;
+    cur().events = cur().events.filter((x) => x !== item);
+    renumber();
+    save();
+    close();
+  };
+  const copy = async () => {
+    const text = callSheet({ ...item, ...collect(), title: item?.title || 'Shoot day', shoot: draft.shoot });
+    try { await navigator.clipboard.writeText(text); snack('Call sheet copied — paste it in a chat.'); } catch { snack('Couldn’t copy on this phone.'); }
+  };
+
+  dialog.replaceChildren(h('form', { novalidate: true, onsubmit: submit },
+    h('div', { class: 'grabber' }),
+    h('div', { class: 'sheet-head' },
+      h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Cancel', onclick: close }, icon(ICONS.close)),
+      h('span', { class: 'spacer' }),
+      h('span', { class: 'org-sheet-title' }, isNew ? 'Shoot day' : item.title),
+      h('span', { class: 'spacer' }),
+      isNew ? null : h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Delete', onclick: remove }, icon(ICONS.trash)),
+      h('button', { type: 'submit', class: 'icon-btn ok', 'aria-label': 'Save' }, icon(ICONS.check))),
+    h('div', { class: 'fields' },
+      row('Date', date), row('Call', call), row('Wrap', wrap),
+      row('Location', btn(locLabel, chooseLoc)),
+      row('Scenes', btn(sceneLabel, chooseScenes)),
+      row('Cast', btn(castLabel, chooseCast))),
+    notes,
+    h('button', { type: 'button', class: 'pill shoot-copy', onclick: copy }, icon(ICONS.copy), 'Copy call sheet')));
+  dialog.showModal(); // no auto-focus: the keyboard waits for a tap
+}
+
+function shootView() {
+  const days = shootDays();
+  const today = todayKey();
+  const next = days.find((d) => d.date >= today);
+  const card = (ev) => {
+    const loc = locName(ev.shoot.location);
+    const d = parseKey(ev.date);
+    const cast = (ev.shoot.cast || []).map(actor).filter(Boolean);
+    return h('li', { class: `shoot-card${ev.date < today ? ' past' : ''}`, onclick: () => openShootDay(ev) },
+      h('span', { class: 'shoot-date' }, h('small', {}, fmt({ weekday: 'short' }).format(d)), h('b', { class: 'display' }, String(d.getDate())), h('small', {}, fmt({ month: 'short' }).format(d))),
+      h('span', { class: 'org-main' },
+        h('b', {}, `Day ${dayNo(ev)}${ev.allDay ? '' : ` · ${ev.start}${ev.end ? `–${ev.end}` : ''}`}`),
+        loc ? h('small', {}, loc.name) : h('small', { class: 'muted' }, 'No location'),
+        ev.shoot.scenes?.length ? h('span', { class: 'org-note' }, `Sc ${ev.shoot.scenes.map((x) => x.label.split('.')[0]).join(', ')}`) : null,
+        cast.length ? h('span', { class: 'org-note' }, cast.map((a) => a.name).join(', ')) : null),
+      linkBtn(mapOf(loc), `Open map for ${loc?.name || ''}`));
+  };
+  return h('div', { class: 'org-body' },
+    days.length ? summary([['Days', String(days.length)], ['Next', next ? longDay(next.date) : '—', 'org-due'], ['Scenes', String(new Set(days.flatMap((d) => (d.shoot.scenes || []).map((x) => x.id))).size)]]) : null,
+    days.length ? h('ul', { class: 'org-list shoot-list' }, days.map(card)) : empty('Tap + to plan a shooting day: date, call time, location, scenes and cast.'));
+}
+
+const VIEWS = { supply: suppliesView, location: locationsView, actor: castView, budget: budgetView, shoot: shootView };
 
 export function renderOrganize(root) {
   const p = currentProject();
@@ -307,6 +476,8 @@ export function renderOrganize(root) {
     return;
   }
   const kind = section === 'budget' ? 'expense' : section;
+  const add = section === 'shoot' ? () => openShootDay() : () => openForm(kind);
+  const addLabel = section === 'shoot' ? 'Add shooting day' : `Add ${FORMS[kind].title.toLowerCase()}`;
   // Keep the scroll position across redraws (e.g. after ticking an item off).
   const prevScroll = root.querySelector('.organize-page')?.scrollTop || 0;
   root.replaceChildren(h('div', { class: 'settings organize-page' },
@@ -314,7 +485,7 @@ export function renderOrganize(root) {
     h('div', { class: 'page-sticky' },
       h('div', { class: 'page-head' },
         h('h1', { class: 'display org-project' }, p.name),
-        h('button', { class: 'icon-btn page-add', 'aria-label': `Add ${FORMS[kind].title.toLowerCase()}`, onclick: () => openForm(kind) }, icon(ICONS.plus))),
+        h('button', { class: 'icon-btn page-add', 'aria-label': addLabel, onclick: add }, icon(ICONS.plus))),
       h('div', { class: 'segmented org-tabs', role: 'radiogroup' }, SECTIONS.map(([k, label]) => h('button', {
         type: 'button', role: 'radio', 'aria-checked': String(k === section),
         onclick: () => { section = k; localStorage.setItem('planner.orgsection', k); renderOrganize(root); },

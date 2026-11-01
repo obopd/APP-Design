@@ -262,7 +262,7 @@ laptop. So:
   removed members lose access at once. Note: `project_items` grants update on project_id/id
   too because PostgREST's upsert sets every column it sends.
 - **Organize tab** (film mode; `js/organize.js`, `#view-organize`, sheet `#org-sheet`):
-  Supplies · Locations · Cast · Budget for the chosen project (section saved in
+  Supplies · Locations · Cast · Budget · Shoot for the chosen project (section saved in
   `planner.orgsection`). Entries are project items with kinds `supply` (name, group, qty,
   price each, link, bought ✓, notes; grouped by "group"), `location` (place, status
   scouting/confirmed/rejected, address, map link — else a Google Maps search of the address —
@@ -315,6 +315,16 @@ laptop. So:
   copies · Restore…" lists them (`pick`) and restores with `replaceAll` (overwrites the account).
 - **Keep-awake**: `.github/workflows/keep-awake.yml` calls the public `ping()` RPC every 3
   days so the free Supabase project never pauses (runs from the default branch).
+- **Shoot** (5th Organize section; `shootView` / `openShootDay` in organize.js): one card per
+  shooting day (date block, "Day n · call–wrap", location, "Sc 1, 2", cast; past days faded;
+  summary Days / Next / Scenes). A shooting day is a project **calendar event** with a `shoot`
+  part `{ location: location id, scenes: [{ id, label }], cast: [actor id] }` (no new item
+  kind, so no SQL; it shows on the project calendar/timeline and the normal editor keeps
+  `shoot`). Titles are renumbered "Shoot day N" by date on every Organize save. Scenes are
+  picked (`pickMany` in ui.js) from the script's scene headings ("n. INT. …", block ids), else
+  the Plot's cards; actors whose role matches a CHARACTER cue in the chosen scenes are added
+  automatically. "Copy call sheet" puts a plain-text call sheet on the clipboard (to paste in a
+  chat). Locations / cast pickers use the Organize entries.
 - **Postpone a to-do** (`js/postpone.js`): swipe a to-do left to reveal **Tmrw** and
   **Date** (date card from `askDate`), or use the editor's "Postpone" row (Tomorrow /
   Pick date). A "Moved to …" snack with **Undo** appears (`snack` in ui.js). One-off
@@ -493,7 +503,7 @@ Supabase's auth / storage / vault / pg_net / pg_cron, plus `db/seed.sql`: users 
 c@x with password `secret1`, alice friends with bob and carol, an alice↔bob chat), and runs
 `tests/mock-server.js` on :54321 (PostgREST + GoTrue + Storage + RPC + a Realtime stand-in,
 with real RLS; `Bearer service` = service role) and the app on :8765. `tests/run-all.sh`
-runs `sync`, `preview`, `app-features` (push sign-up, instant chat, search, backups,
+runs `sync`, `preview`, `shoot`, `app-features` (push sign-up, instant chat, search, backups,
 clean-up, ping) and `push-function` (the Edge Function in Node, decrypting real Web Push).
 Write new tests with `tests/helpers.js` (`phone`, `inApp`, `sql`, `check`, `filmProject`).
 Add a test when adding a feature; run the suite before pushing.
@@ -535,7 +545,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v75`; bump to `planner-v76`, …) and keep its `ASSETS` list in sync
+(currently `planner-v77`; bump to `planner-v78`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
