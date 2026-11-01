@@ -50,7 +50,8 @@ laptop. So:
   month as a taller grid (up to 3 chips per day, else 2 + "+n"), 3rd tap = back. It shows
   every event (own + shared, time first) and every to-do **that has a due date, on its due
   date** (slim-dash outlined chip; done = struck). ‹ › and sideways swipes move by week /
-  month; tapping a day opens that day's normal view.
+  month; tapping a day opens that day's normal view. The last grid form is saved on the
+  device (localStorage `planner.expand`) and restored when the app opens (current week/month).
   Motion (app.js `growExpanded` / `leaveExpanded` / `swapExpanded`): normal → expanded
   clips the expanded card (`clip-path inset … round 24px`) from the square card's rect to
   its own while content fades in; back = the reverse (expanded pinned `position: fixed`,
@@ -253,7 +254,7 @@ docs/                  Screenshots of the app
 
 ## Data model (`js/store.js`)
 
-Keep the internal names (`planner.v1`, `planner.auth`, `planner.social`, `planner_data`, `planner-vN`) as they
+Keep the internal names (`planner.v1`, `planner.auth`, `planner.social`, `planner.expand`, `planner_data`, `planner-vN`) as they
 are, or existing users lose their data/session.
 
 Stored in `localStorage` under `planner.v1`:
@@ -358,7 +359,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v49`; bump to `planner-v50`, …) and keep its `ASSETS` list in sync
+(currently `planner-v50`; bump to `planner-v51`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

@@ -38,6 +38,15 @@ function weekToShow() {
   const d = inMonth ? today : view.cursor;
   return dateKey(addDays(d, -d.getDay()));
 }
+
+// The grid form (normal / week / month) is remembered on this device and restored on open,
+// showing the current week or month.
+const EXPAND_KEY = 'planner.expand';
+const savedExpand = localStorage.getItem(EXPAND_KEY);
+if (savedExpand === 'week' || savedExpand === 'month') {
+  view.expand = savedExpand;
+  view.week = weekToShow();
+}
 let prevView = null;
 
 const actions = {
@@ -65,6 +74,7 @@ const actions = {
     } else {
       view.expand = null;
     }
+    localStorage.setItem(EXPAND_KEY, view.expand || '');
     render();
   },
   shift(dir) {
