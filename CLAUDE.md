@@ -134,9 +134,15 @@ laptop. So:
   wouldn't swipe. `place()` re-centers after layout, after `document.fonts.ready`
   (Fraunces changes widths) and on resize.
 - **Haptics**: every button-like tap gives a light haptic tick (Settings → Haptics,
-  on by default). iOS Safari has no vibration API, so `js/haptics.js` clicks the label
-  of a hidden `<input type="checkbox" switch>` (iOS 18+ plays a system haptic); Android
-  uses `navigator.vibrate`. No sound. Must be called inside the user's tap.
+  on by default). iOS Safari has no vibration API; toggling an `<input type="checkbox"
+  switch>` plays a system haptic, but newer iOS only for a *real* tap (`label.click()`
+  from code stays silent — the old approach stopped working). So `js/haptics.js` places a
+  transparent `.haptic-hit` label for a hidden switch exactly over the button on
+  `pointerdown` (fixed, in `body` or the open `<dialog>`, so re-renders can't remove it);
+  the finger's click lands on it, it calls `host.click()` (still inside the real tap),
+  then the label flips the switch. Moving >8px / scrolling removes it, so swipes work.
+  Android uses `navigator.vibrate`. No sound. Automated browsers skip the layer
+  (Playwright's click hit-check would fail) unless `window.__hapticTest` is set.
 - **Account required — email + password login with cloud backup/sync** via
   Supabase (`js/cloud.js`, login page + new-password sheet in `js/account.js`,
   Settings → Account shows the email, sync status and Sign out). When accounts are
@@ -378,7 +384,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v52`; bump to `planner-v53`, …) and keep its `ASSETS` list in sync
+(currently `planner-v53`; bump to `planner-v54`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
