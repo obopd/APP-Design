@@ -748,7 +748,8 @@ body.typing .tabbar { opacity: 0; transform: translateX(-50%) translateY(16px); 
    motion. Resizing or re-pinning the chat as well made it jump and bounce, so the
    layout doesn't change while typing. */
 #view-chat { padding-bottom: calc(var(--tabbar) + 8px); }
-body.chatting #view-chat { padding-bottom: 0; }
+/* Entering a chat: the dock's room goes away at once (no glide), so the box doesn't move. */
+body.chatting #view-chat { padding-bottom: 0; transition: none; }
 
 .chat-page { min-height: 0; }
 .chat-empty { display: grid; justify-items: start; gap: 10px; margin: 4px 0 0; }
