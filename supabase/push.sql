@@ -1,10 +1,10 @@
 -- Planner: push notifications. Run once in Supabase → SQL Editor, after film.sql
 -- (it adds triggers to the chat, friends and film tables). Safe to run again.
 --
--- Needs the Edge Function "push" (supabase/functions/push/index.ts) and two Vault secrets,
--- created once (not stored in this file):
---   select vault.create_secret('https://<project>.supabase.co/functions/v1/push', 'push_url');
---   select vault.create_secret('<random text>', 'push_secret');   -- same as the function's PUSH_SECRET
+-- Needs the Edge Function "push" (supabase/functions/push/index.ts) and four Vault secrets
+-- (never stored in this repo): push_url (the function's address), push_secret (random text),
+-- vapid_public / vapid_private (the notification key pair; the public one is also in
+-- js/config.js). The owner's setup file adds them in front of this script.
 --
 -- push_subscriptions  one row per phone that allowed notifications (Web Push endpoint + keys)
 -- push_alerts         upcoming schedule alerts, uploaded by the app; sent when due, then deleted
@@ -76,6 +76,21 @@ grant execute on function public.save_push_subscription(text, text, text) to aut
 grant execute on function public.replace_push_alerts(jsonb) to authenticated;
 
 /* ---------- Sending (server only) ---------- */
+
+-- The function asks for the keys with the secret it was called with.
+create or replace function public.push_settings(p_secret text) returns jsonb
+  language sql stable security definer set search_path = public as $$
+  select case when p_secret is not null and p_secret = (select decrypted_secret from vault.decrypted_secrets where name = 'push_secret')
+    then jsonb_build_object(
+      'public', (select decrypted_secret from vault.decrypted_secrets where name = 'vapid_public'),
+      'private', (select decrypted_secret from vault.decrypted_secrets where name = 'vapid_private'))
+  end $$;
+revoke execute on function public.push_settings(text) from public, anon, authenticated;
+do $$ begin
+  if exists (select 1 from pg_roles where rolname = 'service_role') then
+    grant execute on function public.push_settings(text) to service_role;
+  end if;
+end $$;
 
 -- Calls the Edge Function. Not callable by app users (only triggers and the timer use it).
 create or replace function public.push_call(payload jsonb) returns void

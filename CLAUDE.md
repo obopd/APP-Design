@@ -330,7 +330,7 @@ laptop. So:
   they stack), friend requests / accepts, first-time shares and film project invites; a
   pg_cron job each minute calls it when alerts are due (sent once, skipped if >30 min late,
   then deleted). The function is called only by the database (`push_call` reads the URL +
-  `x-push-secret` from Vault; users can't execute it), reads subscriptions with the service
+  `x-push-secret` from Vault; users can't execute it), fetches the VAPID keys with that secret, reads subscriptions with the service
   role, encrypts with `npm:web-push`, and forgets endpoints that answer 404/410. With push on,
   `reminders.js` shows only the in-app toast for personal alerts (no duplicate). The service
   worker's `push` handler always shows a notification (iOS requires it); tapping one opens
@@ -487,9 +487,10 @@ set Authentication → URL Configuration → Site URL / Redirect URLs to the Pag
 and put the Project URL + anon (publishable) key in `js/config.js` (done: project
 `rkpsjkssmfjuavdhayie`, table + RLS verified). For friends & sharing also run
 `supabase/social.sql` there, then `supabase/chat.sql` for chat and `supabase/film.sql` for film mode (all safe to run again). Push: deploy the `push` Edge
-Function (Verify JWT off) with secrets `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `PUSH_SECRET`,
-create Vault secrets `push_url` / `push_secret`, then run `supabase/push.sql`. The VAPID
-private key and push secret are never committed. Never commit the service_role/secret key. The service worker only caches same-origin GETs, so API
+Function (Verify JWT off; it needs no secrets of its own), then run `supabase/push.sql` preceded
+by four Vault secrets (`push_url`, `push_secret`, `vapid_public`, `vapid_private`; the owner gets
+them as one paste, kept in the git-excluded `.setup/`). The function gets the keys from
+`push_settings(secret)` (service role only). The VAPID private key and push secret are never committed. Never commit the service_role/secret key. The service worker only caches same-origin GETs, so API
 responses are never cached.
 
 Updates reach phones quickly: the service worker installs with `cache: 'reload'` and

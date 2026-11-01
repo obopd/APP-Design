@@ -2,7 +2,8 @@
 // Called only by the database (supabase/push.sql: triggers + the every-minute alert timer),
 // which proves itself with the x-push-secret header. Deploy with "Verify JWT" turned off.
 //
-// Secrets (Edge Functions → Secrets): VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, PUSH_SECRET.
+// No secrets to set here: the push secret and the notification (VAPID) keys live in the
+// database's Vault, and push_settings() hands the keys over only for the right secret.
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by Supabase automatically.
 //
 // Body: { users: [uuid], title, body, tag, view }  → every phone of those users
@@ -12,8 +13,6 @@ import webpush from 'npm:web-push@3.6.7';
 const env = (k: string) => Deno.env.get(k) ?? '';
 const BASE = env('SUPABASE_URL').replace(/\/$/, '');
 const KEY = env('SUPABASE_SERVICE_ROLE_KEY');
-// The sender's contact (must be https: or mailto:): this project's address.
-webpush.setVapidDetails(BASE.startsWith('https://') ? BASE : 'https://supabase.com', env('VAPID_PUBLIC_KEY'), env('VAPID_PRIVATE_KEY'));
 
 type Sub = { endpoint: string; user_id: string; p256dh: string; auth: string };
 type Note = { title: string; body: string; tag?: string; view?: string };
@@ -56,8 +55,21 @@ async function forget(endpoints: string[]) {
   if (endpoints.length) await rest(`push_subscriptions?endpoint=${inList(endpoints)}`, { method: 'DELETE' });
 }
 
+// The keys, only for the right secret (cached while this instance runs).
+let keysFor = '';
+async function authorize(secret: string) {
+  if (!secret) return false;
+  if (keysFor === secret) return true;
+  const keys = await rest('rpc/push_settings', { method: 'POST', body: JSON.stringify({ p_secret: secret }) });
+  if (!keys?.public || !keys?.private) return false;
+  // The sender's contact (must be https: or mailto:): this project's address.
+  webpush.setVapidDetails(BASE.startsWith('https://') ? BASE : 'https://supabase.com', keys.public, keys.private);
+  keysFor = secret;
+  return true;
+}
+
 Deno.serve(async (req) => {
-  if (req.method !== 'POST' || !env('PUSH_SECRET') || req.headers.get('x-push-secret') !== env('PUSH_SECRET')) {
+  if (req.method !== 'POST' || !await authorize(req.headers.get('x-push-secret') ?? '').catch(() => false)) {
     return new Response('forbidden', { status: 403 });
   }
   const input = await req.json().catch(() => ({}));
