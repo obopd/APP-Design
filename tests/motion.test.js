@@ -51,14 +51,18 @@ const { browser, phone, check, wait, done } = require('./helpers');
     const bx = await page.locator('#brand').boundingBox();
     await page.mouse.move(bx.x + 15, bx.y + 15); await page.mouse.down(); await wait(1000); await page.mouse.up();
   };
-  // Default switch = the logo flip only (the owner is choosing a full-screen style).
-  await hold(p); await wait(60);
+  // The owner's choice: dissolve, with the slate clapping in the empty middle.
+  await hold(p); await wait(650); // the logo flips at the switch, mid-dissolve
   check('the logo flips into the clapperboard (animated, not instant)', await p.evaluate(() => document.querySelector('#brand .brand-slate').getAnimations().length > 0));
-  await wait(300);
-  check('default switch: logo flip, no full-screen effect', await p.locator('.fx').count() === 0 && await p.evaluate(() => document.documentElement.classList.contains('film')));
-  await hold(p); await wait(300);
+  check('entering plays the dissolve with the slate in the middle', await p.locator('.fx-mark.fx-in .fx-mark-arm').count() === 1);
+  await wait(1500);
+  check('…then it\'s gone and film mode is on', await p.locator('.fx').count() === 0 && await p.evaluate(() => document.documentElement.classList.contains('film') && !document.body.className.includes('fx-')));
+  await hold(p); await wait(200);
+  check('leaving shows the calendar logo in the middle', await p.locator('.fx-mark.fx-out img.fx-mark-art').count() === 1);
+  await wait(1500);
+  check('…then film mode is off', await p.evaluate(() => !document.documentElement.classList.contains('film')));
   // Every candidate style plays, switches the mode under cover, and cleans up.
-  for (const [style, total, at] of [['dip', 1150, 560], ['letterbox', 1250, 600], ['leak', 1350, 620], ['focus', 1100, 520], ['dissolve', 1000, 450]]) {
+  for (const [style, total, at] of [['dip', 1150, 560], ['letterbox', 1250, 600], ['leak', 1350, 620], ['focus', 1100, 520], ['dissolve', 1400, 560]]) {
     const r = await p.evaluate(async ([style, at]) => {
       const c = await import('./js/cinema.js');
       let switched = 0; const t0 = performance.now();

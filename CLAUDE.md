@@ -141,10 +141,12 @@ chats and (film mode) writing; results go to the day, chat, D-Day tab or Write s
 **Film Production Mode** (`js/film.js`, `js/filmui.js`, `supabase/film.sql`): **press and
 hold the logo** ~0.9s → `html.film`, the logo becomes a clapperboard (CSS only); saved per
 device (`planner.film`). The switch animation lives in `js/cinema.js` (`playFilmSwitch`): `FILM_TRANSITION`
-is `'flip'` (just the logo flip) until the owner picks one of the calm candidate styles —
-`dip` (to black, project name in the beat), `letterbox`, `leak` (warm light leak), `focus`
-(blur, the heaviest), `dissolve` — each ~1s, eased, switching the mode at its covered
-moment; reduced motion = none. The owner rejected a dramatic clapperboard show (too much). The project name chip / clapperboard opens the projects card (New /
+= **`'dissolve'`** (the owner's choice, 1.4s): the page eases back and fades out, the logo
+tile (`.fx-mark`, a copy of `#brand`'s art, 76px) fades into the empty middle — entering, the
+slate's arm softly claps shut; leaving, the calendar icon — and the new mode fades in from
+slightly closer; the switch happens at 560ms while the page is invisible. The other
+candidates (`dip`, `letterbox`, `leak`, `focus`, `flip` = logo flip only) stay in the file;
+reduced motion = instant. The owner rejected a dramatic clapperboard show (too much). The project name chip / clapperboard opens the projects card (New /
 Invite / Rename / Delete or Leave / Exit). The calendar, editor, folders and expanded grid
 then show **only the project's** items: `cur()` returns the lists set by `useLists()`;
 `save()` goes to `film.persist()` (row-per-item upsert into `project_items`, merged by object
@@ -282,7 +284,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v83`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v84`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 

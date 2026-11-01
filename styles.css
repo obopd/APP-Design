@@ -1222,10 +1222,40 @@ body.fx-focus .view:not([hidden]) { animation-name: fx-focus-view; }
 }
 
 /* Dissolve: the page eases back and fades; the new mode arrives from slightly closer. */
-body.fx-dissolve .view:not([hidden]) { animation: fx-dissolve 1s cubic-bezier(.45, 0, .55, 1) both; }
-body.fx-dissolve .tabbar { animation: fx-dissolve-dock 1s cubic-bezier(.45, 0, .55, 1) both; }
-@keyframes fx-dissolve { 0% { opacity: 1; transform: none; } 45% { opacity: 0; transform: scale(.97); } 46% { opacity: 0; transform: scale(1.03); } 100% { opacity: 1; transform: none; } }
-@keyframes fx-dissolve-dock { 0% { opacity: 1; } 45%, 46% { opacity: 0; } 100% { opacity: 1; } }
+/* 1.4s: the page fades out (to 32%), the mark holds the empty middle (switch at 40%),
+   the new mode fades in from slightly closer (62% → 100%). */
+body.fx-dissolve .view:not([hidden]) { animation: fx-dissolve 1.4s cubic-bezier(.45, 0, .55, 1) both; }
+body.fx-dissolve .tabbar { animation: fx-dissolve-dock 1.4s cubic-bezier(.45, 0, .55, 1) both; }
+@keyframes fx-dissolve {
+  0% { opacity: 1; transform: none; }
+  32% { opacity: 0; transform: scale(.97); }
+  33%, 60% { opacity: 0; transform: scale(1.03); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes fx-dissolve-dock { 0% { opacity: 1; } 32%, 60% { opacity: 0; } 100% { opacity: 1; } }
+
+/* The mark in the middle: the logo tile, a little larger, fading in and away. */
+.fx-mark { display: grid; place-items: center; background: none; }
+.fx-mark-tile {
+  position: static; width: 76px; height: 76px; border-radius: 22.5%; overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .14), 0 0 0 1px var(--line);
+  animation: fx-mark 1.4s cubic-bezier(.4, 0, .2, 1) both;
+}
+.fx-mark-art { display: block; width: 100%; height: 100%; }
+@keyframes fx-mark {
+  0%, 20% { opacity: 0; transform: scale(.92); }
+  36% { opacity: 1; transform: scale(1); }
+  64% { opacity: 1; transform: scale(1); }
+  84%, 100% { opacity: 0; transform: scale(1.06); }
+}
+/* The slate starts open and softly claps shut in the middle of the hold. */
+.fx-mark-arm { transform-box: view-box; transform-origin: 140px 194px; animation: fx-mark-clap 1.4s both; }
+@keyframes fx-mark-clap {
+  0%, 38% { transform: rotate(-24deg); animation-timing-function: cubic-bezier(.55, 0, .85, .35); }
+  48% { transform: rotate(0); animation-timing-function: ease-out; }
+  52% { transform: rotate(-3deg); animation-timing-function: ease-in; }
+  56%, 100% { transform: rotate(0); }
+}
 
 /* ---------- Small iPhones (SE / mini) ---------- */
 /* The month title stays on one line, and the to-do column's headings keep their words. */

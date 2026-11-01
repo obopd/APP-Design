@@ -1,7 +1,7 @@
 // The moment of switching into / out of Film Production Mode.
 //
-// Several calm, cinematic styles exist; the owner picks one (FILM_TRANSITION). Until then
-// the switch is just the logo flipping into a clapperboard ('flip', no full-screen effect).
+// Several calm, cinematic styles exist; the owner chose 'dissolve' (FILM_TRANSITION). 'flip'
+// means just the logo flipping into a clapperboard, with no full-screen effect.
 // Every style animates only transform / opacity (focus also blur), lasts about a second,
 // and switches the mode at its quietest, most covered moment. Reduced motion: no effect.
 //
@@ -9,22 +9,33 @@
 //   letterbox  thin widescreen bars glide in while the page dims, then glide away
 //   leak       a warm light leak drifts across the screen (film photography)
 //   focus      the page racks out of focus and back into focus
-//   dissolve   the page eases back and fades; the new mode fades in from slightly closer
+//   dissolve   the page eases back and fades; in the empty moment the slate fades in and
+//              softly claps (leaving: the calendar logo), then the new mode fades in from
+//              slightly closer — the owner's choice
 import { h } from './util.js';
 
-export const FILM_TRANSITION = 'flip';
+export const FILM_TRANSITION = 'dissolve';
 
 const STYLES = {
   dip: { total: 1150, at: 560 },
   letterbox: { total: 1250, at: 600 },
   leak: { total: 1350, at: 620 },
   focus: { total: 1100, at: 520, onPage: true },
-  dissolve: { total: 1000, at: 450, onPage: true },
+  dissolve: { total: 1400, at: 560, onPage: true, mark: true },
 };
 export const TRANSITIONS = Object.keys(STYLES);
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 let playing = null;
+
+// A copy of the logo tile from #brand: the clapperboard, or the calendar icon.
+function markTile(slate) {
+  const src = document.querySelector(slate ? '#brand .brand-slate' : '#brand .brand-cal');
+  const art = src.cloneNode(true);
+  art.setAttribute('class', 'fx-mark-art');
+  art.querySelector('.slate-arm')?.setAttribute('class', 'fx-mark-arm');
+  return h('div', { class: 'fx-mark-tile' }, art);
+}
 
 /**
  * Plays the chosen style and calls switchMode() at its covered moment; resolves when done.
@@ -37,6 +48,10 @@ export function playFilmSwitch(entering, switchMode, title = '', style = FILM_TR
   let el = null;
   if (s.onPage) {
     document.body.classList.add('fx-page', `fx-${style}`, `fx-${dir}`);
+    // The empty middle shows the app's own mark: the slate claps going in; the calendar
+    // logo comes back going out.
+    if (s.mark) el = h('div', { class: `fx fx-mark fx-${dir}`, 'aria-hidden': 'true' }, markTile(entering));
+    if (el) document.body.append(el);
   } else {
     el = h('div', { class: `fx fx-${style} fx-${dir}`, 'aria-hidden': 'true' },
       style === 'letterbox' ? [h('div', { class: 'fx-dim' }), h('div', { class: 'fx-bar top' }), h('div', { class: 'fx-bar bottom' })] : null,
