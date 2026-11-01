@@ -739,9 +739,9 @@ body.gated .tabbar { display: none; }
 .tab-badge[hidden] { display: none; }
 /* Inside a conversation the dock steps aside; the composer takes the bottom. */
 body.chatting .tabbar, body.typing .tabbar { display: none; }
-body.typing #view-chat, body.typing #view-write { padding-bottom: 0; height: var(--vvh, 100dvh); }
 #view-chat { padding-bottom: calc(var(--tabbar) + 8px); }
-body.chatting #view-chat {
+body.chatting #view-chat, body.typing #view-chat, body.typing #view-write {
+  position: fixed; left: 0; right: 0; top: var(--vvtop, 0px);
   padding-bottom: 0; height: var(--vvh, 100dvh);
 }
 
