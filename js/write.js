@@ -1,14 +1,17 @@
 // Film mode "Write" tab: Theme · Plot · Script for the chosen project.
-// (Theme is stored under the 'story' section key, which the database already allows.)
+// Theme and Characters are both stored in the 'story' document (the key the database
+// already allows), so they share one editing lock.
 // Reading is open to all members; editing takes the section's lock (one editor at a
 // time), autosaves while typing (which also renews the lock) and frees it on Done.
 import { h, icon, ICONS, fmt } from './util.js';
-import { tell } from './ui.js';
+import { tell, ask } from './ui.js';
 import {
   currentProject, docOf, editorOf, lockDoc, saveDoc, unlockDoc, nameOf, newId, filmStatus,
 } from './film.js';
 
-const LABELS = { story: 'Theme', plot: 'Plot', script: 'Script' };
+const LABELS = { story: 'Theme', characters: 'Characters', plot: 'Plot', script: 'Script' };
+// The stored document behind each section.
+const docKey = (sec) => (sec === 'characters' ? 'story' : sec);
 let section = localStorage.getItem('planner.filmsection') || 'story';
 let editing = null; // { section, pid, body, el, saveTimer, beat, lost }
 let rootEl = null;
@@ -16,9 +19,11 @@ let rootEl = null;
 /* ---------- Document shapes ---------- */
 
 function normalize(sec, body = {}) {
-  if (sec === 'story') {
-    // Older fields (logline, synopsis, characters) are kept in the saved body, just not shown.
-    return { ...body, theme: body.theme || '', message: body.message || '', notes: body.notes || '' };
+  if (sec === 'story' || sec === 'characters') {
+    // Older fields (logline, synopsis) are kept in the saved body, just not shown.
+    const characters = (Array.isArray(body.characters) ? body.characters : [])
+      .map((c) => ({ ...c, id: c.id || newId(), name: c.name || '', description: c.description ?? c.desc ?? '' })); // `desc` = the old Story field
+    return { ...body, theme: body.theme || '', message: body.message || '', notes: body.notes || '', characters };
   }
   if (sec === 'plot') {
     const acts = Array.isArray(body.acts) && body.acts.length ? body.acts
@@ -32,12 +37,13 @@ function normalize(sec, body = {}) {
 /* ---------- Editing session ---------- */
 
 async function startEdit() {
-  const who = editorOf(section);
+  const key = docKey(section);
+  const who = editorOf(key);
   if (who) { tell(`${nameOf(who)} is editing`, `You can read ${LABELS[section]} now and edit it when they’re done.`); return; }
   let ok = false;
-  try { ok = await lockDoc(section); } catch (e) { tell('Couldn’t start editing', e.message); return; }
-  if (!ok) { tell(`${nameOf(editorOf(section))} just started editing`, 'Try again when they’re done.'); rerender(); return; }
-  const doc = docOf(section);
+  try { ok = await lockDoc(key); } catch (e) { tell('Couldn’t start editing', e.message); return; }
+  if (!ok) { tell(`${nameOf(editorOf(key))} just started editing`, 'Try again when they’re done.'); rerender(); return; }
+  const doc = docOf(key);
   editing = { section, pid: currentProject().id, body: normalize(section, structuredClone(doc?.body || {})), lost: false };
   editing.beat = setInterval(() => save(true), 45000); // keep the lock while the screen sits open
   rerender();
@@ -52,7 +58,7 @@ async function save(quiet) {
   if (!editing) return;
   clearTimeout(editing.saveTimer);
   try {
-    await saveDoc(editing.section, editing.body);
+    await saveDoc(docKey(editing.section), editing.body);
     if (editing.lost) { editing.lost = false; paintBanner(); }
   } catch {
     editing.lost = true;
@@ -68,7 +74,7 @@ export async function finishEditing() {
   editing = null;
   clearTimeout(e.saveTimer);
   clearInterval(e.beat);
-  try { await unlockDoc(e.section, e.lost ? undefined : e.body); } catch { /* lock expires on its own */ }
+  try { await unlockDoc(docKey(e.section), e.lost ? undefined : e.body); } catch { /* lock expires on its own */ }
   rerender();
 }
 
@@ -142,6 +148,71 @@ function themeEdit(b) {
     h('section', { class: 'w-part' }, h('h3', { class: 'w-h' }, 'Theme'), area(b.theme, 'What the film is about, in a few words.', (v) => { b.theme = v; })),
     h('section', { class: 'w-part' }, h('h3', { class: 'w-h' }, 'Message'), area(b.message, 'What the audience should feel or take away.', (v) => { b.message = v; })),
     h('section', { class: 'w-part' }, h('h3', { class: 'w-h' }, 'Notes'), area(b.notes, 'Motifs, tone, references…', (v) => { b.notes = v; })));
+}
+
+/* ---------- Characters ---------- */
+
+const CHAR_FIELDS = [
+  ['description', 'Description', 'Appearance, personality, how they speak…'],
+  ['goal', 'Goal', 'What they want — and what they really need'],
+  ['arc', 'Arc', 'How they change from beginning to end'],
+  ['symbolism', 'Symbolism', 'What they stand for; objects, colors, motifs tied to them'],
+  ['backstory', 'Backstory', 'What happened before the film'],
+  ['relationships', 'Relationships', 'Who they’re tied to, and how'],
+  ['notes', 'Notes', 'Casting ideas, references, anything else'],
+];
+
+function charactersRead(b) {
+  if (!b.characters.length) return h('div', { class: 'w-doc' }, h('p', { class: 'w-empty' }, 'No characters yet'));
+  return h('div', { class: 'w-doc' }, b.characters.map((c) => h('section', { class: 'w-char-card' },
+    h('div', { class: 'w-char-top' },
+      h('span', { class: 'chat-avatar w-char-av' }, (c.name || '?')[0].toUpperCase()),
+      h('span', { class: 'w-char-id' },
+        h('b', { class: 'display' }, c.name || 'Unnamed'),
+        [c.role, c.age].filter(Boolean).length ? h('small', {}, [c.role, c.age && `${c.age}`].filter(Boolean).join(' · ')) : null)),
+    CHAR_FIELDS.filter(([k]) => (c[k] || '').trim()).map(([k, label]) => h('div', { class: 'w-char-f' },
+      h('h4', {}, label), h('p', { class: 'w-text' }, c[k]))))));
+}
+
+function charactersEdit(b) {
+  const root = h('div', { class: 'w-doc editing' });
+  const cardEl = (c) => h('section', { class: 'w-char-card edit', 'data-char': c.id },
+    h('div', { class: 'w-row' },
+      line(c.name, 'Name', (v) => { c.name = v; }, 'w-char-name'),
+      tiny('Move up', ICONS.up, () => move(c, -1)),
+      tiny('Move down', ICONS.down, () => move(c, 1)),
+      tiny('Delete character', ICONS.close, async () => {
+        if ((c.name || CHAR_FIELDS.some(([k]) => c[k])) && !await ask({ title: `Delete ${c.name || 'this character'}?`, ok: 'Delete', danger: true })) return;
+        b.characters.splice(b.characters.indexOf(c), 1);
+        changed();
+        root.querySelector(`[data-char="${c.id}"]`)?.remove();
+      })),
+    h('div', { class: 'w-row w-char-meta' },
+      line(c.role || '', 'Role (lead, antagonist, …)', (v) => { c.role = v; }, 'w-char-role'),
+      line(c.age || '', 'Age', (v) => { c.age = v; }, 'w-char-age')),
+    CHAR_FIELDS.map(([k, label, ph]) => h('div', { class: 'w-char-f' },
+      h('h4', {}, label), area(c[k] || '', ph, (v) => { c[k] = v; }))));
+  const add = tapBtn({ class: 'pill w-add' }, (typing) => {
+    const c = { id: newId(), name: '', role: '' };
+    b.characters.push(c);
+    changed();
+    const el = cardEl(c);
+    root.insertBefore(el, add);
+    el.querySelectorAll('textarea').forEach(fit);
+    reveal(el);
+    if (typing) el.querySelector('input').focus({ preventScroll: true });
+  }, '+ Character');
+  const move = (c, dir) => {
+    const i = b.characters.indexOf(c);
+    const j = i + dir;
+    if (j < 0 || j >= b.characters.length) return;
+    [b.characters[i], b.characters[j]] = [b.characters[j], b.characters[i]];
+    changed();
+    steady(root, build, () => root.querySelector(`[data-char="${c.id}"]`));
+  };
+  const build = () => root.replaceChildren(...b.characters.map(cardEl), add);
+  build();
+  return root;
 }
 
 /* ---------- Plot (acts of scene cards) ---------- */
@@ -333,8 +404,8 @@ function scriptEdit(b) {
 
 /* ---------- Page ---------- */
 
-const READ = { story: themeRead, plot: plotRead, script: scriptRead };
-const EDIT = { story: themeEdit, plot: plotEdit, script: scriptEdit };
+const READ = { story: themeRead, characters: charactersRead, plot: plotRead, script: scriptRead };
+const EDIT = { story: themeEdit, characters: charactersEdit, plot: plotEdit, script: scriptEdit };
 
 function since(iso) {
   const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
@@ -360,8 +431,8 @@ export function renderWrite(root) {
   if (editing && editing.pid === p.id && editing.section === section && editing.el && root.contains(editing.el)) return;
   if (editing && (editing.pid !== p.id || editing.section !== section)) { finishEditing(); return; }
 
-  const doc = docOf(section);
-  const other = editorOf(section);
+  const doc = docOf(docKey(section));
+  const other = editorOf(docKey(section));
   const mine = editing && editing.section === section;
   const tabs = h('div', { class: 'segmented write-tabs', role: 'radiogroup' }, Object.entries(LABELS).map(([k, label]) => h('button', {
     type: 'button', role: 'radio', 'aria-checked': String(k === section),

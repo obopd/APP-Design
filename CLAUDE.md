@@ -223,7 +223,9 @@ laptop. So:
   added to the project's single **group chat** (created with the project); in film mode
   the Chat tab opens that chat directly (no back button, dock stays). While typing in any page field (not sheets) the dock fades out (`body.typing`, set on focusin; removed only once the keyboard has folded). The layout is otherwise left alone while typing: iOS slides the page up with the keyboard and back down in one motion. Don't resize / re-pin the chat to the visual viewport — that fought iOS's own scroll and made it jump and bounce. Because iOS lifts the page by the whole keyboard height, the space under the box (home-bar padding, the dock's room in film mode) eases to 0 while typing so the box sits on the keyboard, and messages stack from the bottom of the list (`.msg-scroll::before` spacer) so short chats stay visible. Invites show in the
   bell ("@x added you to the film project …"). **Write** = Theme (theme, message, notes;
-  stored under the `story` section key) · Plot (acts of scene cards, ▲▼ moves across acts) · Script
+  stored under the `story` section key) · Characters (cards: name, role, age, description, goal,
+  arc, symbolism, backstory, relationships, notes; ▲▼ reorder; stored as `characters` in the same
+  `story` document, so Theme and Characters share one lock — `docKey()` in write.js) · Plot (acts of scene cards, ▲▼ moves across acts) · Script
   (screenplay blocks scene / action / character / dialogue / ( ) / transition; Enter = next
   block of the usual next type, "INT."/"EXT." → scene, Backspace on an empty block removes
   it; read view in Courier with scene numbers). Editing never rebuilds the whole list: + Card / + Act / Enter / Backspace add or remove single elements in place (indexes looked up when used), and the editing buttons (`tapBtn`) handle the touch themselves so they don't take focus from the box being typed in — on iPhone, losing focus or removing the focused box folded the keyboard and scrolled the page to the top. Only ▲▼ moves rebuild, keeping the scroll position (`steady`). The Write and Organize page tops (name, Edit / Done or +, section switch) are pinned while scrolling (`.page-sticky`; the script's type bar sticks under it via `--sticky-h`), and switching read ⇄ edit or redrawing Organize keeps the scroll position. **One editor at a time** per section: Edit
@@ -315,7 +317,7 @@ js/chat.js             Chat data: chats, members, messages (polling + local cach
 js/chatview.js         Chat tab: chat list, conversation (bubbles + composer), group info; film mode = project chat
 js/film.js             Film Production Mode data: mode, projects, collaborators, project items (sync), writing locks
 js/filmui.js           Film mode UI: logo press-and-hold + clapperboard, projects card, project name chip
-js/write.js            Write tab: Theme / Plot / Script read + edit (one editor at a time)
+js/write.js            Write tab: Theme / Characters / Plot / Script read + edit (one editor at a time)
 js/organize.js         Organize tab: Supplies / Locations / Cast / Budget (film mode), entry sheet, totals
 supabase/film.sql      Tables + RLS for projects, project_members, project_items, project_docs
 supabase/chat.sql      Tables + RLS for chats, chat_members, messages (run once after social.sql)
@@ -431,7 +433,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v70`; bump to `planner-v71`, …) and keep its `ASSETS` list in sync
+(currently `planner-v71`; bump to `planner-v72`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
