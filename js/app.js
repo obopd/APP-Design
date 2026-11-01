@@ -32,6 +32,8 @@ const view = { tab: 'calendar', cursor: new Date(now.getFullYear(), now.getMonth
 
 // Sunday of the week to show when expanding: this week if it's in the shown month,
 // otherwise the month's first week.
+const sundayOf = (key) => { const d = parseKey(key); return dateKey(addDays(d, -d.getDay())); };
+
 function weekToShow() {
   const today = new Date();
   const inMonth = today.getFullYear() === view.cursor.getFullYear() && today.getMonth() === view.cursor.getMonth();
@@ -50,8 +52,10 @@ if (savedExpand === 'week' || savedExpand === 'month') {
 let prevView = null;
 
 const actions = {
+  // Opening a day keeps view.expand, so going back returns to the same grid form
+  // (expanded week = the week of the day you were on).
   select(key) {
-    view.expand = null;
+    if (view.selected === key && view.expand) view.week = sundayOf(key);
     view.selected = view.selected === key ? null : key; // tap the selected day again to go back to month
     const d = parseKey(key);
     view.cursor = new Date(d.getFullYear(), d.getMonth(), 1);
@@ -59,6 +63,7 @@ const actions = {
   },
   showMonth() {
     if (!view.selected) return;
+    if (view.expand) view.week = sundayOf(view.selected);
     view.selected = null;
     render();
   },
@@ -79,14 +84,15 @@ const actions = {
   },
   shift(dir) {
     view.lastShift = dir; // which way the expanded calendar slides
-    if (view.expand === 'week') {
-      view.week = dateKey(addDays(parseKey(view.week), dir * 7));
-      const mid = addDays(parseKey(view.week), 3);
-      view.cursor = new Date(mid.getFullYear(), mid.getMonth(), 1);
-    } else if (view.selected) {
+    // A selected day wins: view.expand is kept while a day is open (to return to it).
+    if (view.selected) {
       view.selected = dateKey(addDays(parseKey(view.selected), dir * 7));
       const d = parseKey(view.selected);
       view.cursor = new Date(d.getFullYear(), d.getMonth(), 1);
+    } else if (view.expand === 'week') {
+      view.week = dateKey(addDays(parseKey(view.week), dir * 7));
+      const mid = addDays(parseKey(view.week), 3);
+      view.cursor = new Date(mid.getFullYear(), mid.getMonth(), 1);
     } else {
       view.cursor = new Date(view.cursor.getFullYear(), view.cursor.getMonth() + dir, 1);
     }
