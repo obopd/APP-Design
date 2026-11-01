@@ -283,6 +283,8 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .todo.imp .todo-title { font-weight: 600; }
 .mark { color: var(--muted); font-size: 10px; margin-left: 4px; vertical-align: 1px; font-weight: 400; }
 .mark.star { color: var(--accent); }
+.due-tag { margin-left: 6px; font-size: 10.5px; font-weight: 500; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; vertical-align: 1px; }
+.due-tag.due-now { color: var(--accent); font-weight: 600; }
 
 /* Tracking: a small number pill (count or time) and a stopwatch button. */
 .tracker { display: flex; align-items: center; gap: 2px; flex-shrink: 0; padding: 5px 0 0 4px; }

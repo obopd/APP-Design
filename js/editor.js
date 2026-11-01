@@ -1,6 +1,6 @@
 // Bottom sheet for creating / editing a to-do or a schedule item.
 import { h, icon, ICONS, todayKey, toMinutes, fromMinutes, pad } from './util.js';
-import { state, save, uid, REPEATS, TRACKS, categoryTree } from './store.js';
+import { state, save, uid, REPEATS, TRACKS, categoryTree, hasDue, todoDate } from './store.js';
 import { openFolderSheet } from './folders.js';
 import { ask, selectButton } from './ui.js';
 import { postponeTomorrow, postponePick } from './postpone.js';
@@ -37,7 +37,8 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null, 
   const isNew = !item;
   let type = kind;
   const startHour = hour ?? Math.min(new Date().getHours() + 1, 23);
-  const draft = item ? { ...item } : {
+  // A due to-do that has rolled forward shows the day it's on now.
+  const draft = item ? { ...item, date: kind === 'todo' && hasDue(item) ? todoDate(item) : item.date } : {
     title: '', date, important: false, notes: '',
     allDay: false, start: `${pad(startHour)}:00`, end: fromMinutes(Math.min(startHour * 60 + 60, 23 * 60 + 59)),
     repeat: presetRepeat, until: '', alert: 'none', category: presetCategory,
@@ -58,6 +59,7 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null, 
   const end = h('input', { type: 'time', value: draft.end || '10:00', 'aria-label': 'End' });
   const repeat = select(REPEATS, draft.repeat || 'none');
   const until = h('input', { type: 'date', value: draft.until || '', 'aria-label': 'Until' });
+  const due = h('input', { type: 'date', value: draft.due || '', 'aria-label': 'Due date' });
   const alert = select(ALERTS, draft.alert || 'none');
   const track = select(TRACKS, draft.track || 'none');
 
@@ -82,6 +84,7 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null, 
 
   const timeRow = field('Time', h('span', { class: 'times' }, start, '–', end));
   const untilRow = field('Until', until);
+  const dueRow = field('Due', due);
   const todoRows = [field('Folder', category), field('Track', track)];
   const eventRows = [field('All-day', allDay), timeRow, field('Alert', alert)];
 
@@ -90,6 +93,7 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null, 
     eventRows.forEach((r) => { r.hidden = type !== 'event'; });
     if (type === 'event') timeRow.hidden = allDay.checked;
     untilRow.hidden = repeat.value === 'none';
+    dueRow.hidden = type !== 'todo' || repeat.value !== 'none'; // routines repeat on their own
   };
   allDay.addEventListener('change', sync);
   repeat.addEventListener('change', sync);
@@ -114,7 +118,9 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null, 
     };
 
     if (type === 'todo') {
-      const data = { ...base, category: category.value && category.value !== '__new' ? category.value : null, track: track.value };
+      // Due date: one-off only, never before the to-do's date.
+      const dueKey = repeat.value === 'none' && due.value ? (due.value < date ? date : due.value) : '';
+      const data = { ...base, category: category.value && category.value !== '__new' ? category.value : null, track: track.value, due: dueKey };
       if (isNew) state.todos.push({ id: uid(), ...data });
       else Object.assign(item, data);
     } else {
@@ -162,7 +168,7 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null, 
       h('span', { class: 'spacer' }),
       h('button', { type: 'submit', class: 'icon-btn ok', 'aria-label': 'Save' }, icon(ICONS.check))),
     h('div', { class: 'title-row' }, title, star),
-    h('div', { class: 'fields' }, field('Date', dateIn), ...todoRows, ...eventRows, field('Repeat', repeat), untilRow),
+    h('div', { class: 'fields' }, field('Date', dateIn), ...todoRows, ...eventRows, field('Repeat', repeat), untilRow, dueRow),
     postponeRow,
     notes,
   );

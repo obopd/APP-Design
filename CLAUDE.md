@@ -152,6 +152,13 @@ laptop. So:
   to-dos change `date` (recorded count/time moves with them); for a routine only that day
   moves: `skipOn[day]` hides it there and a one-off copy is added on the new date.
   Swiping sideways *on a to-do* = postpone; on empty list space = stretch columns.
+- **Due dates** (one-off to-dos only; editor "Due" row, hidden for routines/events):
+  an unfinished to-do with `due` moves forward to today every day until it's done, and
+  is starred from its due date on (calendar accent dot, badge, bold). Both are
+  *computed* (`todoDate`, `isStarred`, `hasDue` in store.js), never written on open,
+  so a phone opening the app can't create an edit that wins a sync. Checking it off
+  pins `date` to that day. The row shows a small "D-3" / "D-Day" / "D+2" tag
+  (`.due-tag`, accent from the due day on).
 - **Tracking (opt-in per to-do)**: editor "Track" = Off | Count | Time. Only tracked
   to-dos show a number pill: Count → tap to enter a number; Time → tap to type
   minutes/h:mm, plus a ▶/■ stopwatch (stored as a start timestamp, so it keeps
@@ -208,7 +215,8 @@ Stored in `localStorage` under `planner.v1`:
 ```js
 {
   todos:  [{ id, title, date: 'YYYY-MM-DD', important, notes, category: id | null,
-             repeat, until, done /* one-off */, doneOn: { 'YYYY-MM-DD': true } /* routines */ }],
+             repeat, until, done /* one-off */, doneOn: { 'YYYY-MM-DD': true } /* routines */,
+             due: '' | 'YYYY-MM-DD' /* one-off only */ }],
   events: [{ id, title, date, allDay, start: 'HH:MM', end: 'HH:MM', repeat, until,
              alert: 'none' | '<minutes before>', important, notes }],
   // todos also: track: 'none' | 'count' | 'time', values: { dateKey: number /* count or seconds */ },
@@ -224,7 +232,9 @@ Stored in `localStorage` under `planner.v1`:
 - Dates are **local** date keys (`dateKey()`), never UTC ISO strings.
 - `date` is the first occurrence; `occursOn(item, key)` decides repeats. Monthly/yearly
   starting on e.g. the 31st fall on the last day of shorter months.
-- Use `isDone(todo, key)` / `toggleDone(todo, key)`, never `todo.done` directly.
+- Use `isDone(todo, key)` / `toggleDone(todo, key)`, never `todo.done` directly; use
+  `isStarred(item, key)` for "important" (includes due-date stars) and `todosOn(key)`
+  (which places due to-dos on `todoDate`).
 - Deleting a folder moves its sub-folders and to-dos up one level (`deleteCategory`).
 - All-day alerts fire at 9:00 AM minus the alert offset.
 - Changing the shape: bump the key and migrate old data in `load()`. Never drop user data.
@@ -300,7 +310,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v45`; bump to `planner-v46`, …) and keep its `ASSETS` list in sync
+(currently `planner-v46`; bump to `planner-v47`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

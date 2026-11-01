@@ -1,6 +1,6 @@
 // Month grid that "rolls up" into the selected week when a date is picked.
 import { h, icon, ICONS, addDays, dateKey, parseKey, todayKey, fmt } from './util.js';
-import { eventsOn, todosOn, isDone, isRoutine } from './store.js';
+import { eventsOn, todosOn, isDone, isRoutine, isStarred } from './store.js';
 
 let weekdayCache = null;
 const weekdayLabels = () => (weekdayCache ||= Array.from({ length: 7 }, (_, i) => fmt({ weekday: 'narrow' }).format(new Date(2023, 0, 1 + i))));
@@ -17,8 +17,8 @@ function dayCell(date, view, month, actions) {
   // Routines only get a dot when starred, so a daily routine doesn't dot every day.
   const events = eventsOn(key);
   const todos = todosOn(key).filter((t) => !isDone(t, key));
-  const items = [...events, ...todos].filter((i) => i.important || !isRoutine(i));
-  const important = items.some((i) => i.important);
+  const items = [...events, ...todos].filter((i) => isStarred(i, key) || !isRoutine(i));
+  const important = items.some((i) => isStarred(i, key));
 
   const cls = ['day'];
   if (date.getMonth() !== month) cls.push('other');

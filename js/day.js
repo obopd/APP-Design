@@ -1,8 +1,8 @@
 // The area below the calendar when a day is selected: to-dos + hourly schedule.
-import { h, icon, ICONS, fmt, todayKey, toMinutes, shortTime, formatDuration, formatClock, formatNumber } from './util.js';
+import { h, icon, ICONS, fmt, todayKey, daysBetween, toMinutes, shortTime, formatDuration, formatClock, formatNumber } from './util.js';
 import {
   state, save, eventsOn, todosOn, isDone, isRoutine, toggleDone, childCategories,
-  isTracked, valueOn, setValue, startTimer, stopTimer, routineStats,
+  isTracked, valueOn, setValue, startTimer, stopTimer, routineStats, hasDue, isStarred,
 } from './store.js';
 import { askText } from './ui.js';
 import { postponeTomorrow, postponePick } from './postpone.js';
@@ -108,9 +108,17 @@ function makeSwipeable(li, row) {
   row.addEventListener('click', (e) => { if (dragged) { e.stopPropagation(); e.preventDefault(); dragged = false; } }, true);
 }
 
+// Days left until a to-do's due date: D-3, D-Day, D+2 (overdue).
+function dueTag(t, key) {
+  const left = daysBetween(key, t.due);
+  const text = left > 0 ? `D-${left}` : left === 0 ? 'D-Day' : `D+${-left}`;
+  return h('span', { class: `due-tag${left <= 0 ? ' due-now' : ''}`, 'aria-label': `Due ${t.due}` }, text);
+}
+
 // The slim mark checks a to-do off; tapping the text opens it for editing.
 function todoItem(t, key, actions) {
   const done = isDone(t, key);
+  const starred = isStarred(t, key);
   const row = h('div', { class: 'todo-row' },
     h('button', {
       class: 'mark-btn', role: 'checkbox', 'aria-checked': String(done), 'aria-label': `Done: ${t.title}`,
@@ -118,9 +126,10 @@ function todoItem(t, key, actions) {
     }, h('span', { class: 'dash' })),
     h('button', { class: 'todo-title', onclick: () => actions.edit('todo', t, key) },
       t.title,
-      t.important ? h('span', { class: 'mark star', 'aria-hidden': 'true' }, '★') : null),
+      starred ? h('span', { class: 'mark star', 'aria-hidden': 'true' }, '★') : null,
+      hasDue(t) && !done ? dueTag(t, key) : null),
     isTracked(t) ? tracker(t, key) : null);
-  const li = h('li', { class: `todo${done ? ' done' : ''}${t.important ? ' imp' : ''}` },
+  const li = h('li', { class: `todo${done ? ' done' : ''}${starred ? ' imp' : ''}` },
     h('div', { class: 'todo-actions' },
       h('button', { class: 'todo-act', 'aria-label': `Postpone ${t.title} to tomorrow`, onclick: () => postponeTomorrow(t, key) },
         icon(ICONS.arrow), h('span', {}, 'Tmrw')),

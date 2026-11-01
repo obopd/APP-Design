@@ -10,7 +10,8 @@ const KEY = 'planner.v1';
               track: 'none' | 'count' | 'time',
               values: { 'YYYY-MM-DD': number }   (count, or seconds for time)
               timer: { key, start: epoch ms } | null   (running stopwatch)
-              skipOn: { 'YYYY-MM-DD': true }   (routine days moved away by "postpone") }
+              skipOn: { 'YYYY-MM-DD': true }   (routine days moved away by "postpone")
+              due: '' | 'YYYY-MM-DD'   (one-off only: rolls to today until done, starred from due) }
   event:    { id, title, date, allDay, start: 'HH:MM', end: 'HH:MM', repeat, until,
               alert: 'none' | '<minutes before>', important, notes }
   category: { id, name, parent: id | null, open, color: '#hex' | null }   — nestable to-do folders
@@ -108,12 +109,25 @@ export const isRoutine = (item) => !!item.repeat && item.repeat !== 'none';
 // Routines are checked off per day; one-off to-dos have a single done flag.
 export const isDone = (todo, key) => (isRoutine(todo) ? !!todo.doneOn?.[key] : !!todo.done);
 
+/* ---------- Due dates (one-off to-dos) ---------- */
+
+// An unfinished to-do with a due date moves forward to today each day until it's done.
+// Computed, not stored, so opening the app never creates an edit that could win a sync.
+export const hasDue = (todo) => !!todo.due && !isRoutine(todo);
+export const todoDate = (todo, today = todayKey()) =>
+  (hasDue(todo) && !todo.done && todo.date < today ? today : todo.date);
+
+// Starred by hand, or automatically from its due date on while unfinished.
+export const isStarred = (item, key = todayKey()) =>
+  !!item.important || (hasDue(item) && !item.done && key >= item.due);
+
 export function toggleDone(todo, key) {
   if (isRoutine(todo)) {
     todo.doneOn = { ...todo.doneOn };
     if (todo.doneOn[key]) delete todo.doneOn[key];
     else todo.doneOn[key] = true;
   } else {
+    if (!todo.done && hasDue(todo)) todo.date = key; // stays on the day it was finished
     todo.done = !todo.done;
   }
   save();
@@ -126,8 +140,8 @@ export const eventsOn = (key) => state.events.filter((e) => occursOn(e, key)).so
 // Important first; done items sink to the bottom.
 export const todosOn = (key) =>
   state.todos
-    .filter((t) => occursOn(t, key) && !t.skipOn?.[key])
-    .sort((a, b) => isDone(a, key) - isDone(b, key) || b.important - a.important);
+    .filter((t) => (hasDue(t) ? todoDate(t) === key : occursOn(t, key)) && !t.skipOn?.[key])
+    .sort((a, b) => isDone(a, key) - isDone(b, key) || isStarred(b, key) - isStarred(a, key));
 
 /* ---------- Categories (folders) ---------- */
 
