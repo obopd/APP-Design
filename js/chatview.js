@@ -250,18 +250,6 @@ function convView(root, id, fixed = false) {
   pollChat(id);
 }
 
-// As the keyboard opens or folds the chat glides to its new height; keep the newest
-// messages in view while it does.
-if (window.visualViewport) {
-  visualViewport.addEventListener('resize', () => {
-    const list = conv?.list;
-    if (!list || !list.isConnected) return;
-    const end = performance.now() + 400;
-    const stick = () => { list.scrollTop = list.scrollHeight; if (performance.now() < end) requestAnimationFrame(stick); };
-    if (list.scrollHeight - list.scrollTop - list.clientHeight < 160) stick();
-  });
-}
-
 /* ---------- Chat info (members, rename, add, leave) ---------- */
 
 function chatInfo(id) {

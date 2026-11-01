@@ -426,19 +426,6 @@ document.addEventListener('focusout', () => {
   setTimeout(() => { if (!isField(document.activeElement)) document.body.classList.remove('typing'); }, 900);
 });
 
-// iPhone keyboard: when it opens, iOS both shrinks the visible area and scrolls the page.
-// The chat / Write screens are pinned to exactly the visible area (its height and its
-// offset from the top), so the composer sits right above the keyboard.
-if (window.visualViewport) {
-  const fit = () => {
-    const root = document.documentElement.style;
-    root.setProperty('--vvh', `${visualViewport.height}px`);
-    root.setProperty('--vvtop', `${visualViewport.offsetTop}px`);
-  };
-  visualViewport.addEventListener('resize', fit);
-  visualViewport.addEventListener('scroll', fit);
-  fit();
-}
 setInterval(() => { if (view.tab === 'calendar' && view.selected === todayKey()) render(); }, 60 * 1000); // move the "now" line
 
 setInterval(tickTimers, 1000); // running stopwatches
