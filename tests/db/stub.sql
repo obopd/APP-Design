@@ -1,0 +1,32 @@
+select pg_terminate_backend(pid) from pg_stat_activity where datname = 'planner' and pid <> pg_backend_pid();
+drop database if exists planner; create database planner;
+\c planner
+do $$ begin
+  if not exists (select 1 from pg_roles where rolname='anon') then create role anon nologin; end if;
+  if not exists (select 1 from pg_roles where rolname='authenticated') then create role authenticated nologin; end if;
+end $$;
+create schema auth;
+create table auth.users (id uuid primary key, email text);
+create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claims', true)::json->>'sub','')::uuid $$;
+grant usage on schema auth to anon, authenticated;
+grant usage on schema public to anon, authenticated;
+alter default privileges in schema public grant all on tables to anon, authenticated;
+alter default privileges in schema public grant all on sequences to anon, authenticated;
+insert into auth.users values ('00000000-0000-0000-0000-00000000000a','a@x'),('00000000-0000-0000-0000-00000000000b','b@x'),('00000000-0000-0000-0000-00000000000c','c@x');
+create schema if not exists storage;
+create table storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
+create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text, owner uuid default auth.uid(), data bytea, unique (bucket_id, name));
+alter table storage.objects enable row level security;
+grant usage on schema storage to authenticated;
+grant all on storage.objects to authenticated;
+create schema if not exists vault;
+create table vault.secrets (name text primary key, secret text);
+create view vault.decrypted_secrets as select name, secret as decrypted_secret from vault.secrets;
+create function vault.create_secret(s text, n text) returns text language sql as $$ insert into vault.secrets values (n, s) returning n $$;
+create schema if not exists net;
+create table net.calls (id serial, url text, body jsonb, headers jsonb);
+create function net.http_post(url text, body jsonb, headers jsonb) returns bigint language sql as $$ insert into net.calls (url, body, headers) values (url, body, headers) returning id $$;
+create schema if not exists cron;
+create table cron.job (jobid serial primary key, jobname text unique, schedule text, command text);
+create function cron.schedule(n text, s text, c text) returns bigint language sql as $$ insert into cron.job (jobname, schedule, command) values (n, s, c) returning jobid $$;
+create function cron.unschedule(id bigint) returns boolean language sql as $$ delete from cron.job where jobid = id returning true $$;

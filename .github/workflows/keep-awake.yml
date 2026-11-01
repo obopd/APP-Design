@@ -1,0 +1,16 @@
+# Free Supabase projects pause after about a week without use. This calls the app's
+# tiny ping() query every 3 days so the planner never stops syncing.
+# The URL and key are the public ones from js/config.js; supabase/maintenance.sql adds ping().
+name: Keep Supabase awake
+on:
+  schedule:
+    - cron: '17 6 */3 * *'
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: >
+          curl -fsS -X POST "https://rkpsjkssmfjuavdhayie.supabase.co/rest/v1/rpc/ping"
+          -H "apikey: sb_publishable_2z7xQjOY5JLONdZH_Xu1OA_NaKzpeRW"
+          -H "Content-Type: application/json" -d '{}'

@@ -19,14 +19,17 @@ let shownSig = '';
 let uploading = []; // { id, url } tiles shown while their images upload
 
 const org = (kind) => cur().org?.[kind] || [];
-const concepts = () => [...org('concept')].sort((a, b) => (a.created || 0) - (b.created || 0));
+// Order: the one set by the viewer's arrows, else when added.
+const rank = (x) => x.order ?? x.created ?? 0;
+const concepts = () => [...org('concept')].sort((a, b) => rank(a) - rank(b));
 
 /* ---------- Signed links to private images (cached so the browser cache can be reused) ---------- */
 
 const URL_KEY = 'planner.previewurls';
-const SIGN_SECONDS = 24 * 3600;
+// Short-lived, so someone removed from a project soon can't open its images any more.
+const SIGN_SECONDS = 2 * 3600;
 let urls = (() => { try { return JSON.parse(localStorage.getItem(URL_KEY)) || {}; } catch { return {}; } })();
-const freshUrl = (path) => { const u = urls[path]; return u && u[1] - Date.now() > 3600_000 ? u[0] : null; };
+const freshUrl = (path) => { const u = urls[path]; return u && u[1] - Date.now() > 15 * 60_000 ? u[0] : null; };
 let signing = null;
 const wanted = new Set();
 
@@ -109,12 +112,14 @@ async function addImage(file) {
     const path = `${p.id}/${id}.jpg`;
     const thumbPath = `${p.id}/${id}_t.jpg`;
     await uploadFile(BUCKET, thumbPath, thumb);
-    await uploadFile(BUCKET, path, full);
+    // If the big one fails, don't leave the small one behind in storage.
+    await uploadFile(BUCKET, path, full).catch((e) => { removeFiles(BUCKET, [thumbPath]).catch(() => {}); throw e; });
     // Show the picture from the phone right away (no download needed).
     imgs.set(thumbPath, h('img', { alt: '', decoding: 'async', draggable: 'false', src: URL.createObjectURL(thumb) }));
     imgs.set(path, h('img', { alt: '', decoding: 'async', draggable: 'false', src: URL.createObjectURL(full) }));
     if (currentProject()?.id === p.id && cur().org) {
-      cur().org.concept.push({ id, path, thumb: thumbPath, caption: '', w: img.naturalWidth, h: img.naturalHeight, created: Date.now() });
+      const last = concepts().at(-1);
+      cur().org.concept.push({ id, path, thumb: thumbPath, caption: '', w: img.naturalWidth, h: img.naturalHeight, created: Date.now(), order: Math.max(Date.now(), last ? rank(last) + 1 : 0) });
     }
     uploading = uploading.filter((t) => t !== tile);
     save();
@@ -172,11 +177,23 @@ function drawViewer(dir = 0) {
   viewer.replaceChildren(
     h('div', { class: 'pv-bar' },
       h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Close', onclick: closeViewer }, icon(ICONS.close)),
-      h('span', { class: 'pv-count' }, `${i + 1} / ${list.length}`),
+      h('span', { class: 'pv-move' },
+        h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Move earlier', disabled: i === 0, onclick: () => move(-1) }, icon(ICONS.left)),
+        h('span', { class: 'pv-count' }, `${i + 1} / ${list.length}`),
+        h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Move later', disabled: i === list.length - 1, onclick: () => move(1) }, icon(ICONS.right))),
       h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Delete image', onclick: async () => { if (await removeConcept(item)) closeViewer(); } }, icon(ICONS.trash))),
     stage,
     h('div', { class: 'pv-foot' }, caption));
   swipe(stage, list, i);
+
+  // Swap places with the neighbour (numbers everything once, so older images get an order too).
+  function move(step) {
+    const j = i + step;
+    if (j < 0 || j >= list.length) return;
+    list.forEach((x, k) => { if (x.order !== k) x.order = k; });
+    [list[i].order, list[j].order] = [j, i];
+    save();
+  }
 }
 
 function swipe(stage, list, i) {

@@ -1,9 +1,9 @@
 // Settings tab: appearance (light/dark, accent color), folders, alerts and backup.
-import { h, icon, ICONS } from './util.js';
+import { h, icon, ICONS, fmt } from './util.js';
 import { state, save, replaceAll, categoryTree, deleteCategory } from './store.js';
 import { openFolderSheet } from './folders.js';
-import { ask, tell } from './ui.js';
-import { isConfigured, currentUser, syncStatus, syncNow, signOut, hasUnsyncedChanges } from './cloud.js';
+import { ask, tell, pick } from './ui.js';
+import { isConfigured, currentUser, syncStatus, syncNow, signOut, hasUnsyncedChanges, api } from './cloud.js';
 import { notificationsSupported, requestNotifications } from './reminders.js';
 import { pushSupported, pushActive, enablePush, pushSignOut } from './push.js';
 import { peopleSection } from './people.js';
@@ -34,9 +34,35 @@ function alertsControl(rerender) {
   if (!notificationsSupported()) return h('span', { class: 'status' }, 'Add to Home Screen');
   // Granted but this phone isn't subscribed for push yet (e.g. turned on before push existed).
   if (Notification.permission === 'granted' && (pushActive() || !pushSupported())) return h('span', { class: 'status' }, 'On');
-  if (pushSupported()) return h('button', { class: 'pill', onclick: async () => { await enablePush().catch(() => {}); await requestNotifications(); rerender(); } }, 'Turn on');
   if (Notification.permission === 'denied') return h('span', { class: 'status' }, 'Off in iPhone Settings');
+  if (pushSupported()) return h('button', { class: 'pill', onclick: async () => { await enablePush().catch(() => {}); await requestNotifications(); rerender(); } }, 'Turn on');
   return h('button', { class: 'pill', onclick: async () => { await requestNotifications(); rerender(); } }, 'Turn on');
+}
+
+// Weekly copies kept in the account (supabase/backups.sql): pick one to restore.
+async function accountBackups(e) {
+  const anchor = e.currentTarget;
+  let list;
+  try {
+    list = await api('/rest/v1/planner_backups?select=id,taken_at&order=taken_at.desc', { auth: true });
+  } catch (err) {
+    tell('Couldn’t load backups', err.status === 404 || err.code === 'PGRST205' ? 'The backup setup step hasn’t been run in Supabase yet.' : err.message);
+    return;
+  }
+  if (!list.length) { tell('No backups yet', 'A copy of your planner is saved to your account once a week. The first one appears within a day.'); return; }
+  const day = fmt({ month: 'short', day: 'numeric', year: 'numeric' });
+  const id = await pick(anchor, list.map((b) => [String(b.id), day.format(new Date(b.taken_at))]));
+  if (!id) return;
+  const label = day.format(new Date(list.find((b) => String(b.id) === id).taken_at));
+  if (!await ask({ title: `Restore ${label}?`, message: 'Your planner goes back to how it was then, on all your devices.', ok: 'Restore', danger: true })) return;
+  try {
+    const [row] = await api(`/rest/v1/planner_backups?select=data&id=eq.${id}`, { auth: true });
+    replaceAll(row.data);
+    applyTheme();
+    tell('Restored', `Your planner is back to ${label}.`);
+  } catch (err) {
+    tell('Couldn’t restore', err.message);
+  }
 }
 
 function exportBackup() {
@@ -150,11 +176,13 @@ export function renderSettings(root) {
     foldersSection(),
     h('div', {},
       h('div', { class: 'set-row' }, h('span', {}, 'Alerts'), alertsControl(rerender))),
-    h('p', { class: 'set-note' }, 'Works while the app is open or recently used.'),
+    h('p', { class: 'set-note' }, pushActive() ? 'Also when the app is closed.' : 'Works while the app is open or recently used.'),
     h('div', {},
       h('div', { class: 'set-row' }, h('span', {}, 'Backup'),
         h('span', { class: 'swatches' },
           h('button', { class: 'pill', onclick: exportBackup }, 'Export'),
-          h('button', { class: 'pill', onclick: importBackup }, 'Restore')))),
+          h('button', { class: 'pill', onclick: importBackup }, 'Restore'))),
+      currentUser() ? h('div', { class: 'set-row' }, h('span', {}, 'Weekly copies'),
+        h('button', { class: 'pill', onclick: accountBackups }, 'Restore…')) : null),
   ));
 }

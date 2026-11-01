@@ -9,6 +9,7 @@ import {
 import { acceptedFriends, myHandle } from './social.js';
 import { pickFriends, chooseHandle, askAddFriend } from './people.js';
 import { filmOn, currentProject } from './film.js';
+import { onLiveMessage, liveConnected } from './live.js';
 
 let openId = null;  // the open conversation, or null for the list
 let conv = null;    // { id, root, list, input } of the conversation on screen
@@ -24,15 +25,26 @@ export function chatShown(on) {
   clearInterval(pollTimer);
   if (!on) { document.body.classList.remove('chatting', 'chat-leaving'); return; }
   refreshChats();
-  // An open chat checks every 3s (new messages only); the list every 10s.
+  // An open chat checks every 3s (new messages only); the list every 9s. With the live
+  // connection up, messages arrive at once, so these are only a safety net (15s / 45s).
   let tick = 0;
   pollTimer = setInterval(() => {
     if (document.visibilityState !== 'visible') return;
     tick += 1;
-    if (openId) pollChat(openId);
-    else if (tick % 3 === 0) refreshChats();
+    const every = liveConnected() ? 5 : 1;
+    if (openId) { if (tick % every === 0) pollChat(openId); } else if (tick % (3 * every) === 0) refreshChats();
   }, 3000);
 }
+
+// A message was added or deleted somewhere: fetch the open chat and the list (unread badge).
+let nudge = 0;
+onLiveMessage((chatId) => {
+  clearTimeout(nudge);
+  nudge = setTimeout(() => {
+    if (openId && (!chatId || chatId === openId)) pollChat(openId);
+    refreshChats();
+  }, 150);
+});
 
 /* ---------- Helpers ---------- */
 

@@ -3,10 +3,12 @@ import { onChange } from './store.js';
 import { renderCalendar, renderExpanded } from './calendar.js';
 import { filmOn, onFilmChange, refreshFilm, editorOf } from './film.js';
 import { setupBrand, renderProjectChip, paintBrand } from './filmui.js';
-import { renderWrite, finishEditing, writeBackgrounded, isEditing } from './write.js';
+import { renderWrite, finishEditing, writeBackgrounded, isEditing, showWriteSection } from './write.js';
 import { renderOrganize } from './organize.js';
 import { renderPreview, leavePreview } from './preview.js';
 import { syncPush } from './push.js';
+import { openSearch } from './search.js';
+import './live.js';
 import { renderDay, tickTimers } from './day.js';
 import { openEditor } from './editor.js';
 import { renderSettings, applyTheme } from './settings.js';
@@ -17,7 +19,7 @@ import { openAccountSheet, renderLoginGate } from './account.js';
 import { socialEnabled, socialStatus, onSocialChange, refreshSocial, unseenCount } from './social.js';
 import { openNotifications, redrawNotifications } from './people.js';
 import { onChatChange, refreshChats, unreadTotal, chatEnabled } from './chat.js';
-import { renderChat, chatShown } from './chatview.js';
+import { renderChat, chatShown, openChat } from './chatview.js';
 
 const calendarView = document.getElementById('view-calendar');
 const calendarEl = document.getElementById('calendar');
@@ -337,6 +339,26 @@ function paintBell() {
   bellEl.setAttribute('aria-label', n ? `Notifications, ${n} new` : 'Notifications');
 }
 bellEl.addEventListener('click', () => { openNotifications(); refreshFilm(); });
+
+// Search: results lead to a day, a chat, the D-Day tab or a Write section.
+document.getElementById('search-btn').addEventListener('click', () => openSearch((to) => {
+  if (to.date) {
+    const d = parseKey(to.date);
+    Object.assign(view, { tab: 'calendar', selected: to.date, cursor: new Date(d.getFullYear(), d.getMonth(), 1) });
+    render();
+  } else if (to.chat) {
+    view.tab = 'chat';
+    render();
+    openChat(to.chat);
+  } else if (to.write) {
+    showWriteSection(to.write);
+    view.tab = 'write';
+    render();
+  } else if (to.tab) {
+    view.tab = to.tab;
+    render();
+  }
+}));
 
 // Film Production Mode: the logo (press and hold) switches; project data redraws the views.
 setupBrand(document.getElementById('brand'), () => {

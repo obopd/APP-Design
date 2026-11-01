@@ -473,3 +473,10 @@ export function renderWrite(root) {
 }
 
 export const isEditing = () => !!editing;
+
+/** Open a section (used by search). */
+export function showWriteSection(sec) {
+  if (!LABELS[sec]) return;
+  section = sec;
+  localStorage.setItem('planner.filmsection', sec);
+}

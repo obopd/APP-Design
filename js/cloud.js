@@ -119,6 +119,9 @@ function setSession(data, user = data.user) {
   persist();
 }
 
+/** A valid access token (refreshed when close to expiring). */
+export async function authToken() { return accessToken(); }
+
 async function accessToken() {
   if (!session) throw new Error('Not signed in');
   if (session.expires_at - 60_000 < Date.now()) {

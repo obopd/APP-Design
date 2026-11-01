@@ -220,6 +220,13 @@ laptop. So:
   delete their own, direct chats never get a 3rd member, you can only add accepted
   friends, removed members lose access at once, members may only update `last_read`.
   New messages also arrive as push notifications while the app is closed (see Push notifications).
+  **Instant chat** (`js/live.js`): while the app is on screen, a Supabase Realtime WebSocket
+  (Phoenix protocol, no SDK; joined only once the server's `system` reply confirms
+  postgres_changes) nudges on every message insert/delete; chatview then fetches as usual.
+  While connected, polling slows to 15s (open chat) / 45s (list) as a safety net. Realtime
+  applies the messages RLS. Needs `messages` in the `supabase_realtime` publication
+  (maintenance.sql); until then the join errors and the app stays on polling (retries after 5 min).
+  Messages older than a year are deleted nightly (`chat_cleanup_run`, pg_cron).
 - **Film Production Mode** (`js/film.js` data, `js/filmui.js` logo/projects, `js/write.js`
   Write tab, tables in `supabase/film.sql`, run once after chat.sql). Hidden: **press and
   hold the logo** (`#brand`, a button) ~0.9s → `html.film`; the calendar logo flips into a
@@ -279,10 +286,10 @@ laptop. So:
   the private Storage bucket `concepts` at `<project id>/<item id>.jpg` / `_t.jpg`
   (`uploadFile` / `signFiles` / `removeFiles` in cloud.js; `api()` sends Blob bodies as-is).
   Details are project items of kind `concept` ({ path, thumb, caption, w, h, created }).
-  Images are shown through signed links (24h, cached in localStorage `planner.previewurls`,
+  Images are shown through signed links (2h, reused while >15 min is left, cached in localStorage `planner.previewurls`,
   removed on sign-out) and one reused `<img>` per file so redraws never flash. Tapping a tile
   opens a full-screen dark viewer (`.pv-viewer` dialog): swipe sideways = next/previous, swipe
-  down = close, tap the caption to edit, trash deletes the item and its files. Deleting a
+  down = close, ‹ › next to the count move it earlier / later (`order`, else `created`), tap the caption to edit, trash deletes the item and its files (a half-failed upload removes its thumbnail). Deleting a
   project deletes its concept files first (`leaveProject`). **Result** = one YouTube link
   (item kind `result`, id `result`: { url, video, start }; `parseYouTube` accepts youtu.be,
   watch?v=, shorts, embed, live, a bare id and `t=`). Its thumbnail (i.ytimg.com maxres, else
@@ -295,6 +302,19 @@ laptop. So:
   is run, kinds the database refuses (`23514`) are held on the phone per kind
   (`film.js` `blocked` → `needsSetup(kinds)`, banner), other kinds keep syncing, and they
   upload on a later refresh; uploads without the bucket say to run the setup step.
+- **Search** (`js/search.js`, `#search-btn` top-left of the calendar screen, mirroring the
+  bell): a card from the top; the field isn't focused on open (app rule). Searches what's on
+  the phone: to-dos, events (`cur()`, so the project's in film mode), D-Days (normal mode),
+  cached chat messages / chat names, and in film mode the writing (Theme, Characters, Plot,
+  Script). Results grouped, max 30 each; tapping goes to the day (a routine's next
+  occurrence, a due to-do's `todoDate`), the chat (`openChat`), the D-Day tab or the Write
+  section (`showWriteSection`).
+- **Weekly backups** (supabase/maintenance.sql): a nightly pg_cron job copies each
+  `planner_data` row into `planner_backups` when the newest copy is ~a week old and the data
+  changed, keeping 5 per person (RLS: read own only; users can't write). Settings → "Weekly
+  copies · Restore…" lists them (`pick`) and restores with `replaceAll` (overwrites the account).
+- **Keep-awake**: `.github/workflows/keep-awake.yml` calls the public `ping()` RPC every 3
+  days so the free Supabase project never pauses (runs from the default branch).
 - **Postpone a to-do** (`js/postpone.js`): swipe a to-do left to reveal **Tmrw** and
   **Date** (date card from `askDate`), or use the editor's "Postpone" row (Tomorrow /
   Pick date). A "Moved to …" snack with **Undo** appears (`snack` in ui.js). One-off
@@ -370,6 +390,8 @@ supabase/setup.sql     Table + row-level-security policies to run once in Supaba
 js/settings.js         Settings tab: theme, accent color, folders, alerts, backup export/restore
 js/reminders.js        Alert timers, notifications, in-app toast, app icon badge
 js/push.js             Push notifications: subscribe this phone, upload upcoming alerts, sign-out cleanup
+js/live.js             Instant chat: Supabase Realtime WebSocket that nudges chat fetches
+js/search.js           Search card: to-dos, events, D-Days, chats, film writing
 js/social.js           Friends & sharing data: profile ID, friend requests, publishing shares, check-offs, bell items
 js/people.js           Friends UI: bell sheet, Settings ID/Friends, Share row + friend picker
 js/chat.js             Chat data: chats, members, messages (polling + local cache), send/delete/read marks
@@ -383,6 +405,9 @@ supabase/film.sql      Tables + RLS for projects, project_members, project_items
 supabase/chat.sql      Tables + RLS for chats, chat_members, messages (run once after social.sql)
 supabase/social.sql    Tables + RLS for profiles, friendships, shares, share_checks (run once after setup.sql)
 supabase/push.sql      Push: subscriptions, alerts, notify triggers, minute timer (run once after film.sql)
+supabase/maintenance.sql  Weekly backups, ping(), chat clean-up, Realtime for messages (run after push.sql)
+.github/workflows/keep-awake.yml  Pings Supabase every 3 days so the free project doesn't pause
+tests/                 Test suite: Supabase stand-in (mock-server.js), local Postgres (db/), Playwright tests
 supabase/functions/push/index.ts  Edge Function that sends the pushes (deployed in the dashboard, Verify JWT off)
 icons/                 icon.svg (source) + 180/192/512 PNGs rendered from it
 docs/                  Screenshots of the app
@@ -450,7 +475,7 @@ Stored in `localStorage` under `planner.v1`:
 | Install deps  | None             |
 | Run locally   | `python3 -m http.server 8765` from repo root, open http://localhost:8765/ |
 | Build         | None (static files) |
-| Test          | Manual + Playwright script (below); no automated suite yet |
+| Test          | `tests/run-all.sh` (cloud session: starts Postgres, a fresh test DB, the Supabase stand-in and the app; PASS/FAIL per check) |
 | Lint / format | None configured  |
 
 ES modules and service workers need `http://localhost` or HTTPS; opening
@@ -461,6 +486,17 @@ login page. For UI tests either route `**/js/config.js` to empty values (account
 or route it to a fake URL and mock the Supabase REST endpoints with `context.route`.
 Never create real accounts in the owner's project from tests (confirmation emails
 are sent to the address); a wrong-password sign-in is a safe connectivity check.
+
+**Test suite (`tests/`)**: `tests/start.sh` starts Postgres, rebuilds the `planner` test
+database from every file in `supabase/` (on top of `tests/db/stub.sql`, which stands in for
+Supabase's auth / storage / vault / pg_net / pg_cron, plus `db/seed.sql`: users a@x, b@x,
+c@x with password `secret1`, alice friends with bob and carol, an alice↔bob chat), and runs
+`tests/mock-server.js` on :54321 (PostgREST + GoTrue + Storage + RPC + a Realtime stand-in,
+with real RLS; `Bearer service` = service role) and the app on :8765. `tests/run-all.sh`
+runs `sync`, `preview`, `app-features` (push sign-up, instant chat, search, backups,
+clean-up, ping) and `push-function` (the Edge Function in Node, decrypting real Web Push).
+Write new tests with `tests/helpers.js` (`phone`, `inApp`, `sql`, `check`, `filmProject`).
+Add a test when adding a feature; run the suite before pushing.
 
 Verify every UI change in a phone-sized browser with Playwright (pre-installed
 in cloud sessions; `require('playwright')` works — don't reinstall). Use
