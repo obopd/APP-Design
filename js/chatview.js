@@ -123,14 +123,79 @@ async function startGroup() {
 
 /* ---------- Conversation ---------- */
 
+// Opening from the list slides the chat in over it; leaving slides it back out.
+let slideFrom = null; // the list page on screen when a chat is opened (slides under it)
 export function openChat(id) {
+  const listOnScreen = !openId && rootEl?.querySelector(':scope > .chat-page');
   openId = id;
+  slideFrom = listOnScreen || null;
   rerender();
+  slideFrom = null;
 }
 
 function closeChat() {
+  if (conv && !conv.fixed && rootEl?.contains(conv.root)) { slideOut(rootEl, conv.root); return; }
   openId = null;
   rerender();
+}
+
+/* ---------- Push / pop motion (shared by tap, back button and swipe) ---------- */
+const PUSH_MS = 420;
+const PUSH_EASE = `transform ${PUSH_MS}ms cubic-bezier(.32, .72, 0, 1)`; // iOS-like: quick start, long soft finish
+
+function underLayer(root, page) {
+  const under = h('div', { class: 'chat-under', 'aria-hidden': 'true' }, page);
+  root.prepend(under);
+  return under;
+}
+
+function slideIn(root, page, listPageEl) {
+  const under = underLayer(root, listPageEl);
+  under.style.setProperty('--dim', '0');
+  page.classList.add('swiping');
+  page.style.transition = 'none';
+  page.style.transform = 'translateX(100%)';
+  void page.offsetWidth;
+  requestAnimationFrame(() => {
+    page.style.transition = PUSH_EASE;
+    page.style.transform = 'translateX(0)';
+    under.style.setProperty('--dim', '1');
+  });
+  setTimeout(() => {
+    under.remove();
+    page.classList.remove('swiping');
+    page.style.transition = page.style.transform = '';
+  }, PUSH_MS + 30);
+}
+
+// Slide the open chat off to the right and land on the chat list. `under` is reused
+// when a swipe already put the list underneath.
+let leaving = false; // a slide-out is running: hold redraws until it lands
+function slideOut(root, page, under = null, fromPx = 0) {
+  leaving = true;
+  document.activeElement?.blur?.();
+  if (!under) {
+    under = underLayer(root, listPage());
+    under.style.setProperty('--dim', '1');
+    page.classList.add('swiping');
+    page.style.transition = 'none';
+    page.style.transform = `translateX(${fromPx}px)`;
+    void page.offsetWidth;
+  }
+  document.body.classList.remove('chatting'); // the dock fades back in during the slide
+  requestAnimationFrame(() => {
+    page.style.transition = PUSH_EASE;
+    page.style.transform = 'translateX(100%)';
+    under.style.setProperty('--dim', '0');
+  });
+  setTimeout(() => {
+    const list = under.firstChild; // keep the list that's already on screen (no redraw flash)
+    leaving = false;
+    openId = null;
+    conv = null;
+    if (list) root.replaceChildren(list); else rerender();
+    refreshChats();
+  }, PUSH_MS + 30);
 }
 
 let rootEl = null;
@@ -248,6 +313,7 @@ function convView(root, id, fixed = false) {
   root.replaceChildren(convRoot);
   conv = { id, root: convRoot, list, items, input, titleEl, fixed };
   if (!fixed) swipeBack(root, convRoot);
+  if (!fixed && slideFrom) slideIn(root, convRoot, slideFrom);
   items.replaceChildren(...bubbles(id));
   grow();
   requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
@@ -264,7 +330,6 @@ function swipeBack(root, page) {
   let dragging = false;
   let under = null;
   const width = () => root.clientWidth || window.innerWidth;
-  const ease = 'transform .28s cubic-bezier(.2, .8, .2, 1)';
   const place = (dx) => {
     page.style.transform = `translateX(${dx}px)`;
     if (under) under.style.setProperty('--dim', String(Math.max(0, 1 - dx / width())));
@@ -291,8 +356,8 @@ function swipeBack(root, page) {
       if (dx < 12 || dx < Math.abs(dy) * 1.5) return;
       dragging = true;
       document.activeElement?.blur?.(); // a keyboard would fight the slide
-      under = h('div', { class: 'chat-under', 'aria-hidden': 'true' }, listPage());
-      root.prepend(under);
+      under = underLayer(root, listPage());
+      under.classList.add('dragging');
       page.classList.add('swiping');
       page.style.transition = 'none';
     }
@@ -306,22 +371,15 @@ function swipeBack(root, page) {
     const speed = dx / Math.max(1, performance.now() - start.t); // px per ms
     start = null;
     dragging = false;
-    page.style.transition = ease;
+    under?.classList.remove('dragging');
     if (dx > width() / 3 || speed > 0.5) {
-      place(width());
-      setTimeout(() => {
-        // Keep the list that's already on screen (no redraw flash), then hand over.
-        const list = under?.firstChild;
-        cleanup();
-        openId = null;
-        conv = null;
-        document.body.classList.remove('chatting');
-        if (list) root.replaceChildren(list); else rerender();
-        refreshChats();
-      }, 280);
+      const u = under;
+      under = null;
+      slideOut(root, page, u);
     } else {
+      page.style.transition = PUSH_EASE;
       place(0);
-      setTimeout(cleanup, 280);
+      setTimeout(cleanup, PUSH_MS);
     }
   };
   page.addEventListener('touchend', end);
@@ -374,6 +432,7 @@ function chatInfo(id) {
 
 export function renderChat(root) {
   rootEl = root;
+  if (leaving) return;
   if (!chatEnabled()) {
     document.body.classList.remove('chatting');
     root.replaceChildren(h('div', { class: 'settings chat-page' }, h('h1', { class: 'display' }, 'Chat'),

@@ -193,8 +193,8 @@ laptop. So:
   friend, made on first open, reused after) and **group** chats (named; creator or any
   member adds their own friends; the creator removes people; anyone renames or leaves).
   Text only, 1–1000 characters; press and hold your own message to delete it (for
-  everyone). **Swipe right** on an open chat to go back (like Instagram; `swipeBack` in chatview.js: the chat follows the finger with the list underneath, dim fading, edge shadow; past 1/3 width or a flick slides it off, else it springs back; vertical drags still scroll; not in film mode's fixed chat). The ‹ button still works. Sending keeps the keyboard up (the send button's touchend is handled and its
-  default cancelled so the box keeps focus); swiping down on the messages folds it. Opening a chat hides the dock (`body.chatting`); the composer sits at the
+  everyone). Opening a chat from the list slides it in from the right over the dimmed list (`slideIn`), and ‹ slides it back out (`slideOut`); both use one iOS-like curve (420ms, cubic-bezier(.32,.72,0,1)) and only animate transform/opacity; the dock fades out/in with them (`body.chatting` → opacity, not display). **Swipe right** on an open chat to go back (like Instagram; `swipeBack` in chatview.js: the chat follows the finger with the list underneath, dim fading, edge shadow; past 1/3 width or a flick slides it off, else it springs back; vertical drags still scroll; not in film mode's fixed chat). The ‹ button still works. Sending keeps the keyboard up (the send button's touchend is handled and its
+  default cancelled so the box keeps focus); swiping down on the messages folds it. Opening a chat fades the dock away (`body.chatting`); the composer sits at the
   bottom and iOS slides it up with the keyboard. No read
   receipts; unread = messages after `chat_members.last_read` (a message id). Polling, no
   websockets: open chat every 3s (`pollChat`: only ids newer than the newest cached, plus
@@ -412,7 +412,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v65`; bump to `planner-v66`, …) and keep its `ASSETS` list in sync
+(currently `planner-v66`; bump to `planner-v67`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
