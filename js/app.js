@@ -21,6 +21,7 @@ const loginEl = document.getElementById('view-login');
 const toastEl = document.getElementById('toast');
 const ddaySlot = document.getElementById('dday-slot');
 const expandedEl = document.getElementById('expanded');
+const frameEl = document.getElementById('x-frame');
 const bellEl = document.getElementById('bell');
 const bellBadge = bellEl.querySelector('.bell-badge');
 
@@ -67,6 +68,7 @@ const actions = {
     render();
   },
   shift(dir) {
+    view.lastShift = dir; // which way the expanded calendar slides
     if (view.expand === 'week') {
       view.week = dateKey(addDays(parseKey(view.week), dir * 7));
       const mid = addDays(parseKey(view.week), 3);
@@ -117,6 +119,91 @@ function flip(first, opening, panelFirst) {
   }
 }
 
+/* ---------- Expanded calendar motion ----------
+   Normal ⇄ expanded: the expanded card is clipped (clip-path) from the square card's
+   rectangle to its own and back, while its content fades; a thin outline (#x-frame, an
+   empty fixed box, so moving it costs no page layout) traces the card's edge.
+   Week ⇄ month crossfades; ‹ › slides. Only transform / opacity / clip-path animate. */
+let growTimer = 0;
+let leavingTimer = 0;
+const X_RESET = { transition: '', clipPath: '', position: '', top: '', left: '', width: '', height: '', margin: '', zIndex: '', opacity: '' };
+const insetFrom = (outer, inner) =>
+  `inset(${inner.top - outer.top}px ${outer.right - inner.right}px ${outer.bottom - inner.bottom}px ${inner.left - outer.left}px round 24px)`;
+const placeFrame = (r) => setStyle(frameEl, { top: `${r.top}px`, left: `${r.left}px`, width: `${r.width}px`, height: `${r.height}px` });
+
+function moveFrame(from, to) {
+  frameEl.hidden = false;
+  setStyle(frameEl, { transition: 'none' });
+  placeFrame(from);
+  void frameEl.offsetWidth;
+  requestAnimationFrame(() => { setStyle(frameEl, { transition: '' }); placeFrame(to); });
+}
+
+function resetExpandedMotion() {
+  clearTimeout(growTimer);
+  clearTimeout(leavingTimer);
+  leavingTimer = 0;
+  setStyle(expandedEl, X_RESET);
+  expandedEl.classList.remove('morph', 'x-hiding', 'x-leaving');
+  frameEl.hidden = true;
+}
+
+function growExpanded(from) {
+  const to = expandedEl.getBoundingClientRect();
+  expandedEl.classList.add('morph', 'x-hiding');
+  setStyle(expandedEl, { transition: 'none', clipPath: insetFrom(to, from) });
+  moveFrame(from, to);
+  void expandedEl.offsetWidth;
+  requestAnimationFrame(() => {
+    setStyle(expandedEl, { transition: '', clipPath: 'inset(0px 0px 0px 0px round 24px)' });
+    expandedEl.classList.remove('x-hiding');
+  });
+  growTimer = setTimeout(resetExpandedMotion, 700);
+}
+
+// Back to the square card (shrink onto it), or to a day (just fade away).
+function leaveExpanded(from, toCard) {
+  setStyle(expandedEl, {
+    transition: 'none', position: 'fixed', margin: '0', zIndex: '3',
+    top: `${from.top}px`, left: `${from.left}px`, width: `${from.width}px`, height: `${from.height}px`,
+  });
+  expandedEl.hidden = false;
+  expandedEl.classList.add('morph', 'x-leaving');
+  const to = toCard ? calendarEl.getBoundingClientRect() : null;
+  if (to) {
+    moveFrame(from, to);
+    // The square card fades in as the frame arrives (so there's only ever one outline).
+    setStyle(calendarEl, { transition: 'none', opacity: '0' });
+  }
+  void expandedEl.offsetWidth;
+  requestAnimationFrame(() => {
+    // Shrinking onto the card: the content fades first, then the card itself fades to
+    // reveal the square calendar underneath. Going to a day: a quick fade.
+    setStyle(expandedEl, { transition: to ? '' : 'opacity .3s ease', opacity: '0' });
+    expandedEl.classList.add('x-hiding');
+    if (to) {
+      expandedEl.style.clipPath = insetFrom(from, to);
+      setStyle(calendarEl, { transition: 'opacity .3s ease .32s', opacity: '' });
+    }
+  });
+  leavingTimer = setTimeout(() => {
+    resetExpandedMotion();
+    expandedEl.hidden = true;
+    setStyle(calendarEl, { transition: '', opacity: '' });
+  }, 760);
+}
+
+function swapExpanded(oldNodes, { kind, dir }) {
+  expandedEl.querySelectorAll('.x-ghost').forEach((g) => g.remove());
+  const ghost = h('div', { class: `x-ghost ${kind}`, style: `--dir:${dir}`, 'aria-hidden': 'true' }, oldNodes);
+  [...expandedEl.children].forEach((n) => { n.classList.add('x-new', kind); n.style.setProperty('--dir', dir); });
+  expandedEl.append(ghost);
+  setTimeout(() => {
+    ghost.remove();
+    expandedEl.querySelectorAll('.x-new').forEach((n) => n.classList.remove('x-new', 'mode', 'slide'));
+  }, 420);
+}
+
 // Accounts are required: while signed out, only the login page shows (no dock).
 const isGated = () => isConfigured() && !currentUser();
 let gateShown = false;
@@ -156,15 +243,26 @@ function render() {
   // clip-path from where things were (FLIP), so the phone never re-lays out mid-animation.
   const wasWeek = calendarView.classList.contains('week-mode');
   const willWeek = !!view.selected;
+  // Expanded calendar (grid button). Measure before switching so each change can animate.
+  const onCal = prevView?.tab === 'calendar';
+  const wasExpanded = calendarView.classList.contains('expand-mode');
   const expanded = !!view.expand && !view.selected;
-  calendarView.classList.toggle('expand-mode', expanded);
-  expandedEl.hidden = !expanded;
-  if (expanded) {
-    // Fade the expanded calendar in only when it first opens (not on every redraw).
-    const fresh = !prevView?.expand || prevView.tab !== 'calendar';
-    renderExpanded(expandedEl, view, actions);
-    if (fresh) { expandedEl.classList.remove('enter'); void expandedEl.offsetWidth; expandedEl.classList.add('enter'); }
+  const calFirst = onCal && !wasExpanded && expanded ? calendarEl.getBoundingClientRect() : null;
+  const xFirst = onCal && wasExpanded && !expanded ? expandedEl.getBoundingClientRect() : null;
+  let swap = null;
+  if (onCal && wasExpanded && expanded) {
+    const moved = view.expand === 'week' ? prevView.week !== view.week : +prevView.cursor !== +view.cursor;
+    if (prevView.expand !== view.expand) swap = { kind: 'mode', dir: 0 };
+    else if (moved) swap = { kind: 'slide', dir: view.lastShift || 1 };
   }
+  const oldNodes = swap ? [...expandedEl.children].filter((n) => !n.classList.contains('x-ghost')) : null;
+  if (expanded || calFirst) resetExpandedMotion();
+  calendarView.classList.toggle('expand-mode', expanded);
+  if (expanded) renderExpanded(expandedEl, view, actions);
+  if (!xFirst && !leavingTimer) expandedEl.hidden = !expanded;
+  if (calFirst) growExpanded(calFirst);
+  else if (xFirst) leaveExpanded(xFirst, !view.selected);
+  else if (swap) swapExpanded(oldNodes, swap);
   const animate = wasWeek !== willWeek && prevView?.tab === 'calendar' && !prevView?.expand && !expanded;
   const first = animate ? calendarEl.getBoundingClientRect() : null;
   const panelFirst = animate && wasWeek ? panelEl.getBoundingClientRect() : null;

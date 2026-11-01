@@ -562,6 +562,7 @@ body.gated .tabbar { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   :root, #view-calendar.closing { --dur: .01s; }
+  .expanded, .expanded.x-leaving { --xdur: .01s; }
 }
 
 /* Hidden switch used only to trigger iOS haptics (see js/haptics.js). */
@@ -622,8 +623,45 @@ body.gated .tabbar { display: none; }
   touch-action: pan-y;
 }
 .expanded[hidden] { display: none; }
-.expanded.enter { animation: expand-in .42s var(--ease) both; }
-@keyframes expand-in { from { opacity: 0; transform: scale(.97); } }
+
+/* Motion (see app.js growExpanded / leaveExpanded / swapExpanded). */
+.expanded {
+  position: relative; --xdur: .6s; --xease: cubic-bezier(.32, .72, 0, 1);
+  transition: clip-path var(--xdur) var(--xease), opacity calc(var(--xdur) * .5) ease calc(var(--xdur) * .45);
+}
+.expanded.x-leaving { --xdur: .62s; --xease: cubic-bezier(.45, .05, .2, 1); }
+.expanded.morph { border-color: transparent; } /* #x-frame draws the edge meanwhile */
+.expanded > * { transition: opacity calc(var(--xdur) * .55) ease calc(var(--xdur) * .3); }
+.expanded.x-leaving > * { transition: opacity calc(var(--xdur) * .35) ease; }
+.expanded.x-hiding > * { opacity: 0; }
+.x-frame {
+  position: fixed; z-index: 4; pointer-events: none; border: 1px solid var(--line); border-radius: 24px;
+  transition: top .6s var(--ease), left .6s var(--ease), width .6s var(--ease), height .6s var(--ease);
+}
+.x-frame[hidden] { display: none; }
+.expanded.x-leaving ~ .x-frame { transition-duration: .62s; transition-timing-function: cubic-bezier(.45, .05, .2, 1); }
+
+/* Week ⇄ month: crossfade with a slight zoom. ‹ ›: the days slide, the title crossfades. */
+.x-ghost {
+  position: absolute; inset: calc(var(--cal-pad) + 1px); display: flex; flex-direction: column;
+  pointer-events: none; background: var(--bg);
+}
+/* Old view leaves quickly, the new one arrives just after, so they barely overlap. */
+.x-ghost.mode { animation: x-out-zoom .18s ease-in forwards; }
+.x-new.mode { animation: x-in-zoom .38s var(--ease) .1s both; }
+.x-ghost.slide { animation: x-fade-out .3s ease forwards; background: none; }
+.x-ghost.slide > :not(.cal-head) { animation: x-out-slide .3s ease forwards; }
+.x-new.slide:not(.cal-head) { animation: x-in-slide .4s var(--ease) both; }
+.x-new.slide.cal-head .cal-title { animation: x-fade-in .3s ease both; }
+/* Arrows and grid stay put; only the title crossfades. */
+.x-ghost.slide > .cal-head { visibility: hidden; }
+.x-ghost.slide > .cal-head .cal-title { visibility: visible; }
+@keyframes x-out-zoom { to { opacity: 0; transform: scale(.97); } }
+@keyframes x-in-zoom { from { opacity: 0; transform: scale(1.03); } }
+@keyframes x-out-slide { to { opacity: 0; transform: translateX(calc(var(--dir) * -32px)); } }
+@keyframes x-in-slide { from { opacity: 0; transform: translateX(calc(var(--dir) * 32px)); } }
+@keyframes x-fade-out { to { opacity: 0; } }
+@keyframes x-fade-in { from { opacity: 0; } }
 .expanded .cal-head { flex: none; }
 
 /* Chips: an event (soft block), a due to-do (slim dash in front), shared ones dashed. */

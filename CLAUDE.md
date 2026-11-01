@@ -50,7 +50,16 @@ laptop. So:
   month as a taller grid (up to 3 chips per day, else 2 + "+n"), 3rd tap = back. It shows
   every event (own + shared, time first) and every to-do **that has a due date, on its due
   date** (slim-dash outlined chip; done = struck). ‹ › and sideways swipes move by week /
-  month; tapping a day opens that day's normal view. Fades/scales in (no layout animation).
+  month; tapping a day opens that day's normal view.
+  Motion (app.js `growExpanded` / `leaveExpanded` / `swapExpanded`): normal → expanded
+  clips the expanded card (`clip-path inset … round 24px`) from the square card's rect to
+  its own while content fades in; back = the reverse (expanded pinned `position: fixed`,
+  the square card fades in as it arrives); to a day = quick fade. The outline during these
+  is `#x-frame`, an empty fixed box whose top/left/width/height transition (the one
+  allowed size animation: it has no children, so it costs no page layout). Week ⇄ month
+  crossfades with a slight zoom (old `.x-ghost` leaves in .18s, new arrives .1s later);
+  ‹ › / swipes slide the days while the title crossfades. Rapid taps reset cleanly
+  (`resetExpandedMotion`).
   Chip classes are `.chip-ev` / `.chip-due` — never `.event`, which is the timeline block.
 - Design: **minimalist** — modern, clean, intuitive, small sizes, as few words as
   possible (prefer icons/symbols over labels). **Never use iPhone system pop-ups**:
@@ -349,7 +358,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v48`; bump to `planner-v49`, …) and keep its `ASSETS` list in sync
+(currently `planner-v49`; bump to `planner-v50`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
