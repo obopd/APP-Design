@@ -565,10 +565,6 @@ body.gated .tabbar { display: none; }
   .expanded, .expanded.x-leaving { --xdur: .01s; }
 }
 
-/* Transparent tap layer over a touched button, wired to a hidden switch: the real tap
-   flips the switch so iOS plays its haptic (see js/haptics.js). */
-.haptic-hit { position: fixed; z-index: 2147483647; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-.haptic-hit input { position: absolute; width: 1px; height: 1px; margin: 0; visibility: hidden; pointer-events: none; }
 
 /* ---------- Friends & sharing ---------- */
 /* Bell: top right of the calendar screen, level with the logo. */

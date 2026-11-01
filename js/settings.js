@@ -142,16 +142,6 @@ export function renderSettings(root) {
     h('div', {},
       h('div', { class: 'set-row' }, h('span', {}, 'Theme'), theme),
       h('div', { class: 'set-row' }, h('span', {}, 'Color'), swatches)),
-    h('div', {},
-      h('div', { class: 'set-row' }, h('span', {}, 'Haptics'),
-        h('input', {
-          type: 'checkbox', class: 'switch', 'aria-label': 'Haptics', checked: state.settings.haptics !== false,
-          // Saving re-renders Settings, which would cut the slide short; save once it's done.
-          onchange: (e) => {
-            const on = e.target.checked;
-            setTimeout(() => { state.settings.haptics = on; save(); }, 320);
-          },
-        }))),
     foldersSection(),
     h('div', {},
       h('div', { class: 'set-row' }, h('span', {}, 'Alerts'), alertsControl(rerender))),

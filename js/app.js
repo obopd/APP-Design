@@ -6,7 +6,6 @@ import { openEditor } from './editor.js';
 import { renderSettings, applyTheme } from './settings.js';
 import { renderDdays, renderTodayDdays } from './dday.js';
 import { refreshReminders, setToast } from './reminders.js';
-import './haptics.js';
 import { onCloudChange, syncNow, handleAuthRedirect, isConfigured, currentUser } from './cloud.js';
 import { openAccountSheet, renderLoginGate } from './account.js';
 import { socialEnabled, socialStatus, onSocialChange, refreshSocial, unseenCount } from './social.js';

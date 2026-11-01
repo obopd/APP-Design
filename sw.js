@@ -1,5 +1,5 @@
 // Bump CACHE whenever any file in ASSETS changes, so installed copies update.
-const CACHE = 'planner-v53';
+const CACHE = 'planner-v54';
 const ASSETS = [
   './',
   'index.html',
@@ -13,7 +13,6 @@ const ASSETS = [
   'js/editor.js',
   'js/folders.js',
   'js/dday.js',
-  'js/haptics.js',
   'js/ui.js',
   'js/postpone.js',
   'js/config.js',

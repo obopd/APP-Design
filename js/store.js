@@ -20,7 +20,7 @@ const KEY = 'planner.v1';
   dday:     { id, title, date: 'YYYY-MM-DD', yearly }   — countdowns (birthdays, graduation…)
   meta:     { updatedAt: epoch ms }   — last local change, used by cloud sync
 */
-const DEFAULTS = { todos: [], events: [], categories: [], ddays: [], settings: { theme: 'auto', accent: 'mono', haptics: true } };
+const DEFAULTS = { todos: [], events: [], categories: [], ddays: [], settings: { theme: 'auto', accent: 'mono' } };
 
 export const REPEATS = [
   ['none', 'Never'],
@@ -63,7 +63,7 @@ export function replaceAll(data, { touch = true } = {}) {
 }
 
 // Used on sign-out: remove this user's planner from the device (it lives on in their
-// account). Device preferences (theme, accent, haptics) stay.
+// account). Device preferences (theme, accent) stay.
 export function clearData() {
   state.todos = [];
   state.events = [];
