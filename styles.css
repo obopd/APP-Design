@@ -738,7 +738,8 @@ body.gated .tabbar { display: none; }
 }
 .tab-badge[hidden] { display: none; }
 /* Inside a conversation the dock steps aside; the composer takes the bottom. */
-body.chatting .tabbar { display: none; }
+body.chatting .tabbar, body.typing .tabbar { display: none; }
+body.typing #view-chat, body.typing #view-write { padding-bottom: 0; height: var(--vvh, 100dvh); }
 #view-chat { padding-bottom: calc(var(--tabbar) + 8px); }
 body.chatting #view-chat {
   padding-bottom: 0; height: var(--vvh, 100dvh);

@@ -407,6 +407,15 @@ document.addEventListener('visibilitychange', () => {
 // Friends' changes arrive by checking now and then while the app is open.
 setInterval(() => { if (document.visibilityState === 'visible') { refreshSocial(); refreshChats(); refreshFilm(); } }, 60 * 1000);
 
+// While typing in a page field (chat composer, Write tab), the dock steps aside so it
+// doesn't ride up on top of the keyboard; it returns when the keyboard closes.
+const isField = (el) => !!el && el.matches?.('textarea, input:not([type="checkbox"]):not([type="radio"]):not([type="file"])') && !el.closest('dialog');
+document.addEventListener('focusin', (e) => { if (isField(e.target)) document.body.classList.add('typing'); });
+document.addEventListener('focusout', () => {
+  // Focus moving to the next field (e.g. Enter in the script) shouldn't flash the dock.
+  setTimeout(() => { if (!isField(document.activeElement)) document.body.classList.remove('typing'); }, 80);
+});
+
 // iPhone keyboard: keep the chat (composer) inside the visible area above the keyboard.
 if (window.visualViewport) {
   const fit = () => document.documentElement.style.setProperty('--vvh', `${visualViewport.height}px`);
