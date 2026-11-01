@@ -193,7 +193,7 @@ laptop. So:
   friend, made on first open, reused after) and **group** chats (named; creator or any
   member adds their own friends; the creator removes people; anyone renames or leaves).
   Text only, 1–1000 characters; press and hold your own message to delete it (for
-  everyone). Sending keeps the keyboard up (the send button's touchend is handled and its
+  everyone). **Swipe right** on an open chat to go back (like Instagram; `swipeBack` in chatview.js: the chat follows the finger with the list underneath, dim fading, edge shadow; past 1/3 width or a flick slides it off, else it springs back; vertical drags still scroll; not in film mode's fixed chat). The ‹ button still works. Sending keeps the keyboard up (the send button's touchend is handled and its
   default cancelled so the box keeps focus); swiping down on the messages folds it. Opening a chat hides the dock (`body.chatting`); the composer sits at the
   bottom and iOS slides it up with the keyboard. No read
   receipts; unread = messages after `chat_members.last_read` (a message id). Polling, no
@@ -412,7 +412,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v63`; bump to `planner-v64`, …) and keep its `ASSETS` list in sync
+(currently `planner-v64`; bump to `planner-v65`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

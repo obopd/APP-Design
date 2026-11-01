@@ -74,8 +74,12 @@ function emptyState() {
 function listView(root) {
   conv = null;
   document.body.classList.remove('chatting');
+  root.replaceChildren(listPage());
+}
+
+function listPage() {
   const items = chatList();
-  root.replaceChildren(h('div', { class: 'settings chat-page' },
+  return h('div', { class: 'settings chat-page' },
     h('div', { class: 'page-head' },
       h('h1', { class: 'display' }, 'Chat'),
       chatStatus() === 'missing' ? null : h('button', { class: 'icon-btn page-add', 'aria-label': 'New chat', onclick: newChat }, icon(ICONS.plus))),
@@ -87,7 +91,7 @@ function listView(root) {
           h('span', { class: 'chat-preview' }, last ? `${chat.kind === 'group' && last.sender !== myId() ? `${nameOf(last.sender)}: ` : ''}${last.body}` : 'No messages yet')),
         h('span', { class: 'chat-meta' },
           last ? h('span', { class: 'chat-time' }, whenLabel(last.created_at)) : null,
-          unread ? h('span', { class: 'chat-unread' }, unread > 99 ? '99+' : String(unread)) : null))))) : emptyState()));
+          unread ? h('span', { class: 'chat-unread' }, unread > 99 ? '99+' : String(unread)) : null))))) : emptyState());
 }
 
 // "+": a friend (personal chat) or a new group.
@@ -243,11 +247,85 @@ function convView(root, id, fixed = false) {
     h('div', { class: 'composer' }, input, sendBtn));
   root.replaceChildren(convRoot);
   conv = { id, root: convRoot, list, items, input, titleEl, fixed };
+  if (!fixed) swipeBack(root, convRoot);
   items.replaceChildren(...bubbles(id));
   grow();
   requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
   markRead(id);
   pollChat(id);
+}
+
+/* ---------- Swipe right to go back (like Instagram) ----------
+   The chat follows the finger with the chat list showing underneath (dimmed a little,
+   brightening as the chat slides away). Let go past a third of the width, or flick,
+   and it slides off to the list; otherwise it springs back. Only transform/opacity move. */
+function swipeBack(root, page) {
+  let start = null;   // { x, y, t }
+  let dragging = false;
+  let under = null;
+  const width = () => root.clientWidth || window.innerWidth;
+  const ease = 'transform .28s cubic-bezier(.2, .8, .2, 1)';
+  const place = (dx) => {
+    page.style.transform = `translateX(${dx}px)`;
+    if (under) under.style.setProperty('--dim', String(Math.max(0, 1 - dx / width())));
+  };
+  const cleanup = () => {
+    page.classList.remove('swiping');
+    page.style.transition = page.style.transform = '';
+    under?.remove();
+    under = null;
+  };
+
+  page.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1 || e.target.closest('.composer')) { start = null; return; }
+    start = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: performance.now() };
+    dragging = false;
+  }, { passive: true });
+
+  page.addEventListener('touchmove', (e) => {
+    if (!start) return;
+    const dx = e.touches[0].clientX - start.x;
+    const dy = e.touches[0].clientY - start.y;
+    if (!dragging) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { start = null; return; } // scrolling
+      if (dx < 12 || dx < Math.abs(dy) * 1.5) return;
+      dragging = true;
+      document.activeElement?.blur?.(); // a keyboard would fight the slide
+      under = h('div', { class: 'chat-under', 'aria-hidden': 'true' }, listPage());
+      root.prepend(under);
+      page.classList.add('swiping');
+      page.style.transition = 'none';
+    }
+    e.preventDefault();
+    place(Math.max(0, dx));
+  }, { passive: false });
+
+  const end = (e) => {
+    if (!start || !dragging) { start = null; return; }
+    const dx = Math.max(0, (e.changedTouches[0]?.clientX ?? start.x) - start.x);
+    const speed = dx / Math.max(1, performance.now() - start.t); // px per ms
+    start = null;
+    dragging = false;
+    page.style.transition = ease;
+    if (dx > width() / 3 || speed > 0.5) {
+      place(width());
+      setTimeout(() => {
+        // Keep the list that's already on screen (no redraw flash), then hand over.
+        const list = under?.firstChild;
+        cleanup();
+        openId = null;
+        conv = null;
+        document.body.classList.remove('chatting');
+        if (list) root.replaceChildren(list); else rerender();
+        refreshChats();
+      }, 280);
+    } else {
+      place(0);
+      setTimeout(cleanup, 280);
+    }
+  };
+  page.addEventListener('touchend', end);
+  page.addEventListener('touchcancel', end);
 }
 
 /* ---------- Chat info (members, rename, add, leave) ---------- */

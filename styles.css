@@ -909,3 +909,13 @@ body.typing #view-chat { padding-bottom: 0; }
 .sp-type { flex-shrink: 0; font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 999px; background: var(--soft); color: var(--muted); }
 .sp-type.on { background: var(--accent); color: var(--on-accent); }
 #view-write { padding-bottom: calc(var(--tabbar) + 8px); }
+
+/* Swipe-back in a chat: the list waits underneath while the chat slides right. */
+#view-chat { position: relative; }
+.conv { position: relative; z-index: 1; background: var(--bg); will-change: transform; }
+.conv.swiping { box-shadow: -10px 0 28px rgba(0, 0, 0, .12); }
+.chat-under {
+  position: absolute; inset: 0; z-index: 0; overflow: hidden; display: flex; flex-direction: column;
+  padding-top: calc(env(safe-area-inset-top) + var(--gap)); background: var(--bg);
+}
+.chat-under::after { content: ""; position: absolute; inset: 0; background: rgba(0, 0, 0, .08); opacity: var(--dim, 1); pointer-events: none; }
