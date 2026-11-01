@@ -1004,3 +1004,14 @@ body.typing #view-chat { padding-bottom: 0; }
 .w-char-meta { gap: 8px; }
 .w-char-meta .write-line { font-weight: 400; font-size: 15px; border-bottom: 1px solid var(--line); }
 .w-char-age { flex: 0 0 64px; }
+
+/* Settings → friends: a foldable list; names first, the ID small underneath. */
+.friends-toggle { display: flex; align-items: center; gap: 8px; min-height: 40px; text-align: left; }
+.friends-toggle svg { width: 13px; height: 13px; stroke-width: 2.2; color: var(--muted); transition: transform .2s var(--ease); }
+.friends-toggle.open svg { transform: rotate(90deg); }
+.friends-count { font-size: 12px; font-weight: 600; color: var(--muted); }
+.friend-name { display: grid; gap: 1px; }
+.friend-name b { font-weight: 500; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.friend-name small, .pick-name small { font-size: 11.5px; color: var(--muted); }
+.pick-name { display: grid; gap: 0; text-align: left; line-height: 1.25; }
+.my-handle { color: var(--muted); font-weight: 500; }

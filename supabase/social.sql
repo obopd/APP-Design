@@ -12,6 +12,9 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now()
 );
 
+-- Nickname: the name everyone sees (the ID / handle is only for finding friends).
+alter table public.profiles add column if not exists nickname text check (char_length(nickname) <= 30);
+
 create table if not exists public.friendships (
   id         bigint generated always as identity primary key,
   requester  uuid not null default auth.uid() references auth.users (id) on delete cascade,
@@ -53,7 +56,7 @@ alter table public.share_checks enable row level security;
 
 -- Only these columns can ever be changed after a row is created.
 revoke update on public.profiles, public.friendships from anon, authenticated;
-grant update (handle) on public.profiles to authenticated;
+grant update (handle, nickname) on public.profiles to authenticated;
 grant update (status) on public.friendships to authenticated;
 revoke all on public.profiles, public.friendships, public.shares, public.share_checks from anon;
 

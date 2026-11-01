@@ -166,8 +166,16 @@ laptop. So:
   pop-ups; the app validates and shows its own messages.
 - **Friends & sharing** (`js/social.js` data/sync, `js/people.js` UI, tables in
   `supabase/social.sql`, must be run once in Supabase): each user picks a unique **ID**
-  (`profiles.handle`, lowercase a–z 0–9 _ . , 3–20; Settings → ID). Friends are added by
+  (`profiles.handle`, lowercase a–z 0–9 _ . , 3–20; Settings → ID), used **only to find
+  friends**, and a **Name** (`profiles.nickname`, ≤30 chars; Settings → Name) that is what
+  everyone sees — chats, bell, shared items, film projects, editing locks all use
+  `displayName(id)` from social.js (nickname, else @ID); friend lists / pickers show the name
+  with the @ID small underneath. Names are loaded via `loadProfiles(ids)` (also used by chat.js
+  and film.js). If the `nickname` column is missing (42703 / PGRST204) profiles are read
+  without it and saving a name says the setup step is needed. Friends are added by
   ID (Settings → Friends +, or the people icon in the bell sheet) and must **accept**.
+  The Settings friends list **folds** (tap "Friends n ›"; state in localStorage
+  `planner.friendsopen`, folded by default); requests waiting for an answer always show.
   A **bell** (`#bell`, fixed top-right of the calendar screen, red count badge) opens the
   notifications sheet (`#social-sheet`): friend requests (Accept / ✕), accepted requests,
   "@x shared …", "@x checked off …"; opening it marks them seen (requests keep counting
@@ -328,7 +336,7 @@ docs/                  Screenshots of the app
 
 ## Data model (`js/store.js`)
 
-Keep the internal names (`planner.v1`, `planner.auth`, `planner.social`, `planner.chat`, `planner.expand`, `planner.film`, `planner.filmdata`, `planner.filmsection`, `planner.orgsection`, `planner_data`, `planner-vN`) as they
+Keep the internal names (`planner.v1`, `planner.auth`, `planner.social`, `planner.friendsopen`, `planner.chat`, `planner.expand`, `planner.film`, `planner.filmdata`, `planner.filmsection`, `planner.orgsection`, `planner_data`, `planner-vN`) as they
 are, or existing users lose their data/session.
 
 Stored in `localStorage` under `planner.v1`:
@@ -433,7 +441,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v71`; bump to `planner-v72`, …) and keep its `ASSETS` list in sync
+(currently `planner-v72`; bump to `planner-v73`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

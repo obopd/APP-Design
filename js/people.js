@@ -4,8 +4,8 @@ import { h, icon, ICONS } from './util.js';
 import { ask, tell, askText, openLayer } from './ui.js';
 import { inFilm } from './store.js';
 import {
-  socialEnabled, socialStatus, myHandle, friends, acceptedFriends, nameOf, notifications, markSeen,
-  setHandle, addFriend, acceptFriend, removeFriend, refreshSocial,
+  socialEnabled, socialStatus, myHandle, myNickname, setNickname, friends, acceptedFriends, nameOf, notifications, markSeen,
+  setHandle, addFriend, acceptFriend, removeFriend, refreshSocial, notifySocial,
 } from './social.js';
 
 const sheet = document.getElementById('social-sheet');
@@ -42,7 +42,7 @@ const removeLabel = { friend: 'Remove friend', sent: 'Cancel request', received:
 
 async function confirmRemove(f) {
   if (f.state === 'friend' && !await ask({
-    title: `Remove @${f.handle}?`, message: 'You’ll stop seeing each other’s shared items.', ok: 'Remove', danger: true,
+    title: `Remove ${f.name}?`, message: 'You’ll stop seeing each other’s shared items.', ok: 'Remove', danger: true,
   })) return;
   try { await removeFriend(f.rowId); } catch (e) { tell('Couldn’t update', e.message); }
 }
@@ -59,19 +59,43 @@ export function peopleSection() {
     return h('div', {}, h('div', { class: 'set-row' }, h('span', {}, 'Friends'), h('span', { class: 'status' }, 'Not set up yet')));
   }
   const handle = myHandle();
+  const nick = myNickname();
   const list = friends();
+  const open = localStorage.getItem('planner.friendsopen') === '1';
+  // Folded, only requests waiting for an answer stay visible.
+  const shown = open ? list : list.filter((f) => f.state === 'received');
+  const count = list.filter((f) => f.state === 'friend').length;
+  const row = (f) => h('div', { class: 'cat-row' },
+    h('span', { class: 'friend-name' }, h('b', {}, f.name), f.name !== `@${f.handle}` ? h('small', {}, `@${f.handle}`) : null),
+    f.state === 'sent' ? h('span', { class: 'status' }, 'Pending') : null,
+    f.state === 'received' ? h('button', { class: 'pill', onclick: () => accept(f.rowId) }, 'Accept') : null,
+    h('button', { class: 'icon-btn', 'aria-label': `${removeLabel[f.state]} ${f.name}`, onclick: () => confirmRemove(f) }, icon(ICONS.close)));
   return h('div', {},
+    // Name = what everyone sees; ID = only for being found as a friend.
+    h('div', { class: 'set-row' },
+      h('span', {}, 'Name'),
+      h('button', { class: nick ? 'link-btn my-id' : 'pill', onclick: chooseNickname }, nick || 'Add')),
     h('div', { class: 'set-row' },
       h('span', {}, 'ID'),
-      h('button', { class: handle ? 'link-btn my-id' : 'pill', onclick: chooseHandle }, handle ? `@${handle}` : 'Choose')),
+      h('button', { class: handle ? 'link-btn my-handle' : 'pill', onclick: chooseHandle }, handle ? `@${handle}` : 'Choose')),
     h('div', { class: 'set-row' },
-      h('span', {}, 'Friends'),
+      h('button', {
+        class: `friends-toggle${open ? ' open' : ''}`, 'aria-expanded': String(open),
+        onclick: () => { localStorage.setItem('planner.friendsopen', open ? '0' : '1'); notifySocial(); },
+      }, h('span', {}, 'Friends'), count ? h('span', { class: 'friends-count' }, String(count)) : null, icon(ICONS.right)),
       h('button', { class: 'icon-btn', 'aria-label': 'Add friend', onclick: askAddFriend }, icon(ICONS.plus))),
-    list.length ? h('div', { class: 'cat-list friend-list' }, list.map((f) => h('div', { class: 'cat-row' },
-      h('span', { class: 'friend-name' }, `@${f.handle}`),
-      f.state === 'sent' ? h('span', { class: 'status' }, 'Pending') : null,
-      f.state === 'received' ? h('button', { class: 'pill', onclick: () => accept(f.rowId) }, 'Accept') : null,
-      h('button', { class: 'icon-btn', 'aria-label': `${removeLabel[f.state]} @${f.handle}`, onclick: () => confirmRemove(f) }, icon(ICONS.close))))) : null);
+    shown.length ? h('div', { class: 'cat-list friend-list' }, shown.map(row)) : null);
+}
+
+export async function chooseNickname() {
+  if (!myHandle() && !await chooseHandle()) return;
+  let message = 'Your name in chats and shared projects. Friends still add you by your ID.';
+  let value = myNickname();
+  for (;;) {
+    const text = await askText({ title: 'Your name', message, value, placeholder: 'e.g. Marvin', ok: 'Save' });
+    if (text === null) return;
+    try { await setNickname(text); return; } catch (e) { message = e.message; value = text; }
+  }
 }
 
 /* ---------- Bell ---------- */
@@ -126,7 +150,8 @@ export function pickFriends(selected = [], {
           btn.setAttribute('aria-checked', String(chosen.has(f.id)));
           btn.querySelector('.menu-check').replaceChildren(...(chosen.has(f.id) ? [icon(ICONS.check)] : []));
         },
-      }, h('span', { class: 'menu-check' }, chosen.has(f.id) ? icon(ICONS.check) : null), h('span', {}, `@${f.handle}`));
+      }, h('span', { class: 'menu-check' }, chosen.has(f.id) ? icon(ICONS.check) : null),
+      h('span', { class: 'pick-name' }, f.name, f.name !== `@${f.handle}` ? h('small', {}, `@${f.handle}`) : null));
       return btn;
     });
     layer = openLayer('ask', h('div', { class: 'ask-card' },

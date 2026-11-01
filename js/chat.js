@@ -3,6 +3,7 @@
 // sign-out). Updates come by polling: only messages newer than the newest one we have
 // are downloaded, so checking often stays cheap.
 import { api, currentUser, isConfigured, onCloudChange } from './cloud.js';
+import { loadProfiles, displayName, handleOf as idOf } from './social.js';
 
 const KEY = 'planner.chat';
 const KEEP = 200; // messages kept per chat on the phone (older ones load on request)
@@ -34,8 +35,8 @@ export const chatEnabled = () => isConfigured() && !!currentUser();
 export const chatStatus = () => status;
 const me = () => currentUser()?.id;
 export const myId = me;
-export const handleOf = (id) => data.handles[id] || null;
-export const nameOf = (id) => (data.handles[id] ? `@${data.handles[id]}` : 'Someone');
+export const handleOf = idOf;
+export const nameOf = (id) => displayName(id, 'Someone'); // nickname, else @ID
 
 const rest = (path, opts = {}) => api(`/rest/v1/${path}`, { auth: true, ...opts });
 const isMissing = (e) => e.status === 404 || e.code === 'PGRST205' || e.code === '42P01';
@@ -107,11 +108,8 @@ export function refreshChats() {
           merge(id, rows);
         }
         await fetchNew(since);
-        const unknown = [...new Set(members.map((m) => m.user_id))].filter((u) => !data.handles[u]);
-        if (unknown.length) {
-          const rows = await rest(`profiles?select=user_id,handle&user_id=in.(${unknown.join(',')})`);
-          rows.forEach((r) => { data.handles[r.user_id] = r.handle; });
-        }
+        // Everyone in my chats (names can change, so refresh them all).
+        await loadProfiles(members.map((m) => m.user_id)).catch(() => {});
       }
       status = 'ready';
     } catch (e) {

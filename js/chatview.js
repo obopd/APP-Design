@@ -107,7 +107,7 @@ function newChat() {
       h('button', { type: 'button', class: 'menu-item new-group', onclick: () => go(startGroup) },
         h('span', { class: 'menu-check' }, icon(ICONS.people)), h('span', {}, 'New group')),
       friends.map((f) => h('button', { type: 'button', class: 'menu-item', onclick: () => go(async () => openChat(await openDirect(f.id))) },
-        h('span', { class: 'menu-check' }), h('span', {}, `@${f.handle}`)))),
+        h('span', { class: 'menu-check' }), h('span', { class: 'pick-name' }, f.name, f.name !== `@${f.handle}` ? h('small', {}, `@${f.handle}`) : null)))),
     h('div', { class: 'ask-actions' },
       h('button', { type: 'button', class: 'ask-btn', autofocus: true, onclick: () => layer.close() }, 'Cancel'))),
   { onBackdrop: () => layer.close() });

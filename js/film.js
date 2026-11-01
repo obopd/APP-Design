@@ -10,7 +10,7 @@
 import { api, currentUser, isConfigured, onCloudChange } from './cloud.js';
 import { useLists, uid } from './store.js';
 import { createGroup, addMembers, removeMember, leaveChat, renameGroup } from './chat.js';
-import { addNoteSource, notifySocial } from './social.js';
+import { addNoteSource, notifySocial, loadProfiles, displayName } from './social.js';
 
 const MODE_KEY = 'planner.film';      // { on, project } on this device
 const CACHE_KEY = 'planner.filmdata'; // per user, removed on sign-out
@@ -49,7 +49,7 @@ export const filmOn = () => mode.on;
 export const filmStatus = () => status;
 const me = () => currentUser()?.id;
 export const myId = me;
-export const nameOf = (id) => (data.handles[id] ? `@${data.handles[id]}` : 'Someone');
+export const nameOf = (id) => displayName(id, 'Someone'); // nickname, else @ID
 
 const rest = (path, opts = {}) => api(`/rest/v1/${path}`, { auth: true, ...opts });
 const isMissing = (e) => e.status === 404 || e.code === 'PGRST205' || e.code === '42P01';
@@ -235,11 +235,7 @@ export function refreshFilm() {
         data.projects = Object.fromEntries(projs.map((p) => [p.id, p]));
         data.members = {};
         members.forEach((m) => { (data.members[m.project_id] ||= []).push(m); });
-        const users = [...new Set(members.flatMap((m) => [m.user_id, m.added_by]))].filter((x) => !data.handles[x]);
-        if (users.length) {
-          const rows = await rest(`profiles?select=user_id,handle&user_id=in.(${users.join(',')})`);
-          rows.forEach((r) => { data.handles[r.user_id] = r.handle; });
-        }
+        await loadProfiles(members.flatMap((m) => [m.user_id, m.added_by])).catch(() => {});
       }
       // No project chosen (or it's gone): open the first one.
       if (!mode.project || !data.projects[mode.project]) {

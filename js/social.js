@@ -21,7 +21,7 @@ const pending = {}; // check-offs tapped since the last refresh: key → { done,
 const listeners = new Set();
 
 function blank(uid = null) {
-  return { uid, me: null, friendships: [], handles: {}, shares: [], checks: [], seen: {}, log: [] };
+  return { uid, me: null, myNick: '', friendships: [], handles: {}, nicks: {}, shares: [], checks: [], seen: {}, log: [] };
 }
 function readCache() {
   try {
@@ -40,8 +40,12 @@ export const socialEnabled = () => isConfigured() && !!currentUser();
 export const socialStatus = () => status;
 export const myHandle = () => data.me;
 const me = () => currentUser()?.id;
+export const myNickname = () => data.myNick || '';
 export const handleOf = (id) => data.handles[id] || null;
-export const nameOf = (id) => (data.handles[id] ? `@${data.handles[id]}` : 'A friend');
+// People are shown by the nickname they chose; the ID (@handle) is only for finding friends.
+export const displayName = (id, fallback = 'Someone') =>
+  (data.nicks?.[id] || (data.handles[id] ? `@${data.handles[id]}` : fallback));
+export const nameOf = (id) => displayName(id, 'A friend');
 
 // Friends with their state: requests to answer first, then friends, then requests I sent.
 const RANK = { received: 0, friend: 1, sent: 2 };
@@ -50,8 +54,9 @@ export function friends() {
   return data.friendships.map((f) => {
     const other = f.requester === uid ? f.addressee : f.requester;
     const state = f.status === 'accepted' ? 'friend' : f.requester === uid ? 'sent' : 'received';
-    return { rowId: f.id, id: other, handle: data.handles[other] || '…', state };
-  }).sort((a, b) => RANK[a.state] - RANK[b.state] || a.handle.localeCompare(b.handle));
+    const handle = data.handles[other] || '…';
+    return { rowId: f.id, id: other, handle, name: data.nicks?.[other] || `@${handle}`, state };
+  }).sort((a, b) => RANK[a.state] - RANK[b.state] || a.name.replace(/^@/, '').localeCompare(b.name.replace(/^@/, '')));
 }
 export const acceptedFriends = () => friends().filter((f) => f.state === 'friend');
 
@@ -60,16 +65,46 @@ export const acceptedFriends = () => friends().filter((f) => f.state === 'friend
 const rest = (path, opts = {}) => api(`/rest/v1/${path}`, { auth: true, ...opts });
 const isMissing = (e) => e.status === 404 || e.code === 'PGRST205' || e.code === '42P01';
 
+// Nicknames need the `profiles.nickname` column (supabase/social.sql). Until that setup
+// step has run, profiles are read without it and everyone shows as @ID.
+let nickMissing = false;
+export const nicknamesReady = () => !nickMissing;
+const noNickColumn = (e) => e.code === '42703' || e.code === 'PGRST204' || /nickname/i.test(e.message || '');
+async function fetchProfiles(filter) {
+  if (!nickMissing) {
+    try { return await rest(`profiles?select=user_id,handle,nickname&${filter}`); } catch (e) {
+      if (!noNickColumn(e)) throw e;
+      nickMissing = true;
+    }
+  }
+  return rest(`profiles?select=user_id,handle&${filter}`);
+}
+function remember(rows) {
+  data.nicks ||= {};
+  rows.forEach((r) => {
+    data.handles[r.user_id] = r.handle;
+    if (r.nickname) data.nicks[r.user_id] = r.nickname; else delete data.nicks[r.user_id];
+  });
+}
+/** Load (or refresh) names for these users; chat and film mode use it too. */
+export async function loadProfiles(ids) {
+  const list = [...new Set(ids)].filter(Boolean);
+  if (!list.length || !socialEnabled()) return;
+  remember(await fetchProfiles(`user_id=in.(${list.join(',')})`));
+  writeCache();
+}
+
 async function load() {
   const uid = me();
   if (data.uid !== uid) data = blank(uid);
   const [profile, friendships, shares, checks] = await Promise.all([
-    rest(`profiles?select=handle&user_id=eq.${uid}`),
+    fetchProfiles(`user_id=eq.${uid}`),
     rest('friendships?select=id,requester,addressee,status,created_at'),
     rest('shares?select=id,owner,friend,kind,item_id,data,created_at'),
     rest('share_checks?select=share_id,todo_id,day,done,by_user,updated_at'),
   ]);
   data.me = profile[0]?.handle || null;
+  data.myNick = profile[0]?.nickname || '';
   data.friendships = friendships;
   data.shares = shares;
   data.checks = checks;
@@ -78,10 +113,9 @@ async function load() {
   shares.forEach((s) => { others.add(s.owner); others.add(s.friend); });
   others.delete(uid);
   if (others.size) {
-    const rows = await rest(`profiles?select=user_id,handle&user_id=in.(${[...others].join(',')})`);
-    data.handles = Object.fromEntries(rows.map((r) => [r.user_id, r.handle]));
+    remember(await fetchProfiles(`user_id=in.(${[...others].join(',')})`));
   }
-  if (data.me) data.handles[uid] = data.me;
+  if (data.me) remember([{ user_id: uid, handle: data.me, nickname: data.myNick }]);
   for (const k of Object.keys(pending)) delete pending[k];
 }
 
@@ -126,18 +160,34 @@ export async function setHandle(text) {
   notify();
 }
 
+/** Set my nickname (what everyone sees). Needs an ID first (the profile row). */
+export async function setNickname(text) {
+  const nickname = text.trim().replace(/\s+/g, ' ').slice(0, 30);
+  if (!data.me) throw new Error('Choose your ID first.');
+  try {
+    await rest(`profiles?user_id=eq.${me()}`, { method: 'PATCH', body: { nickname: nickname || null } });
+  } catch (e) {
+    if (noNickColumn(e)) { nickMissing = true; throw new Error('Nicknames aren’t set up yet (one Supabase step).'); }
+    throw e;
+  }
+  data.myNick = nickname;
+  remember([{ user_id: me(), handle: data.me, nickname }]);
+  writeCache();
+  notify();
+}
+
 /** Send a friend request by ID (or accept theirs if they already asked). */
 export async function addFriend(text) {
   const handle = normalizeHandle(text);
   if (!data.me) throw new Error('Choose your own ID first.');
   if (!HANDLE_RE.test(handle)) throw new Error('That isn’t a valid ID.');
   if (handle === data.me) throw new Error('That’s your own ID.');
-  const [found] = await rest(`profiles?select=user_id,handle&handle=eq.${encodeURIComponent(handle)}`);
+  const [found] = await fetchProfiles(`handle=eq.${encodeURIComponent(handle)}`);
   if (!found) throw new Error(`No one has the ID @${handle}.`);
   const existing = friends().find((f) => f.id === found.user_id);
   if (existing?.state === 'friend') throw new Error(`You’re already friends with @${handle}.`);
   if (existing?.state === 'sent') throw new Error(`You already asked @${handle}.`);
-  data.handles[found.user_id] = handle;
+  remember([found]);
   if (existing?.state === 'received') return acceptFriend(existing.rowId);
   await rest('friendships', { method: 'POST', body: { addressee: found.user_id } });
   await refreshSocial();
