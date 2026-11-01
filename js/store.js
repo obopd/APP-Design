@@ -1,6 +1,7 @@
 // App data lives in localStorage on the device. When signed in, js/cloud.js also
 // backs the whole state up to the user's Supabase account and syncs it.
 import { parseKey, daysBetween, todayKey } from './util.js';
+import { snack } from './ui.js';
 
 const KEY = 'planner.v1';
 
@@ -57,6 +58,20 @@ export function useLists(lists) {
   listeners.forEach((fn) => fn());
 }
 
+// Caches the app can download again. When the phone's storage for the app is full, they're
+// cleared one by one until the write fits (the sync copy only makes merges less precise).
+const DISPOSABLE = ['planner.chat', 'planner.filmdata', 'planner.previewurls', 'planner.social', 'planner.syncbase'];
+export function storeItem(key, value) {
+  try { localStorage.setItem(key, value); return true; } catch { /* full: make room */ }
+  for (const k of DISPOSABLE) {
+    if (k === key || localStorage.getItem(k) === null) continue;
+    localStorage.removeItem(k);
+    try { localStorage.setItem(key, value); return true; } catch { /* still full */ }
+  }
+  return false;
+}
+let warnedFull = false;
+
 // touch: stamp this as a local change (false when applying data that came from the cloud).
 export function save({ touch = true, personal = false } = {}) {
   if (film && !personal) {
@@ -65,7 +80,13 @@ export function save({ touch = true, personal = false } = {}) {
     return;
   }
   if (touch) state.meta = { ...state.meta, updatedAt: Date.now() };
-  localStorage.setItem(KEY, JSON.stringify(state));
+  if (!storeItem(KEY, JSON.stringify(state)) && !warnedFull) {
+    // The planner stays in memory (and syncs to the account if signed in).
+    warnedFull = true;
+    snack(localStorage.getItem('planner.auth')
+      ? 'Phone storage is full: changes go to your account but can’t be kept on this phone.'
+      : 'Phone storage is full: changes can’t be saved. Export a backup in Settings.');
+  }
   listeners.forEach((fn) => fn());
 }
 

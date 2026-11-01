@@ -2,7 +2,7 @@
 // Entries are project items (film.js: cur().org[kind]), one row each, so collaborators
 // can work on different entries at once; the budget adds everything up.
 import { h, icon, ICONS, fmt, parseKey, todayKey } from './util.js';
-import { cur, save, uid } from './store.js';
+import { cur, save, uid, onChange, inFilm } from './store.js';
 import { ask, pick, pickMany, snack } from './ui.js';
 import { currentProject, filmStatus, orgNeedsSetup, docOf } from './film.js';
 
@@ -305,8 +305,12 @@ function budgetView() {
 const shootDays = () => cur().events.filter((e) => e.shoot).sort((a, b) => (a.date + (a.start || '')).localeCompare(b.date + (b.start || '')));
 const dayNo = (ev) => shootDays().indexOf(ev) + 1;
 function renumber() {
-  shootDays().forEach((e, i) => { const t = `Shoot day ${i + 1}`; if (e.title !== t) e.title = t; });
+  let changed = false;
+  shootDays().forEach((e, i) => { const t = `Shoot day ${i + 1}`; if (e.title !== t) { e.title = t; changed = true; } });
+  return changed;
 }
+// Also after edits made elsewhere (e.g. a shoot day's date moved in the calendar editor).
+onChange(() => { if (inFilm() && cur().events.some((e) => e.shoot) && renumber()) save(); });
 
 // Scenes to choose from: the script's scene headings (numbered), else the Plot's cards.
 function sceneOptions() {

@@ -31,7 +31,7 @@ function readCache() {
   return blank(currentUser()?.id || null);
 }
 function writeCache() {
-  if (data.uid) localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+  if (data.uid) { try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch { /* storage full: keep in memory */ } }
 }
 function notify() { listeners.forEach((fn) => fn()); }
 

@@ -7,7 +7,7 @@
 // state.meta.updatedAt; we remember the stamp of the last successful sync and
 // compare it with the local and remote stamps.
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
-import { state, onChange, replaceAll, hasContent, clearData } from './store.js';
+import { state, onChange, replaceAll, hasContent, clearData, storeItem } from './store.js';
 import { ask } from './ui.js';
 
 const AUTH_KEY = 'planner.auth';
@@ -26,7 +26,7 @@ function readSession() {
   try { return JSON.parse(localStorage.getItem(AUTH_KEY)); } catch { return null; }
 }
 function persist() {
-  if (session) localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+  if (session) storeItem(AUTH_KEY, JSON.stringify(session));
   else localStorage.removeItem(AUTH_KEY);
 }
 function notify() { listeners.forEach((fn) => fn()); }

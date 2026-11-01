@@ -14,7 +14,7 @@ import { alertTime } from './reminders.js';
 const KEY = 'planner.push'; // { endpoint, uid, sig } for this device
 let status = 'idle'; // idle | on | missing | error
 const read = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
-const write = (v) => localStorage.setItem(KEY, JSON.stringify(v));
+const write = (v) => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch { /* storage full */ } };
 
 export const pushSupported = () => isConfigured() && !!config.VAPID_PUBLIC_KEY
   && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
@@ -78,18 +78,21 @@ export async function pushSignOut() {
   try { const sub = await (await navigator.serviceWorker.ready).pushManager.getSubscription(); await sub?.unsubscribe(); } catch { /* ignore */ }
 }
 
-/* ---------- Schedule alerts (personal planner, next 8 days) ---------- */
+/* ---------- Schedule alerts (personal planner, next 30 days) ---------- */
+// Refreshed whenever the app opens or the planner changes, so alerts keep coming for a
+// month even if the app isn't opened.
+const AHEAD_DAYS = 30;
 
 function upcoming() {
   const now = Date.now();
   const out = [];
-  for (let i = 0; i <= 8; i++) {
+  for (let i = 0; i <= AHEAD_DAYS; i++) {
     const day = addDays(new Date(), i);
     const key = dateKey(day);
     for (const e of state.events) {
       if (!e.alert || e.alert === 'none' || !occursOn(e, key)) continue;
       const at = alertTime(e, key);
-      if (at.getTime() < now + 30_000 || at.getTime() > now + 8 * 86400_000) continue;
+      if (at.getTime() < now + 30_000 || at.getTime() > now + AHEAD_DAYS * 86400_000) continue;
       const when = e.allDay ? (dateKey(at) === key ? 'Today' : 'Tomorrow') : formatTime(e.start);
       out.push({ fire_at: at.toISOString(), title: e.title || 'Event', body: `${when}${e.notes ? ` · ${e.notes}` : ''}`.slice(0, 200), tag: `${e.id}@${key}` });
     }

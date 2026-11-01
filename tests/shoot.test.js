@@ -48,6 +48,12 @@ const { browser, phone, inApp, filmProject, sql, check, wait, done } = require('
   await A.click('#org-sheet button[aria-label=Save]'); await wait(600);
   check('days are numbered by date', (await A.locator('.shoot-card b:not(.display)').allInnerTexts()).map((t) => t.split(' ·')[0]).join(',') === 'Day 1,Day 2');
 
+  // Moving a day from the calendar editor (not Organize) renumbers too.
+  await inApp(A, (s) => { const ev = s.cur().events.find((e) => e.title === 'Shoot day 1'); const d = new Date(); d.setDate(d.getDate() + 9); ev.date = d.toISOString().slice(0, 10); s.save(); });
+  await wait(400);
+  check('moving a day elsewhere renumbers', (await inApp(A, (s) => s.cur().events.filter((e) => e.shoot).sort((x, y) => x.date.localeCompare(y.date)).map((e) => e.title).join(','))) === 'Shoot day 1,Shoot day 2');
+  await inApp(A, (s) => { const ev = s.cur().events.find((e) => e.title === 'Shoot day 2'); const d = new Date(); d.setDate(d.getDate() + 2); ev.date = d.toISOString().slice(0, 10); s.save(); });
+  await wait(400);
   await A.click('.shoot-card >> nth=1'); await wait(300);
   await A.click('.shoot-copy'); await wait(300);
   const text = await A.evaluate(() => navigator.clipboard.readText());
