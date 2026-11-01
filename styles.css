@@ -907,8 +907,15 @@ body.typing #view-chat { padding-bottom: 0; }
 .screenplay.editing .sp-paren { padding-left: 26% !important; }
 .screenplay.editing .sp-dialogue { padding-left: 16% !important; }
 .screenplay.editing .sp-transition { text-transform: uppercase; text-align: right; }
+/* Pinned page top (Write / Organize): stays put while the content scrolls under it. */
+.page-sticky {
+  position: sticky; top: -18px; z-index: 3; display: grid; gap: 12px;
+  margin: -18px -18px 0; padding: 18px 18px 10px; background: var(--bg);
+  border-bottom: 1px solid transparent;
+}
+.page-sticky .page-head { margin-bottom: 0; }
 .sp-bar {
-  position: sticky; top: 0; z-index: 2; display: flex; gap: 4px; overflow-x: auto; padding: 4px 0 8px;
+  position: sticky; top: calc(var(--sticky-h, 0px) - 18px); z-index: 2; display: flex; gap: 4px; overflow-x: auto; padding: 4px 0 8px;
   background: var(--bg); scrollbar-width: none;
 }
 .sp-type { flex-shrink: 0; font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 999px; background: var(--soft); color: var(--muted); }

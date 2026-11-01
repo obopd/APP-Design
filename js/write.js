@@ -378,16 +378,26 @@ export function renderWrite(root) {
     : other ? h('span', { class: 'write-lock' }, `${nameOf(other)} is editing`)
       : h('button', { class: 'pill', onclick: startEdit }, 'Edit');
   const body = mine ? EDIT[section](editing.body) : READ[section](normalize(section, doc?.body || {}));
-  const page = h('div', { class: 'settings write-page' },
+  // The name, Edit / Done and the section switch stay pinned while scrolling.
+  const top = h('div', { class: 'page-sticky' },
     h('div', { class: 'write-head' },
       h('span', { class: 'write-project' }, p.name),
       action),
-    tabs,
+    tabs);
+  const page = h('div', { class: 'settings write-page' },
+    top,
     h('p', { class: 'write-banner', hidden: true }, 'Not saved: your editing time ran out. Tap Done to try again.'),
     !mine && doc?.updated_by && doc?.updated_at && Object.keys(doc.body || {}).length
       ? h('p', { class: 'w-meta' }, `Edited by ${nameOf(doc.updated_by)} · ${since(doc.updated_at)}`) : null,
     body);
+  // Switching between reading and editing the same section keeps your place.
+  const old = root.querySelector('.write-page');
+  const keep = old && old.dataset.key === `${p.id}:${section}` ? old.scrollTop : 0;
+  page.dataset.key = `${p.id}:${section}`;
   root.replaceChildren(page);
+  if (keep) page.scrollTop = keep;
+  // The script's line-type bar sticks just under the pinned header.
+  page.style.setProperty('--sticky-h', `${top.offsetHeight}px`);
   if (mine) { editing.el = page; paintBanner(); }
 }
 

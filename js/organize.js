@@ -307,14 +307,20 @@ export function renderOrganize(root) {
     return;
   }
   const kind = section === 'budget' ? 'expense' : section;
+  // Keep the scroll position across redraws (e.g. after ticking an item off).
+  const prevScroll = root.querySelector('.organize-page')?.scrollTop || 0;
   root.replaceChildren(h('div', { class: 'settings organize-page' },
-    h('div', { class: 'page-head' },
-      h('h1', { class: 'display org-project' }, p.name),
-      h('button', { class: 'icon-btn page-add', 'aria-label': `Add ${FORMS[kind].title.toLowerCase()}`, onclick: () => openForm(kind) }, icon(ICONS.plus))),
-    h('div', { class: 'segmented org-tabs', role: 'radiogroup' }, SECTIONS.map(([k, label]) => h('button', {
-      type: 'button', role: 'radio', 'aria-checked': String(k === section),
-      onclick: () => { section = k; localStorage.setItem('planner.orgsection', k); renderOrganize(root); },
-    }, label))),
+    // The name, + and the section switch stay pinned while scrolling.
+    h('div', { class: 'page-sticky' },
+      h('div', { class: 'page-head' },
+        h('h1', { class: 'display org-project' }, p.name),
+        h('button', { class: 'icon-btn page-add', 'aria-label': `Add ${FORMS[kind].title.toLowerCase()}`, onclick: () => openForm(kind) }, icon(ICONS.plus))),
+      h('div', { class: 'segmented org-tabs', role: 'radiogroup' }, SECTIONS.map(([k, label]) => h('button', {
+        type: 'button', role: 'radio', 'aria-checked': String(k === section),
+        onclick: () => { section = k; localStorage.setItem('planner.orgsection', k); renderOrganize(root); },
+      }, label)))),
     orgNeedsSetup() ? h('p', { class: 'write-banner' }, 'Not saved to the project yet: run the Organize setup step in Supabase.') : null,
     VIEWS[section]()));
+  const page = root.querySelector('.organize-page');
+  if (page && prevScroll) page.scrollTop = prevScroll;
 }

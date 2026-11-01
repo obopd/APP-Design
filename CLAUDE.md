@@ -226,7 +226,7 @@ laptop. So:
   stored under the `story` section key) · Plot (acts of scene cards, ▲▼ moves across acts) · Script
   (screenplay blocks scene / action / character / dialogue / ( ) / transition; Enter = next
   block of the usual next type, "INT."/"EXT." → scene, Backspace on an empty block removes
-  it; read view in Courier with scene numbers). Editing never rebuilds the whole list: + Card / + Act / Enter / Backspace add or remove single elements in place (indexes looked up when used), and the editing buttons (`tapBtn`) handle the touch themselves so they don't take focus from the box being typed in — on iPhone, losing focus or removing the focused box folded the keyboard and scrolled the page to the top. Only ▲▼ moves rebuild, keeping the scroll position (`steady`). **One editor at a time** per section: Edit
+  it; read view in Courier with scene numbers). Editing never rebuilds the whole list: + Card / + Act / Enter / Backspace add or remove single elements in place (indexes looked up when used), and the editing buttons (`tapBtn`) handle the touch themselves so they don't take focus from the box being typed in — on iPhone, losing focus or removing the focused box folded the keyboard and scrolled the page to the top. Only ▲▼ moves rebuild, keeping the scroll position (`steady`). The Write and Organize page tops (name, Edit / Done or +, section switch) are pinned while scrolling (`.page-sticky`; the script's type bar sticks under it via `--sticky-h`), and switching read ⇄ edit or redrawing Organize keeps the scroll position. **One editor at a time** per section: Edit
   takes `project_docs.locked_by` (2-minute lock, renewed by autosave every 1.2s after typing
   and a 45s heartbeat), others see "@x is editing" read-only; Done saves and frees it;
   leaving the tab finishes, going to background saves. Refresh: entering film mode,
@@ -431,7 +431,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v69`; bump to `planner-v70`, …) and keep its `ASSETS` list in sync
+(currently `planner-v70`; bump to `planner-v71`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions
