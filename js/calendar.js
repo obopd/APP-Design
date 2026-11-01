@@ -1,6 +1,6 @@
 // Month grid that "rolls up" into the selected week when a date is picked.
 import { h, icon, ICONS, addDays, dateKey, parseKey, todayKey, fmt, formatTime } from './util.js';
-import { state, eventsOn, todosOn, isDone, isRoutine, isStarred, hasDue } from './store.js';
+import { cur, eventsOn, todosOn, isDone, isRoutine, isStarred, hasDue } from './store.js';
 import { sharedTodosOn, sharedEventsOn, isSharedDone, sharedTodos } from './social.js';
 
 let weekdayCache = null;
@@ -85,7 +85,7 @@ function gridButton(expand, actions) {
 function agendaOn(key) {
   const events = [...eventsOn(key), ...sharedEventsOn(key)].sort((a, b) =>
     (a.allDay === b.allDay ? (a.start || '').localeCompare(b.start || '') : a.allDay ? -1 : 1));
-  const due = [...state.todos.filter((t) => hasDue(t) && t.due === key), ...sharedTodos().filter((t) => hasDue(t) && t.due === key)];
+  const due = [...cur().todos.filter((t) => hasDue(t) && t.due === key), ...sharedTodos().filter((t) => hasDue(t) && t.due === key)];
   return [
     ...events.map((e) => ({ kind: 'event', item: e })),
     ...due.map((t) => ({ kind: 'due', item: t })),

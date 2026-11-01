@@ -44,8 +44,26 @@ function load() {
   return structuredClone(DEFAULTS);
 }
 
+/* Film Production Mode swaps the to-do / event / folder lists for the chosen project's
+   (see film.js). Everything that shows or edits those lists goes through cur(); saving
+   then goes to the project, never into the personal planner (so film edits can't stamp
+   the personal planner and win a sync). Personal-only changes (theme, D-Days, sharing,
+   sign-out) pass { personal: true }. */
+let film = null; // { todos, events, categories, persist() } | null
+export const cur = () => film || state;
+export const inFilm = () => !!film;
+export function useLists(lists) {
+  film = lists;
+  listeners.forEach((fn) => fn());
+}
+
 // touch: stamp this as a local change (false when applying data that came from the cloud).
-export function save({ touch = true } = {}) {
+export function save({ touch = true, personal = false } = {}) {
+  if (film && !personal) {
+    film.persist();
+    listeners.forEach((fn) => fn());
+    return;
+  }
   if (touch) state.meta = { ...state.meta, updatedAt: Date.now() };
   localStorage.setItem(KEY, JSON.stringify(state));
   listeners.forEach((fn) => fn());
@@ -59,7 +77,7 @@ export function replaceAll(data, { touch = true } = {}) {
   state.ddays = data.ddays || [];
   state.settings = { ...DEFAULTS.settings, ...data.settings };
   state.meta = { ...data.meta };
-  save({ touch });
+  save({ touch, personal: true });
 }
 
 // Used on sign-out: remove this user's planner from the device (it lives on in their
@@ -70,7 +88,7 @@ export function clearData() {
   state.categories = [];
   state.ddays = [];
   state.meta = {};
-  save({ touch: false });
+  save({ touch: false, personal: true });
 }
 
 export const hasContent = (data = state) =>
@@ -135,18 +153,18 @@ export function toggleDone(todo, key) {
 
 const byTime = (a, b) => (a.allDay === b.allDay ? (a.start || '').localeCompare(b.start || '') : a.allDay ? -1 : 1);
 
-export const eventsOn = (key) => state.events.filter((e) => occursOn(e, key)).sort(byTime);
+export const eventsOn = (key) => cur().events.filter((e) => occursOn(e, key)).sort(byTime);
 
 // Important first; done items sink to the bottom.
 export const todosOn = (key) =>
-  state.todos
+  cur().todos
     .filter((t) => (hasDue(t) ? todoDate(t) === key : occursOn(t, key)) && !t.skipOn?.[key])
     .sort((a, b) => isDone(a, key) - isDone(b, key) || isStarred(b, key) - isStarred(a, key));
 
 /* ---------- Categories (folders) ---------- */
 
-export const categoryById = (id) => state.categories.find((c) => c.id === id) || null;
-export const childCategories = (parent) => state.categories.filter((c) => (c.parent || null) === parent);
+export const categoryById = (id) => cur().categories.find((c) => c.id === id) || null;
+export const childCategories = (parent) => cur().categories.filter((c) => (c.parent || null) === parent);
 
 // Depth-first list of { cat, depth } for pickers and the settings tree.
 export function categoryTree(parent = null, depth = 0) {
@@ -166,7 +184,7 @@ export function ensureCategoryPath(path, parent = null) {
     let cat = childCategories(id).find((c) => c.name.toLowerCase() === name.toLowerCase());
     if (!cat) {
       cat = { id: uid(), name, parent: id, open: true };
-      state.categories.push(cat);
+      cur().categories.push(cat);
     }
     id = cat.id;
   }
@@ -178,9 +196,10 @@ export function deleteCategory(id) {
   const cat = categoryById(id);
   if (!cat) return;
   const parent = cat.parent || null;
-  for (const c of state.categories) if (c.parent === id) c.parent = parent;
-  for (const t of state.todos) if (t.category === id) t.category = parent;
-  state.categories = state.categories.filter((c) => c.id !== id);
+  const lists = cur();
+  for (const c of lists.categories) if (c.parent === id) c.parent = parent;
+  for (const t of lists.todos) if (t.category === id) t.category = parent;
+  lists.categories = lists.categories.filter((c) => c.id !== id);
   save();
 }
 
@@ -252,12 +271,12 @@ export function postponeTodo(todo, fromKey, toKey) {
       id: uid(), title: todo.title, date: toKey, important: !!todo.important, notes: todo.notes || '',
       category: todo.category || null, repeat: 'none', until: '', track: todo.track || 'none',
     };
-    state.todos.push(copy);
+    cur().todos.push(copy);
     save();
     return () => {
       todo.skipOn = { ...todo.skipOn };
       delete todo.skipOn[fromKey];
-      state.todos = state.todos.filter((t) => t !== copy);
+      cur().todos = cur().todos.filter((t) => t !== copy);
       save();
     };
   }

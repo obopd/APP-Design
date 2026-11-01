@@ -8,6 +8,7 @@ import {
 } from './chat.js';
 import { acceptedFriends, myHandle } from './social.js';
 import { pickFriends, chooseHandle, askAddFriend } from './people.js';
+import { filmOn, currentProject } from './film.js';
 
 let openId = null;  // the open conversation, or null for the list
 let conv = null;    // { id, root, list, input } of the conversation on screen
@@ -172,13 +173,14 @@ function holdToDelete(el, chatId, m, mine) {
   el.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 
-function convView(root, id) {
+// fixed: film mode's single project chat (no back button; the dock stays).
+function convView(root, id, fixed = false) {
   const chat = getChat(id);
   if (!chat) { openId = null; listView(root); return; }
-  document.body.classList.add('chatting');
+  document.body.classList.toggle('chatting', !fixed);
   const title = chatTitle(chat);
 
-  if (conv?.id === id && root.contains(conv.root)) {
+  if (conv?.id === id && conv.fixed === fixed && root.contains(conv.root)) {
     // Same chat: refresh the title and messages only, so typing isn't interrupted.
     conv.titleEl.textContent = title;
     const nearBottom = conv.list.scrollHeight - conv.list.scrollTop - conv.list.clientHeight < 80;
@@ -218,13 +220,13 @@ function convView(root, id) {
   const titleEl = h('span', { class: 'conv-title display' }, title);
   const convRoot = h('div', { class: 'conv' },
     h('div', { class: 'conv-head' },
-      h('button', { class: 'icon-btn', 'aria-label': 'Back to chats', onclick: closeChat }, icon(ICONS.left)),
+      fixed ? h('span') : h('button', { class: 'icon-btn', 'aria-label': 'Back to chats', onclick: closeChat }, icon(ICONS.left)),
       titleEl,
       h('button', { class: 'icon-btn', 'aria-label': 'Chat info', onclick: () => chatInfo(id) }, icon(chat.kind === 'group' ? ICONS.people : ICONS.more))),
     list,
     h('div', { class: 'composer' }, input, sendBtn));
   root.replaceChildren(convRoot);
-  conv = { id, root: convRoot, list, items, input, titleEl };
+  conv = { id, root: convRoot, list, items, input, titleEl, fixed };
   items.replaceChildren(...bubbles(id));
   grow();
   requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
@@ -284,8 +286,32 @@ export function renderChat(root) {
       h('p', { class: 'set-note chat-empty' }, 'Sign in to chat with friends.')));
     return;
   }
+  if (filmOn()) { filmChat(root); return; }
+  if (filmChatShown) { filmChatShown = false; openId = null; } // back from film mode: the list
   if (openId) convView(root, openId);
   else listView(root);
+}
+
+// Film mode: the Chat tab is the project's one group chat.
+let filmChatShown = false;
+let fetchedFor = null;
+function filmChat(root) {
+  const p = currentProject();
+  const note = (text) => {
+    document.body.classList.remove('chatting');
+    conv = null;
+    root.replaceChildren(h('div', { class: 'settings chat-page' }, h('h1', { class: 'display' }, 'Chat'), h('p', { class: 'set-note chat-empty' }, text)));
+  };
+  if (!p) { note('Choose or create a project: tap the slate on the Calendar.'); return; }
+  if (!p.chat_id) { note('This project has no chat (Chat isn’t set up).'); return; }
+  if (!getChat(p.chat_id)) {
+    if (fetchedFor !== p.chat_id) { fetchedFor = p.chat_id; refreshChats(); }
+    note(chatStatus() === 'missing' ? 'Chat isn’t set up yet.' : 'Loading the project chat…');
+    return;
+  }
+  filmChatShown = true;
+  openId = p.chat_id;
+  convView(root, p.chat_id, true);
 }
 
 export const inConversation = () => !!openId;

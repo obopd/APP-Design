@@ -120,7 +120,7 @@ function foldersSection() {
 
 export function renderSettings(root) {
   const rerender = () => renderSettings(root);
-  const set = (k, v) => { state.settings[k] = v; save(); applyTheme(); rerender(); };
+  const set = (k, v) => { state.settings[k] = v; save({ personal: true }); applyTheme(); rerender(); };
 
   const theme = h('div', { class: 'segmented', role: 'radiogroup', 'aria-label': 'Theme' },
     [['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']].map(([v, label]) => h('button', {

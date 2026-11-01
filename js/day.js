@@ -1,7 +1,7 @@
 // The area below the calendar when a day is selected: to-dos + hourly schedule.
 import { h, icon, ICONS, fmt, todayKey, daysBetween, toMinutes, shortTime, formatDuration, formatClock, formatNumber } from './util.js';
 import {
-  state, save, eventsOn, todosOn, isDone, isRoutine, toggleDone, childCategories,
+  cur, save, eventsOn, todosOn, isDone, isRoutine, toggleDone, childCategories,
   isTracked, valueOn, setValue, startTimer, stopTimer, routineStats, hasDue, isStarred,
 } from './store.js';
 import { askText, tell } from './ui.js';
@@ -145,7 +145,7 @@ function todoItem(t, key, actions) {
 // One section's to-dos grouped into (nested) category folders. A folder only shows
 // if it has to-dos here somewhere inside it; its open/closed state is saved.
 function folderTree(todos, key, actions) {
-  const known = new Set(state.categories.map((c) => c.id));
+  const known = new Set(cur().categories.map((c) => c.id));
   const catOf = (t) => (known.has(t.category) ? t.category : null);
 
   const countIn = (catId) => todos.filter((t) => catOf(t) === catId).length

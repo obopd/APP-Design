@@ -1,6 +1,6 @@
 // Small bottom sheet to create or edit a to-do folder: name + underline color.
 import { h, icon, ICONS } from './util.js';
-import { state, save, ensureCategoryPath, deleteCategory } from './store.js';
+import { cur, save, ensureCategoryPath, deleteCategory } from './store.js';
 import { ask } from './ui.js';
 import { shareField } from './people.js';
 
@@ -71,9 +71,9 @@ export function openFolderSheet({ cat = null, parent = null, onDone = () => {}, 
       id = cat.id;
     } else {
       id = ensureCategoryPath(text, parent);
-      state.categories.find((c) => c.id === id).color = color;
+      cur().categories.find((c) => c.id === id).color = color;
     }
-    if (share) state.categories.find((c) => c.id === id).sharedWith = share.value();
+    if (share) cur().categories.find((c) => c.id === id).sharedWith = share.value();
     finished = true;
     save();
     close();

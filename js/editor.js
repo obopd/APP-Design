@@ -1,6 +1,6 @@
 // Bottom sheet for creating / editing a to-do or a schedule item.
 import { h, icon, ICONS, todayKey, toMinutes, fromMinutes, pad } from './util.js';
-import { state, save, uid, REPEATS, TRACKS, categoryTree, hasDue, todoDate } from './store.js';
+import { cur, save, uid, REPEATS, TRACKS, categoryTree, hasDue, todoDate } from './store.js';
 import { openFolderSheet } from './folders.js';
 import { ask, selectButton } from './ui.js';
 import { postponeTomorrow, postponePick } from './postpone.js';
@@ -124,14 +124,14 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null, 
       // Due date: one-off only, never before the to-do's date.
       const dueKey = repeat.value === 'none' && due.value ? (due.value < date ? date : due.value) : '';
       const data = { ...base, category: category.value && category.value !== '__new' ? category.value : null, track: track.value, due: dueKey };
-      if (isNew) state.todos.push({ id: uid(), ...data });
+      if (isNew) cur().todos.push({ id: uid(), ...data });
       else Object.assign(item, data);
     } else {
       const s = start.value || '09:00';
       let e = end.value || fromMinutes(toMinutes(s) + 60);
       if (toMinutes(e) <= toMinutes(s)) e = fromMinutes(Math.min(toMinutes(s) + 60, 23 * 60 + 59));
       const data = { ...base, allDay: allDay.checked, start: s, end: e, alert: alert.value };
-      if (isNew) state.events.push({ id: uid(), ...data });
+      if (isNew) cur().events.push({ id: uid(), ...data });
       else Object.assign(item, data);
     }
     save();
@@ -146,7 +146,7 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null, 
       ok: 'Delete', danger: true,
     })) return;
     const list = kind === 'todo' ? 'todos' : 'events';
-    state[list] = state[list].filter((x) => x !== item);
+    cur()[list] = cur()[list].filter((x) => x !== item);
     save();
     close();
   };

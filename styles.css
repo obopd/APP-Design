@@ -105,10 +105,28 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 
 /* Small app icon (logo), always at the top of the calendar screen (month and week mode). */
 .brand {
-  flex: none; align-self: center; width: 30px; height: 30px; margin: 0 0 14px;
+  flex: none; align-self: center; width: 30px; height: 30px; margin: 0 0 14px; position: relative;
   border-radius: 22.5%; /* iOS-like icon corners */
   box-shadow: 0 0 0 1px var(--line); /* keeps the black icon visible on a dark background */
+  perspective: 120px; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+  transition: transform .25s var(--ease);
 }
+/* Press and hold (film mode switch): the logo sinks slowly while held. */
+.brand.pressing { transform: scale(.82); transition: transform .9s cubic-bezier(.3, 0, .2, 1); }
+.brand-face {
+  position: absolute; inset: 0; width: 100%; height: 100%; border-radius: inherit; display: block;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  transition: transform .5s cubic-bezier(.3, .7, .2, 1), opacity .2s linear;
+}
+/* Calendar logo flips away, the clapperboard flips in, then its arm claps shut. */
+.brand-slate { transform: rotateY(-180deg); opacity: 0; }
+.film .brand-cal { transform: rotateY(180deg); opacity: 0; transition-delay: 0s, .12s; }
+.film .brand-slate { transform: rotateY(0); opacity: 1; transition-delay: .05s, .05s; }
+.brand-cal { transition-delay: .05s, .05s; }
+.slate-arm { transform-origin: 140px 194px; }
+.slate-arm { transform: rotate(-26deg); transition: transform .22s cubic-bezier(.6, 0, .9, .5) .55s; }
+.film .slate-arm { transform: rotate(0); }
+.film-instant .brand-face, .film-instant .slate-arm { transition: none !important; }
 .tdd-label {
   font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
   color: var(--on-accent); background: var(--accent); border-radius: 999px; padding: 3px 9px 2px;
@@ -787,3 +805,92 @@ body.chatting #view-chat {
 .composer-send svg { width: 18px; height: 18px; stroke-width: 2.2; }
 .composer-send:disabled { opacity: .3; }
 .msg-earlier[hidden] { display: none; }
+
+/* ---------- Film Production Mode ---------- */
+/* The dock swaps D-Day for Write. */
+.tab[data-view="write"] { display: none; }
+.film .tab[data-view="write"] { display: grid; }
+.film .tab[data-view="dday"] { display: none; }
+
+/* Project name above the month (where today's D-Days sit in normal mode). */
+.film-chip-wrap { display: grid; justify-items: center; gap: 4px; margin-bottom: 22px; transition: opacity .3s var(--ease) .2s; }
+.week-mode .film-chip-wrap { opacity: 0; pointer-events: none; transition: none; }
+.film-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 80vw; padding: 4px 10px; border-radius: 12px; }
+.film-chip:active { background: var(--soft); }
+.film-chip-label { font-family: var(--display); font-weight: 600; font-size: 22px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.film-chip svg { width: 15px; height: 15px; color: var(--muted); flex-shrink: 0; }
+.film-chip-sub { font-size: 11.5px; color: var(--muted); }
+.film-card .film-members { display: grid; gap: 2px; }
+.film-p-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.film-p-owner { font-size: 11px; color: var(--muted); margin-left: auto; padding-left: 8px; }
+.danger-text { color: var(--sun); }
+
+/* Write tab */
+.write-page { gap: 14px; }
+.write-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 34px; }
+.write-project { font-family: var(--display); font-weight: 600; font-size: 24px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.write-tabs { justify-self: stretch; display: grid; grid-template-columns: repeat(3, 1fr); }
+.write-lock { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.write-lock::before { content: "● "; color: var(--sun); }
+.write-done { background: var(--accent); color: var(--on-accent); }
+.write-banner { margin: 0; font-size: 12.5px; color: var(--sun); }
+.write-banner[hidden] { display: none; }
+.w-meta { margin: -4px 0 0; font-size: 11.5px; color: var(--muted); }
+.w-doc { display: grid; gap: 20px; padding-bottom: 20px; }
+.w-part { display: grid; gap: 6px; }
+.w-h { margin: 0; font-family: var(--display); font-weight: 600; font-size: 16px; }
+.w-text { margin: 0; font-size: 15px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.w-empty { margin: 0; font-size: 13px; color: var(--muted); }
+.w-chars { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.w-chars li { display: grid; gap: 2px; font-size: 14px; line-height: 1.45; }
+.w-chars li span { color: var(--muted); white-space: pre-wrap; }
+.w-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.w-card { display: flex; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--soft); }
+.w-card.edit { display: grid; gap: 4px; padding: 6px 6px 8px 10px; }
+.w-card-n { font-family: var(--display); font-weight: 600; font-size: 14px; color: var(--muted); min-width: 16px; }
+.w-card-main { display: grid; gap: 2px; font-size: 14px; line-height: 1.45; min-width: 0; }
+.w-card-main span { color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+.w-cards-edit { display: grid; gap: 6px; }
+.w-row { display: flex; align-items: center; gap: 2px; }
+.write-tiny { width: 30px; height: 30px; color: var(--muted); flex-shrink: 0; }
+.write-tiny svg { width: 15px; height: 15px; }
+.write-area, .write-line {
+  width: 100%; border: 0; outline: none; background: transparent; color: var(--fg); font: inherit;
+  font-size: 16px; line-height: 1.5; padding: 4px 0; resize: none;
+}
+.write-area { background: var(--soft); border-radius: 10px; padding: 8px 10px; min-height: 40px; overflow: hidden; }
+.w-card .write-area { background: var(--bg); }
+.write-line { flex: 1; min-width: 0; font-weight: 600; }
+.w-act-title { font-family: var(--display); font-size: 17px; }
+.w-chars-edit { display: grid; gap: 10px; }
+.w-char { display: grid; gap: 4px; }
+.w-add { justify-self: start; }
+
+/* Screenplay: Courier-style, the usual indents (scaled to a phone). */
+.screenplay { font-family: "Courier Prime", "Courier New", Courier, ui-monospace, monospace; font-size: 14px; line-height: 1.45; display: grid; gap: 0; }
+.screenplay .sp { margin: 0; padding: 0; white-space: pre-wrap; overflow-wrap: anywhere; position: relative; }
+.screenplay p.sp-scene { font-weight: 700; text-transform: uppercase; margin-top: 14px; }
+.screenplay p.sp-action { margin-top: 10px; }
+.screenplay p.sp-character { text-transform: uppercase; margin: 12px 0 0 34%; }
+.screenplay p.sp-paren { margin-left: 26%; margin-right: 20%; }
+.screenplay p.sp-dialogue { margin-left: 16%; margin-right: 12%; }
+.screenplay p.sp-transition { text-transform: uppercase; text-align: right; margin-top: 10px; }
+.sp-num { position: absolute; left: -18px; font-weight: 400; color: var(--muted); font-size: 11px; top: 2px; }
+.screenplay:not(.editing) { padding-left: 18px; }
+.screenplay.editing textarea.sp {
+  width: 100%; border: 0; outline: none; resize: none; background: transparent; color: var(--fg);
+  font: inherit; font-size: 16px; line-height: 1.45; padding: 3px 0; overflow: hidden;
+}
+.screenplay.editing textarea.sp:focus { background: var(--soft); border-radius: 6px; }
+.screenplay.editing .sp-scene { font-weight: 700; text-transform: uppercase; margin-top: 10px; }
+.screenplay.editing .sp-character { text-transform: uppercase; padding-left: 34% !important; margin-top: 8px; }
+.screenplay.editing .sp-paren { padding-left: 26% !important; }
+.screenplay.editing .sp-dialogue { padding-left: 16% !important; }
+.screenplay.editing .sp-transition { text-transform: uppercase; text-align: right; }
+.sp-bar {
+  position: sticky; top: 0; z-index: 2; display: flex; gap: 4px; overflow-x: auto; padding: 4px 0 8px;
+  background: var(--bg); scrollbar-width: none;
+}
+.sp-type { flex-shrink: 0; font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 999px; background: var(--soft); color: var(--muted); }
+.sp-type.on { background: var(--accent); color: var(--on-accent); }
+#view-write { padding-bottom: calc(var(--tabbar) + 8px); }

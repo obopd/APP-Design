@@ -1,6 +1,9 @@
 import { addDays, dateKey, parseKey, todayKey, h } from './util.js';
 import { onChange } from './store.js';
 import { renderCalendar, renderExpanded } from './calendar.js';
+import { filmOn, onFilmChange, refreshFilm, editorOf } from './film.js';
+import { setupBrand, renderProjectChip, paintBrand } from './filmui.js';
+import { renderWrite, finishEditing, writeBackgrounded, isEditing } from './write.js';
 import { renderDay, tickTimers } from './day.js';
 import { openEditor } from './editor.js';
 import { renderSettings, applyTheme } from './settings.js';
@@ -20,6 +23,7 @@ const settingsEl = document.getElementById('view-settings');
 const ddayEl = document.getElementById('view-dday');
 const loginEl = document.getElementById('view-login');
 const chatEl = document.getElementById('view-chat');
+const writeEl = document.getElementById('view-write');
 const chatBadge = document.querySelector('.tab[data-view="chat"] .tab-badge');
 const toastEl = document.getElementById('toast');
 const ddaySlot = document.getElementById('dday-slot');
@@ -232,7 +236,7 @@ function render() {
   document.body.classList.toggle('gated', gated);
   loginEl.hidden = !gated;
   if (gated) {
-    calendarView.hidden = settingsEl.hidden = ddayEl.hidden = chatEl.hidden = true;
+    calendarView.hidden = settingsEl.hidden = ddayEl.hidden = chatEl.hidden = writeEl.hidden = true;
     chatShown(false);
     if (!gateShown) renderLoginGate(loginEl); // once per visit, so typing isn't wiped
     gateShown = true;
@@ -246,6 +250,11 @@ function render() {
     prevView = null;
   }
 
+  // Film mode has a Write tab instead of D-Day.
+  if (filmOn() && view.tab === 'dday') view.tab = 'calendar';
+  if (!filmOn() && view.tab === 'write') view.tab = 'calendar';
+  if (view.tab !== 'write' && isEditing()) finishEditing();
+
   document.querySelectorAll('.tab').forEach((t) => {
     const on = t.dataset.view === view.tab;
     t.classList.toggle('active', on);
@@ -258,10 +267,12 @@ function render() {
   chatShown(view.tab === 'chat');
   paintChatBadge();
   ddayEl.hidden = view.tab !== 'dday';
+  writeEl.hidden = view.tab !== 'write';
 
   if (view.tab === 'settings') { renderSettings(settingsEl); prevView = { ...view }; return; }
   if (view.tab === 'chat') { renderChat(chatEl); prevView = { ...view }; return; }
   if (view.tab === 'dday') { renderDdays(ddayEl); prevView = { ...view }; return; }
+  if (view.tab === 'write') { renderWrite(writeEl); prevView = { ...view }; return; }
 
   // Month ⇄ week: lay out the end state at once, then animate only transform / opacity /
   // clip-path from where things were (FLIP), so the phone never re-lays out mid-animation.
@@ -292,7 +303,8 @@ function render() {
   const panelFirst = animate && wasWeek ? panelEl.getBoundingClientRect() : null;
 
   renderCalendar(calendarEl, view, actions);
-  const ddaysToday = renderTodayDdays(ddaySlot, () => { view.tab = 'dday'; render(); });
+  // Film mode shows the project's name above the month instead of today's D-Days.
+  const ddaysToday = filmOn() ? renderProjectChip(ddaySlot) : renderTodayDdays(ddaySlot, () => { view.tab = 'dday'; render(); });
   calendarView.classList.toggle('has-dday', ddaysToday > 0);
   if (view.selected) renderDay(panelEl, view.selected, actions);
   if (animate) void calendarEl.offsetHeight; // commit the start state so CSS transitions run
@@ -312,7 +324,25 @@ function paintBell() {
   bellBadge.textContent = n > 9 ? '9+' : String(n);
   bellEl.setAttribute('aria-label', n ? `Notifications, ${n} new` : 'Notifications');
 }
-bellEl.addEventListener('click', openNotifications);
+bellEl.addEventListener('click', () => { openNotifications(); refreshFilm(); });
+
+// Film Production Mode: the logo (press and hold) switches; project data redraws the views.
+setupBrand(document.getElementById('brand'), () => {
+  if (filmOn() && view.tab === 'dday') view.tab = 'calendar';
+  if (!filmOn() && view.tab === 'write') view.tab = 'calendar';
+  render();
+});
+onFilmChange(() => { if (!isGated()) render(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') writeBackgrounded();
+  else refreshFilm(); // also outside film mode: project invites show in the bell
+});
+// Collaborators' changes: every 15s in film mode; every 5s while someone else edits the open section.
+setInterval(() => {
+  if (document.visibilityState !== 'visible' || !filmOn()) return;
+  if (view.tab === 'write' && !isEditing() && ['story', 'plot', 'script'].some((s) => editorOf(s))) refreshFilm();
+}, 5000);
+setInterval(() => { if (document.visibilityState === 'visible' && filmOn()) refreshFilm(); }, 15000);
 
 // Chat: unread count on the dock's Chat tab; the open tab redraws on new messages.
 function paintChatBadge() {
@@ -375,7 +405,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') { render(); refreshReminders(); refreshSocial(); refreshChats(); }
 });
 // Friends' changes arrive by checking now and then while the app is open.
-setInterval(() => { if (document.visibilityState === 'visible') { refreshSocial(); refreshChats(); } }, 60 * 1000);
+setInterval(() => { if (document.visibilityState === 'visible') { refreshSocial(); refreshChats(); refreshFilm(); } }, 60 * 1000);
 
 // iPhone keyboard: keep the chat (composer) inside the visible area above the keyboard.
 if (window.visualViewport) {
@@ -416,4 +446,4 @@ onCloudChange(() => {
 handleAuthRedirect()
   .then((type) => { if (type === 'recovery') { view.tab = 'settings'; render(); openAccountSheet('new-password'); } })
   .catch(() => {})
-  .finally(() => syncNow().then(() => { refreshSocial(); refreshChats(); }));
+  .finally(() => syncNow().then(() => { refreshSocial(); refreshChats(); refreshFilm(); }));

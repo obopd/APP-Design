@@ -149,14 +149,14 @@ export function openDdaySheet(dday = null) {
     const data = { title: text, date: date.value, yearly: yearly.checked };
     if (dday) Object.assign(dday, data);
     else state.ddays.push({ id: uid(), ...data });
-    save();
+    save({ personal: true });
     close();
   };
 
   const remove = async () => {
     if (!await ask({ title: `Delete “${dday.title}”?`, ok: 'Delete', danger: true })) return;
     state.ddays = state.ddays.filter((x) => x !== dday);
-    save();
+    save({ personal: true });
     close();
   };
 

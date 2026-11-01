@@ -2,6 +2,7 @@
 // "Share" row used by the editor and the folder sheet, and the friend picker.
 import { h, icon, ICONS } from './util.js';
 import { ask, tell, askText, openLayer } from './ui.js';
+import { inFilm } from './store.js';
 import {
   socialEnabled, socialStatus, myHandle, friends, acceptedFriends, nameOf, notifications, markSeen,
   setHandle, addFriend, acceptFriend, removeFriend, refreshSocial,
@@ -149,7 +150,7 @@ const shareLabel = (ids) => {
  * friends aren't available. Only friends still on the list are kept.
  */
 export function shareField(initial = []) {
-  if (!socialEnabled() || socialStatus() === 'missing') return null;
+  if (!socialEnabled() || socialStatus() === 'missing' || inFilm()) return null; // film projects share via collaborators
   // Keep ids as they are until changed here, so a friend list that hasn't loaded yet
   // (offline) can't silently un-share anything; only current friends are counted.
   let ids = [...initial];

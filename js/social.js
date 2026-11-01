@@ -7,7 +7,7 @@
 // A friend can check a shared to-do off: that writes a `share_checks` row, which the
 // owner's app applies to its own to-do and then deletes.
 import { api, currentUser, isConfigured, onCloudChange } from './cloud.js';
-import { state, save, onChange, isRoutine, hasDue, todoDate, occursOn, childCategories } from './store.js';
+import { state, save, onChange, isRoutine, hasDue, todoDate, occursOn, inFilm } from './store.js';
 
 const CACHE_KEY = 'planner.social';
 export const HANDLE_RE = /^[a-z0-9_.]{3,20}$/;
@@ -159,7 +159,7 @@ export async function removeFriend(rowId) {
     for (const item of [...state.todos, ...state.events, ...state.categories]) {
       if (item.sharedWith?.includes(f.id)) { item.sharedWith = item.sharedWith.filter((id) => id !== f.id); changed = true; }
     }
-    if (changed) save();
+    if (changed) save({ personal: true });
   }
   await refreshSocial();
 }
@@ -172,7 +172,7 @@ const EVENT_KEYS = ['id', 'title', 'date', 'allDay', 'start', 'end', 'repeat', '
 
 function folderTodos(catId, path) {
   const own = state.todos.filter((t) => t.category === catId).map((t) => ({ ...pick(t, TODO_KEYS), folder: path }));
-  return [...own, ...childCategories(catId).flatMap((c) => folderTodos(c.id, `${path} / ${c.name}`))];
+  return [...own, ...state.categories.filter((c) => (c.parent || null) === catId).flatMap((c) => folderTodos(c.id, `${path} / ${c.name}`))];
 }
 
 function snapshot(kind, item) {
@@ -189,6 +189,7 @@ function stable(v) {
 }
 
 async function publishShares() {
+  if (inFilm()) return; // film mode shows project lists; personal shares wait until it ends
   const uid = me();
   const ok = new Set(acceptedFriends().map((f) => f.id));
   const want = new Map();
@@ -257,7 +258,7 @@ async function applyFriendChecks() {
     logNote(`check:${c.share_id}:${c.todo_id}:${c.day}:${c.updated_at}`,
       `${nameOf(c.by_user)} ${c.done ? 'checked off' : 'unchecked'} “${todo.title}”`);
   }
-  if (changed) save();
+  if (changed) save({ personal: true });
   await publishShares(); // so the friend sees the result before their check row goes away
   for (const c of incoming) {
     await rest(`share_checks?share_id=eq.${c.share_id}&todo_id=eq.${encodeURIComponent(c.todo_id)}&day=eq.${c.day}`, { method: 'DELETE' });
@@ -284,6 +285,7 @@ function override(shareId, todo, day) {
 }
 
 export function sharedTodos() {
+  if (inFilm()) return []; // friends' shared items belong to the personal planner
   return inbox().flatMap((s) => {
     const list = s.kind === 'todo' ? [s.data] : s.kind === 'folder' ? (s.data.todos || []) : [];
     return list.map((t) => ({ ...t, shareId: s.id, owner: s.owner, folder: t.folder || null, shared: true }));
@@ -298,7 +300,7 @@ export function sharedTodosOn(key) {
   }).filter((t) => (isRoutine(t) ? occursOn(t, key) && !t.skipOn?.[key] : hasDue(t) ? todoDate(t) === key : t.date === key));
 }
 
-export const sharedEventsOn = (key) => inbox().filter((s) => s.kind === 'event')
+export const sharedEventsOn = (key) => (inFilm() ? [] : inbox()).filter((s) => s.kind === 'event')
   .map((s) => ({ ...s.data, shareId: s.id, owner: s.owner, shared: true }))
   .filter((e) => occursOn(e, key));
 
@@ -332,6 +334,11 @@ function logNote(key, text) {
   data.log = [{ key, text, at: new Date().toISOString() }, ...data.log].slice(0, 40);
 }
 
+// Other features (film projects) can add their own bell items.
+const noteSources = [];
+export const addNoteSource = (fn) => noteSources.push(fn);
+export const notifySocial = () => notify();
+
 export function notifications() {
   const uid = me();
   const list = [];
@@ -349,6 +356,7 @@ export function notifications() {
     list.push({ key: `share:${s.id}`, text: `${nameOf(s.owner)} shared ${what} with you`, at: s.created_at });
   }
   list.push(...data.log);
+  noteSources.forEach((fn) => list.push(...fn()));
   return list.sort((a, b) => (b.at || '').localeCompare(a.at || ''));
 }
 
