@@ -1,6 +1,6 @@
 import { addDays, dateKey, parseKey, todayKey, h } from './util.js';
 import { onChange } from './store.js';
-import { renderCalendar } from './calendar.js';
+import { renderCalendar, renderExpanded } from './calendar.js';
 import { renderDay, tickTimers } from './day.js';
 import { openEditor } from './editor.js';
 import { renderSettings, applyTheme } from './settings.js';
@@ -20,16 +20,28 @@ const ddayEl = document.getElementById('view-dday');
 const loginEl = document.getElementById('view-login');
 const toastEl = document.getElementById('toast');
 const ddaySlot = document.getElementById('dday-slot');
+const expandedEl = document.getElementById('expanded');
 const bellEl = document.getElementById('bell');
 const bellBadge = bellEl.querySelector('.bell-badge');
 
 // view.selected = 'YYYY-MM-DD' → week mode; null → month mode.
 const now = new Date();
-const view = { tab: 'calendar', cursor: new Date(now.getFullYear(), now.getMonth(), 1), selected: null };
+// view.expand = 'week' | 'month' → the expanded calendar (grid button); view.week = its Sunday.
+const view = { tab: 'calendar', cursor: new Date(now.getFullYear(), now.getMonth(), 1), selected: null, expand: null, week: null };
+
+// Sunday of the week to show when expanding: this week if it's in the shown month,
+// otherwise the month's first week.
+function weekToShow() {
+  const today = new Date();
+  const inMonth = today.getFullYear() === view.cursor.getFullYear() && today.getMonth() === view.cursor.getMonth();
+  const d = inMonth ? today : view.cursor;
+  return dateKey(addDays(d, -d.getDay()));
+}
 let prevView = null;
 
 const actions = {
   select(key) {
+    view.expand = null;
     view.selected = view.selected === key ? null : key; // tap the selected day again to go back to month
     const d = parseKey(key);
     view.cursor = new Date(d.getFullYear(), d.getMonth(), 1);
@@ -40,8 +52,26 @@ const actions = {
     view.selected = null;
     render();
   },
+  // Grid button: normal → expanded week → expanded month → normal.
+  toggleExpand() {
+    if (!view.expand) {
+      view.expand = 'week';
+      view.week = weekToShow();
+    } else if (view.expand === 'week') {
+      const mid = addDays(parseKey(view.week), 3);
+      view.cursor = new Date(mid.getFullYear(), mid.getMonth(), 1);
+      view.expand = 'month';
+    } else {
+      view.expand = null;
+    }
+    render();
+  },
   shift(dir) {
-    if (view.selected) {
+    if (view.expand === 'week') {
+      view.week = dateKey(addDays(parseKey(view.week), dir * 7));
+      const mid = addDays(parseKey(view.week), 3);
+      view.cursor = new Date(mid.getFullYear(), mid.getMonth(), 1);
+    } else if (view.selected) {
       view.selected = dateKey(addDays(parseKey(view.selected), dir * 7));
       const d = parseKey(view.selected);
       view.cursor = new Date(d.getFullYear(), d.getMonth(), 1);
@@ -126,7 +156,16 @@ function render() {
   // clip-path from where things were (FLIP), so the phone never re-lays out mid-animation.
   const wasWeek = calendarView.classList.contains('week-mode');
   const willWeek = !!view.selected;
-  const animate = wasWeek !== willWeek && prevView?.tab === 'calendar';
+  const expanded = !!view.expand && !view.selected;
+  calendarView.classList.toggle('expand-mode', expanded);
+  expandedEl.hidden = !expanded;
+  if (expanded) {
+    // Fade the expanded calendar in only when it first opens (not on every redraw).
+    const fresh = !prevView?.expand || prevView.tab !== 'calendar';
+    renderExpanded(expandedEl, view, actions);
+    if (fresh) { expandedEl.classList.remove('enter'); void expandedEl.offsetWidth; expandedEl.classList.add('enter'); }
+  }
+  const animate = wasWeek !== willWeek && prevView?.tab === 'calendar' && !prevView?.expand && !expanded;
   const first = animate ? calendarEl.getBoundingClientRect() : null;
   const panelFirst = animate && wasWeek ? panelEl.getBoundingClientRect() : null;
 
@@ -184,6 +223,16 @@ calendarEl.addEventListener('touchend', (e) => {
   touch = null;
   if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) actions.shift(dx < 0 ? 1 : -1);
   else if (dy > 60 && Math.abs(dy) > Math.abs(dx) * 1.5) actions.showMonth();
+});
+// Expanded calendar: swipe sideways to the previous / next week or month.
+let xTouch = null;
+expandedEl.addEventListener('touchstart', (e) => { xTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }, { passive: true });
+expandedEl.addEventListener('touchend', (e) => {
+  if (!xTouch) return;
+  const dx = e.changedTouches[0].clientX - xTouch.x;
+  const dy = e.changedTouches[0].clientY - xTouch.y;
+  xTouch = null;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) actions.shift(dx < 0 ? 1 : -1);
 });
 
 onChange(() => { render(); refreshReminders(); });

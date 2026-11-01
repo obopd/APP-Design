@@ -283,7 +283,7 @@ function override(shareId, todo, day) {
   return mine ? { done: mine.done, day: mine.day } : null;
 }
 
-function sharedTodos() {
+export function sharedTodos() {
   return inbox().flatMap((s) => {
     const list = s.kind === 'todo' ? [s.data] : s.kind === 'folder' ? (s.data.todos || []) : [];
     return list.map((t) => ({ ...t, shareId: s.id, owner: s.owner, folder: t.folder || null, shared: true }));

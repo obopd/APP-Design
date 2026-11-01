@@ -44,6 +44,14 @@ laptop. So:
   that date's week**, and the space below shows that day in **two columns**:
   to-do list on the left, hourly schedule timeline on the right. Tapping the
   selected date again, the month name, or swiping down returns to the month.
+- **Expanded calendar** (grid button `.grid-btn` right of the month name, month mode only;
+  `renderExpanded` in calendar.js, `#expanded`, `view.expand` / `view.week` in app.js):
+  1st tap = this week as **7 stacked rows** (date left, chips right), 2nd tap = the whole
+  month as a taller grid (up to 3 chips per day, else 2 + "+n"), 3rd tap = back. It shows
+  every event (own + shared, time first) and every to-do **that has a due date, on its due
+  date** (slim-dash outlined chip; done = struck). ‹ › and sideways swipes move by week /
+  month; tapping a day opens that day's normal view. Fades/scales in (no layout animation).
+  Chip classes are `.chip-ev` / `.chip-due` — never `.event`, which is the timeline block.
 - Design: **minimalist** — modern, clean, intuitive, small sizes, as few words as
   possible (prefer icons/symbols over labels). **Never use iPhone system pop-ups**:
   no `confirm` / `alert` / `prompt` and no native `<select>` — use `ask` / `tell` /
@@ -212,7 +220,8 @@ sw.js                  Service worker: offline cache (network-first) + notificat
 js/app.js              Entry point: view state (tab, month, selected day), actions, render(), tabs, swipes
 js/util.js             h() DOM helper, inline SVG icons, date helpers (local 'YYYY-MM-DD' keys)
 js/store.js            State + localStorage, change listeners, routines (occursOn, isDone), queries, folder helpers
-js/calendar.js         Square month card (6 rows); week mode = rows slid + clip-path masked to one week
+js/calendar.js         Square month card (6 rows); week mode = rows slid + clip-path masked to one week;
+                       expanded week/month agenda (grid button)
 js/day.js              Day view: to-do folders (mark = done, text = edit) + hourly timeline, stretchable split
 js/editor.js           Bottom sheet to add/edit a to-do or event (folder, repeat/until, alert)
 js/folders.js          Bottom sheet to create/edit a folder: name + underline color
@@ -340,7 +349,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v47`; bump to `planner-v48`, …) and keep its `ASSETS` list in sync
+(currently `planner-v48`; bump to `planner-v49`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

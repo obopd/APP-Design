@@ -604,3 +604,72 @@ body.gated .tabbar { display: none; }
 .shared-section { border: 1px dashed var(--line); }
 .event.shared { background: var(--bg); border: 1px dashed color-mix(in srgb, var(--fg) 35%, transparent); }
 .event.shared.imp { color: var(--fg); border-color: var(--accent); }
+
+/* ---------- Expanded calendar (grid button next to the month) ---------- */
+.cal-title-wrap { justify-self: center; position: relative; display: flex; align-items: center; }
+.grid-btn { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; color: var(--muted); }
+.grid-btn svg { width: 15px; height: 15px; stroke-width: 1.8; }
+.grid-btn.on { color: var(--fg); }
+.grid-btn.on svg { fill: currentColor; fill-opacity: .14; }
+.grid-btn[data-expand="month"] svg { fill-opacity: 1; }
+
+/* The square card steps aside; the expanded card fills the space down to the dock. */
+.expand-mode .calendar, .expand-mode .panel, .expand-mode .top-slot, .expand-mode > .grow { display: none; }
+.expanded {
+  flex: 1 1 0; min-height: 0; display: flex; flex-direction: column;
+  width: calc(100% - 2 * var(--gap) + 16px); max-width: 560px; margin: 0 auto;
+  padding: calc(var(--cal-pad) + 1px); border: 1px solid var(--line); border-radius: 24px; background: var(--bg);
+  touch-action: pan-y;
+}
+.expanded[hidden] { display: none; }
+.expanded.enter { animation: expand-in .42s var(--ease) both; }
+@keyframes expand-in { from { opacity: 0; transform: scale(.97); } }
+.expanded .cal-head { flex: none; }
+
+/* Chips: an event (soft block), a due to-do (slim dash in front), shared ones dashed. */
+.chip {
+  display: flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%;
+  padding: 1px 5px; border-radius: 5px; background: var(--soft); font-size: 12px; line-height: 17px;
+}
+.chip-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip-time { color: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.chip-ev.imp { background: var(--accent); color: var(--on-accent); }
+.chip-ev.imp .chip-time { color: inherit; opacity: .75; }
+.chip-due { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+.chip-due.imp { box-shadow: inset 0 0 0 1px var(--accent); font-weight: 600; }
+.chip.done { color: var(--muted); text-decoration: line-through; font-weight: 400; }
+.chip.shared { background: transparent; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 30%, transparent); border-radius: 5px; }
+.chip-dash { width: 2.5px; height: 10px; border-radius: 2px; background: currentColor; opacity: .6; flex-shrink: 0; }
+
+/* Week: 7 stacked rows (date on the left, that day's items on the right). */
+.xw-rows { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+.xw-row {
+  flex: 1 0 auto; min-height: 50px; display: flex; align-items: flex-start; gap: 12px; text-align: left;
+  padding: 8px 4px; border-top: 1px solid var(--line);
+}
+.xw-row:active { background: var(--soft); }
+.xw-date { width: 34px; flex-shrink: 0; display: grid; justify-items: center; gap: 1px; }
+.xw-dow { font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+.xw-num { font-size: 18px; line-height: 24px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-variant-numeric: lining-nums; }
+.xw-row.sun .xw-dow, .xw-row.sun .xw-num { color: var(--sun); }
+.xw-row.sat .xw-dow, .xw-row.sat .xw-num { color: var(--sat); }
+.xw-row.today .xw-num { box-shadow: inset 0 0 0 1.2px var(--accent); }
+.xw-items { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px; padding-top: 13px; }
+.xw-none { color: var(--muted); opacity: .5; }
+
+/* Month: the usual grid, taller, with up to 3 chips per day. */
+.xm { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.xm .weekdays { flex: none; }
+.xm-rows { flex: 1; min-height: 0; display: grid; grid-template-rows: repeat(6, minmax(0, 1fr)); }
+.xm-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+.xm-day { min-width: 0; overflow: hidden; display: flex; flex-direction: column; align-items: stretch; gap: 2px; padding: 3px 1.5px; text-align: left; }
+.xm-day:active { background: var(--soft); }
+.xm-num { align-self: center; font-family: var(--display); font-size: 13px; font-weight: 500; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-variant-numeric: lining-nums; }
+.xm-row > .xm-day:first-child .xm-num { color: var(--sun); }
+.xm-row > .xm-day:last-child .xm-num { color: var(--sat); }
+.xm-day.other { opacity: .4; }
+.xm-day.today .xm-num { box-shadow: inset 0 0 0 1.2px var(--accent); font-weight: 800; }
+.xm-day > * { flex-shrink: 0; }
+.xm-day .chip { font-size: 9px; line-height: 13px; padding: 0 3px; border-radius: 3px; gap: 2px; }
+.xm-day .chip-dash { height: 7px; width: 2px; }
+.xm-more { font-size: 9px; color: var(--muted); padding-left: 3px; }
