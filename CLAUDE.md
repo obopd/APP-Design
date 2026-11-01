@@ -140,14 +140,11 @@ chats and (film mode) writing; results go to the day, chat, D-Day tab or Write s
 
 **Film Production Mode** (`js/film.js`, `js/filmui.js`, `supabase/film.sql`): **press and
 hold the logo** ~0.9s → `html.film`, the logo becomes a clapperboard (CSS only); saved per
-device (`planner.film`). The switch is a full-screen show (`js/cinema.js`
-`playFilmSwitch`, transform/opacity only, ~60fps at 4× throttle; none with reduced motion):
-entering (1.4s) = letterbox bars slide in over a dark screen with projector grain, a big
-clapperboard slams in, pulls its arm back and claps (white flash + small shake, the mode
-switches under the flash at 520ms), a "FILM MODE" / project-name title card flickers up,
-then the bars retract; leaving (0.82s) = black curtains close on "Cut.", switch at 340ms,
-open again. Film mode keeps a faint vignette + still film grain over the app
-(`html.film body::after`, taps pass through). The project name chip / clapperboard opens the projects card (New /
+device (`planner.film`). The switch animation lives in `js/cinema.js` (`playFilmSwitch`): `FILM_TRANSITION`
+is `'flip'` (just the logo flip) until the owner picks one of the calm candidate styles —
+`dip` (to black, project name in the beat), `letterbox`, `leak` (warm light leak), `focus`
+(blur, the heaviest), `dissolve` — each ~1s, eased, switching the mode at its covered
+moment; reduced motion = none. The owner rejected a dramatic clapperboard show (too much). The project name chip / clapperboard opens the projects card (New /
 Invite / Rename / Delete or Leave / Exit). The calendar, editor, folders and expanded grid
 then show **only the project's** items: `cur()` returns the lists set by `useLists()`;
 `save()` goes to `film.persist()` (row-per-item upsert into `project_items`, merged by object
@@ -190,7 +187,7 @@ js/store.js  state, save/storeItem, routines (occursOn, isDone), queries, folder
 js/calendar.js  js/day.js  js/editor.js  js/folders.js  js/dday.js  js/postpone.js
 js/ui.js     app dialogs and menus (ask, tell, askText, askDate, pick, pickMany, snack…)
 js/motion.js sheet close animation + drag-down to close
-js/cinema.js the enter / leave film mode show
+js/cinema.js film mode switch animation (candidate styles)
 js/config.js Supabase URL + publishable key + VAPID public key (all public)
 js/cloud.js  auth, sync + merge, storage helpers   js/account.js  login page
 js/settings.js  js/reminders.js (local alerts, badge)  js/push.js  js/live.js  js/search.js
@@ -282,7 +279,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v80`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v81`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 

@@ -1,61 +1,58 @@
-// The moment of switching into / out of Film Production Mode, played over the whole screen.
-// Enter (~1.4s): widescreen bars slide in, a big clapperboard snaps on and claps shut with a
-// flash and a small shake, a title card flickers up, then the bars pull away from the app,
-// already in film mode underneath. Exit (~0.8s): the bars close like curtains on "Cut.",
-// then open onto the planner. Only transform / opacity animate. Reduced motion: no show.
+// The moment of switching into / out of Film Production Mode.
+//
+// Several calm, cinematic styles exist; the owner picks one (FILM_TRANSITION). Until then
+// the switch is just the logo flipping into a clapperboard ('flip', no full-screen effect).
+// Every style animates only transform / opacity (focus also blur), lasts about a second,
+// and switches the mode at its quietest, most covered moment. Reduced motion: no effect.
+//
+//   dip        fade to black and back up, like a cut in an edit
+//   letterbox  thin widescreen bars glide in while the page dims, then glide away
+//   leak       a warm light leak drifts across the screen (film photography)
+//   focus      the page racks out of focus and back into focus
+//   dissolve   the page eases back and fades; the new mode fades in from slightly closer
 import { h } from './util.js';
 
-const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-export const ENTER_MS = 1400;
-export const ENTER_SWITCH_MS = 520; // the clap: the mode switches under the flash
-export const EXIT_MS = 820;
-export const EXIT_SWITCH_MS = 340; // the bars have closed
+export const FILM_TRANSITION = 'flip';
 
+const STYLES = {
+  dip: { total: 1150, at: 560 },
+  letterbox: { total: 1250, at: 600 },
+  leak: { total: 1350, at: 620 },
+  focus: { total: 1100, at: 520, onPage: true },
+  dissolve: { total: 1000, at: 450, onPage: true },
+};
+export const TRANSITIONS = Object.keys(STYLES);
+
+const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 let playing = null;
 
-function slate() {
-  // The logo's clapperboard drawing, without its black tile.
-  const src = document.querySelector('#brand .brand-slate');
-  const svg = src.cloneNode(true);
-  svg.removeAttribute('class');
-  svg.setAttribute('class', 'cine-slate');
-  svg.querySelector('rect').remove();
-  svg.querySelector('.slate-arm').setAttribute('class', 'cine-arm');
-  return svg;
-}
-
-function overlay(kind, title, sub) {
-  return h('div', { class: `cine ${kind}`, 'aria-hidden': 'true' },
-    h('div', { class: 'cine-dim' }),
-    h('div', { class: 'cine-grain' }),
-    h('div', { class: 'cine-bar top' }),
-    h('div', { class: 'cine-bar bottom' }),
-    h('div', { class: 'cine-stage' },
-      kind === 'enter' ? slate() : null,
-      h('p', { class: 'cine-title display' }, title),
-      sub ? h('p', { class: 'cine-sub' }, sub) : null),
-    h('div', { class: 'cine-flash' }));
-}
-
 /**
- * Plays the show and calls switchMode() at the right moment (under the flash / behind the
- * closed bars). Resolves when it's over. Without motion it just switches.
+ * Plays the chosen style and calls switchMode() at its covered moment; resolves when done.
+ * With 'flip', reduced motion, or a show already running, it just switches.
  */
-export function playFilmSwitch(entering, switchMode, projectName = '') {
-  if (reduced.matches || playing) { switchMode(); return Promise.resolve(); }
-  const el = entering
-    ? overlay('enter', 'Film mode', projectName || 'Roll camera')
-    : overlay('exit', 'Cut.', '');
-  document.body.append(el);
-  document.body.classList.add('cine-on');
+export function playFilmSwitch(entering, switchMode, title = '', style = FILM_TRANSITION) {
+  const s = STYLES[style];
+  if (!s || reduced.matches || playing) { switchMode(); return Promise.resolve(); }
+  const dir = entering ? 'in' : 'out';
+  let el = null;
+  if (s.onPage) {
+    document.body.classList.add('fx-page', `fx-${style}`, `fx-${dir}`);
+  } else {
+    el = h('div', { class: `fx fx-${style} fx-${dir}`, 'aria-hidden': 'true' },
+      style === 'letterbox' ? [h('div', { class: 'fx-dim' }), h('div', { class: 'fx-bar top' }), h('div', { class: 'fx-bar bottom' })] : null,
+      style === 'leak' ? [h('div', { class: 'fx-veil' }), h('div', { class: 'fx-glow a' }), h('div', { class: 'fx-glow b' })] : null,
+      style === 'dip' && entering && title ? h('p', { class: 'fx-title display' }, title) : null);
+    document.body.append(el);
+  }
+  document.body.classList.add('fx-on');
   playing = new Promise((resolve) => {
-    setTimeout(switchMode, entering ? ENTER_SWITCH_MS : EXIT_SWITCH_MS);
+    setTimeout(switchMode, s.at);
     setTimeout(() => {
-      el.remove();
-      document.body.classList.remove('cine-on');
+      el?.remove();
+      document.body.classList.remove('fx-on', 'fx-page', `fx-${style}`, `fx-${dir}`);
       playing = null;
       resolve();
-    }, entering ? ENTER_MS : EXIT_MS);
+    }, s.total);
   });
   return playing;
 }

@@ -46,17 +46,25 @@ const { browser, phone, check, wait, done } = require('./helpers');
     const bx = await page.locator('#brand').boundingBox();
     await page.mouse.move(bx.x + 15, bx.y + 15); await page.mouse.down(); await wait(1000); await page.mouse.up();
   };
-  await hold(p); await wait(200);
-  check('entering shows the clapperboard show', await p.locator('.cine.enter .cine-slate').count() === 1);
-  await wait(1500);
-  check('…then it\'s gone and film mode is on', await p.locator('.cine').count() === 0 && await p.evaluate(() => document.documentElement.classList.contains('film')));
-  await hold(p); await wait(200);
-  check('leaving plays the "Cut." curtains', (await p.locator('.cine.exit .cine-title').innerText()) === 'Cut.');
-  await wait(1000);
-  check('…then film mode is off', await p.locator('.cine').count() === 0 && await p.evaluate(() => !document.documentElement.classList.contains('film')));
+  // Default switch = the logo flip only (the owner is choosing a full-screen style).
+  await hold(p); await wait(300);
+  check('default switch: logo flip, no full-screen effect', await p.locator('.fx').count() === 0 && await p.evaluate(() => document.documentElement.classList.contains('film')));
+  await hold(p); await wait(300);
+  // Every candidate style plays, switches the mode under cover, and cleans up.
+  for (const [style, total, at] of [['dip', 1150, 560], ['letterbox', 1250, 600], ['leak', 1350, 620], ['focus', 1100, 520], ['dissolve', 1000, 450]]) {
+    const r = await p.evaluate(async ([style, at]) => {
+      const c = await import('./js/cinema.js');
+      let switched = 0; const t0 = performance.now();
+      const done = c.playFilmSwitch(true, () => { switched = performance.now() - t0; }, 'Night Bus', style);
+      const shown = !!document.querySelector('.fx') || document.body.classList.contains(`fx-${style}`);
+      await done;
+      return { shown, switched: Math.round(switched), clean: !document.querySelector('.fx') && !document.body.className.includes('fx-') };
+    }, [style, at]);
+    check(`${style}: plays, switches at ~${at}ms, cleans up`, r.shown && Math.abs(r.switched - at) < 120 && r.clean, JSON.stringify(r));
+  }
   await p.emulateMedia({ reducedMotion: 'reduce' });
-  await hold(p); await wait(150);
-  check('with Reduce Motion it switches without the show', await p.locator('.cine').count() === 0 && await p.evaluate(() => document.documentElement.classList.contains('film')));
+  const quiet = await p.evaluate(async () => { const c = await import('./js/cinema.js'); let on = false; await c.playFilmSwitch(true, () => { on = true; }, '', 'dip'); return on && !document.querySelector('.fx'); });
+  check('with Reduce Motion every style just switches', quiet);
 
   check('no page errors', !p.errors.length, p.errors.join('; '));
   await done(b);
