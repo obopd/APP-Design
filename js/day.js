@@ -4,7 +4,8 @@ import {
   state, save, eventsOn, todosOn, isDone, isRoutine, toggleDone, childCategories,
   isTracked, valueOn, setValue, startTimer, stopTimer, routineStats, hasDue, isStarred,
 } from './store.js';
-import { askText } from './ui.js';
+import { askText, tell } from './ui.js';
+import { sharedTodosOn, sharedEventsOn, isSharedDone, toggleShared, nameOf } from './social.js';
 import { postponeTomorrow, postponePick } from './postpone.js';
 import { openFolderSheet } from './folders.js';
 
@@ -127,6 +128,7 @@ function todoItem(t, key, actions) {
     h('button', { class: 'todo-title', onclick: () => actions.edit('todo', t, key) },
       t.title,
       starred ? h('span', { class: 'mark star', 'aria-hidden': 'true' }, '★') : null,
+      t.sharedWith?.length ? h('span', { class: 'mark shared-mark', 'aria-label': 'Shared' }, icon(ICONS.people)) : null,
       hasDue(t) && !done ? dueTag(t, key) : null),
     isTracked(t) ? tracker(t, key) : null);
   const li = h('li', { class: `todo${done ? ' done' : ''}${starred ? ' imp' : ''}` },
@@ -160,13 +162,33 @@ function folderTree(todos, key, actions) {
           class: 'folder-head', 'aria-expanded': String(c.open !== false),
           style: c.color ? `--folder-line:${c.color}` : null,
           onclick: () => { c.open = c.open === false; save(); },
-        }, icon(ICONS.right), h('span', { class: 'folder-name' }, c.name), left ? h('span', { class: 'folder-count' }, String(left)) : null),
+        }, icon(ICONS.right), h('span', { class: 'folder-name' }, c.name),
+        c.sharedWith?.length ? h('span', { class: 'mark shared-mark', 'aria-label': 'Shared' }, icon(ICONS.people)) : null,
+        left ? h('span', { class: 'folder-count' }, String(left)) : null),
         h('ul', { class: 'todos' }, branch(c.id)));
     });
     return [...items, ...folders];
   };
 
   return h('ul', { class: 'todos root' }, branch(null));
+}
+
+// A to-do a friend shared: the mark checks it off for both of you; the text shows details.
+function sharedItem(t, key) {
+  const done = isSharedDone(t, key);
+  const starred = isStarred(t, key);
+  const details = () => tell(t.title, [`Shared by ${nameOf(t.owner)}`, t.folder ? `Folder: ${t.folder}` : '', t.notes || ''].filter(Boolean).join('\n'));
+  return h('li', { class: `todo shared${done ? ' done' : ''}${starred ? ' imp' : ''}` },
+    h('div', { class: 'todo-row' },
+      h('button', {
+        class: 'mark-btn', role: 'checkbox', 'aria-checked': String(done), 'aria-label': `Done: ${t.title}`,
+        onclick: () => toggleShared(t, key).catch((e) => tell('Not saved', e.message)),
+      }, h('span', { class: 'dash' })),
+      h('button', { class: 'todo-title', onclick: details },
+        t.title,
+        starred ? h('span', { class: 'mark star', 'aria-hidden': 'true' }, '★') : null,
+        hasDue(t) && !done ? dueTag(t, key) : null,
+        h('span', { class: 'by-tag' }, nameOf(t.owner)))));
 }
 
 let showStats = false;
@@ -218,7 +240,19 @@ function todoColumn(key, actions) {
       routines.length ? folderTree(routines, key, actions) : null),
     h('section', { class: 'todo-section' },
       h('div', { class: 'section-head' }, h('h3', { class: 'section-label' }, 'To-do', count(regular)), folderBtn('New folder'), plus('Add to-do')),
-      regular.length ? folderTree(regular, key, actions) : null)));
+      regular.length ? folderTree(regular, key, actions) : null),
+    sharedSection(key)));
+}
+
+// Friends' shared to-dos for this day (only when there are some).
+function sharedSection(key) {
+  const list = sharedTodosOn(key);
+  if (!list.length) return null;
+  const left = list.filter((t) => !isSharedDone(t, key)).length;
+  return h('section', { class: 'todo-section shared-section' },
+    h('div', { class: 'section-head' },
+      h('h3', { class: 'section-label' }, 'Shared', left ? h('span', { class: 'section-count' }, String(left)) : null)),
+    h('ul', { class: 'todos root' }, list.map((t) => sharedItem(t, key))));
 }
 
 // Assign overlapping timed events to side-by-side lanes.
@@ -250,7 +284,7 @@ function layoutLanes(events) {
 }
 
 function scheduleColumn(key, actions) {
-  const events = eventsOn(key);
+  const events = [...eventsOn(key), ...sharedEventsOn(key)];
   const allDay = events.filter((e) => e.allDay);
   const timed = events.filter((e) => !e.allDay);
 
@@ -268,13 +302,19 @@ function scheduleColumn(key, actions) {
     onclick: () => actions.create({ kind: 'event', date: key, hour: 0 }),
   }));
 
+  // A friend's shared event opens a details card instead of the editor.
+  const open = (e) => (e.shared
+    ? tell(e.title, [`Shared by ${nameOf(e.owner)}`, e.allDay ? 'All day' : `${shortTime(e.start)}–${shortTime(e.end)}`, e.notes || ''].filter(Boolean).join('\n'))
+    : actions.edit('event', e));
+  const cls = (e) => `event${e.important ? ' imp' : ''}${e.shared ? ' shared' : ''}`;
+
   const blocks = layoutLanes(timed).map(({ e, start, end, lane, lanes }) =>
     h('button', {
-      class: `event${e.important ? ' imp' : ''}`,
+      class: cls(e),
       style: `top:${(start / 60) * HOUR_PX + 1}px;height:${((end - start) / 60) * HOUR_PX - 2}px;` +
         `left:calc(${(lane / lanes) * 100}% + 2px);width:calc(${100 / lanes}% - 4px)`,
-      onclick: () => actions.edit('event', e),
-    }, h('b', {}, e.title), h('small', {}, `${shortTime(e.start)}–${shortTime(e.end)}`)));
+      onclick: () => open(e),
+    }, h('b', {}, e.title), h('small', {}, `${shortTime(e.start)}–${shortTime(e.end)}${e.shared ? ` · ${nameOf(e.owner)}` : ''}`)));
 
   const timeline = h('div', { class: 'timeline' }, hours, h('div', { class: 'events' }, blocks));
 
@@ -285,8 +325,8 @@ function scheduleColumn(key, actions) {
 
   return h('div', { class: 'col' },
     allDay.length ? h('div', { class: 'allday' }, allDay.map((e) =>
-      h('button', { class: `event${e.important ? ' imp' : ''}`, onclick: () => actions.edit('event', e) },
-        h('b', {}, e.title)))) : null,
+      h('button', { class: cls(e), onclick: () => open(e) },
+        h('b', {}, e.title), e.shared ? h('small', {}, nameOf(e.owner)) : null))) : null,
     h('div', { class: 'col-scroll', 'data-scroll': 'timeline' }, timeline),
   );
 }

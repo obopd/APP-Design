@@ -3,7 +3,7 @@
 // Each uses a <dialog> opened with showModal(), so it sits above any open sheet.
 import { h, icon, ICONS } from './util.js';
 
-function openLayer(className, content, { onBackdrop } = {}) {
+export function openLayer(className, content, { onBackdrop } = {}) {
   const dialog = h('dialog', { class: `layer ${className}` }, content);
   document.body.append(dialog);
   dialog.addEventListener('click', (e) => { if (e.target === dialog && onBackdrop) onBackdrop(); });

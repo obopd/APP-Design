@@ -5,6 +5,7 @@ import { openFolderSheet } from './folders.js';
 import { ask, tell } from './ui.js';
 import { isConfigured, currentUser, syncStatus, syncNow, signOut, hasUnsyncedChanges } from './cloud.js';
 import { notificationsSupported, requestNotifications } from './reminders.js';
+import { peopleSection } from './people.js';
 
 const media = matchMedia('(prefers-color-scheme: dark)');
 
@@ -137,6 +138,7 @@ export function renderSettings(root) {
   root.replaceChildren(h('div', { class: 'settings' },
     h('h1', { class: 'display' }, 'Settings'),
     accountSection(),
+    peopleSection(),
     h('div', {},
       h('div', { class: 'set-row' }, h('span', {}, 'Theme'), theme),
       h('div', { class: 'set-row' }, h('span', {}, 'Color'), swatches)),

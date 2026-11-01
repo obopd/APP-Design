@@ -566,3 +566,41 @@ body.gated .tabbar { display: none; }
 
 /* Hidden switch used only to trigger iOS haptics (see js/haptics.js). */
 .haptic-switch { position: fixed; left: -9999px; top: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+
+/* ---------- Friends & sharing ---------- */
+/* Bell: top right of the calendar screen, level with the logo. */
+.bell {
+  position: fixed; z-index: 5; right: 12px; top: calc(env(safe-area-inset-top) + var(--gap) - 5px);
+  width: 40px; height: 40px; display: grid; place-items: center; color: var(--fg);
+}
+.bell svg { width: 21px; height: 21px; }
+.bell-badge {
+  position: absolute; top: 4px; right: 3px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+  background: var(--sun); color: #fff; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center;
+}
+.bell[hidden], .bell-badge[hidden] { display: none; }
+
+.sheet-body { padding: 8px 16px calc(20px + env(safe-area-inset-bottom)); display: grid; gap: 10px; }
+.sheet-body h3 { margin: 0; font-size: 18px; }
+.notes-list { list-style: none; margin: 0; padding: 0; max-height: 60dvh; overflow-y: auto; }
+.note-row { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 13.5px; line-height: 1.35; }
+.note-row > span:first-child { flex: 1; min-width: 0; }
+.notes-list .note-row + .note-row { border-top: 1px solid var(--line); }
+.note-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.note-actions .icon-btn { width: 32px; height: 32px; color: var(--muted); }
+.note-actions .icon-btn svg { width: 16px; height: 16px; }
+.notes-empty { margin: 4px 0 8px; font-size: 13px; }
+
+.my-id { font-weight: 600; color: var(--fg); }
+.friend-name { flex: 1; min-width: 0; font-size: 14px; padding: 8px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.friend-list .status { margin-right: 4px; }
+.friend-pick { display: grid; max-height: 40dvh; overflow-y: auto; margin: 2px -6px; }
+.select-btn > svg:first-child { width: 15px; height: 15px; }
+
+/* Shared items: mine get a small people icon; friends' show who shared them. */
+.shared-mark svg { width: 11px; height: 11px; stroke-width: 2; vertical-align: -1px; color: var(--muted); }
+.folder-head .shared-mark { margin-left: -2px; }
+.by-tag { margin-left: 6px; font-size: 10.5px; color: var(--muted); white-space: nowrap; font-weight: 400; }
+.shared-section { border: 1px dashed var(--line); }
+.event.shared { background: var(--bg); border: 1px dashed color-mix(in srgb, var(--fg) 35%, transparent); }
+.event.shared.imp { color: var(--fg); border-color: var(--accent); }

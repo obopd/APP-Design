@@ -18,9 +18,10 @@ laptop. So:
   explained step by step in plain language.
 - The owner describes the design; build what they ask for, and check with
   them before inventing large features. **Anyone with the app link may create
-  their own account** and use the app privately (open email/password sign-up);
-  accounts are fully separate — never add sharing or any way to see another
-  user's data.
+  their own account** and use the app privately (open email/password sign-up).
+  Accounts are separate; the *only* way another user sees anything is the owner's
+  explicit per-item sharing with an accepted friend (see Friends & sharing). Never
+  add any other way to reach someone else's data.
 
 ## Product requirements (from the owner)
 
@@ -146,6 +147,30 @@ laptop. So:
   existing email returns a user with empty `identities` → treated as "already has an
   account". All forms use `novalidate` so the browser never shows its own validation
   pop-ups; the app validates and shows its own messages.
+- **Friends & sharing** (`js/social.js` data/sync, `js/people.js` UI, tables in
+  `supabase/social.sql`, must be run once in Supabase): each user picks a unique **ID**
+  (`profiles.handle`, lowercase a–z 0–9 _ . , 3–20; Settings → ID). Friends are added by
+  ID (Settings → Friends +, or the people icon in the bell sheet) and must **accept**.
+  A **bell** (`#bell`, fixed top-right of the calendar screen, red count badge) opens the
+  notifications sheet (`#social-sheet`): friend requests (Accept / ✕), accepted requests,
+  "@x shared …", "@x checked off …"; opening it marks them seen (requests keep counting
+  until answered). **Sharing** is per to-do / event / folder: a "Share" row in the editor
+  and folder sheet (friend picker card) sets `sharedWith: [userId]` on the item in the
+  owner's own planner; `publishShares()` keeps one `shares` row per (item, friend) with a
+  copy (folders = all to-dos inside, incl. sub-folders), re-published ~2s after edits and
+  deleted when un-shared, deleted or unfriended. Friends see shared to-dos in a dashed
+  **"Shared"** section under To-do (with @owner) and shared events dashed on the timeline;
+  tapping them shows a details card (read-only). Friends can **check off** shared to-dos:
+  that writes a `share_checks` row, shown at once on their side; the owner's app applies
+  it to its own to-do on the next refresh and deletes it. Refresh = on open, foreground,
+  every 60s while open, and when the bell opens. Shared data is cached in localStorage
+  `planner.social` (per user, removed on sign-out). If the tables don't exist (404
+  PGRST205) the bell and Share rows hide and Settings says "Not set up yet".
+  RLS (verified on local Postgres): profiles readable by signed-in users, only own row
+  writable and only `handle`; friendships visible to the two people, inserted only as
+  pending by the requester, only the addressee can set `status` (column grants); shares
+  written only by the owner and only for accepted friends, readable by the friend only
+  while still friends; share_checks written only by the share's friend.
 - **Postpone a to-do** (`js/postpone.js`): swipe a to-do left to reveal **Tmrw** and
   **Date** (date card from `askDate`), or use the editor's "Postpone" row (Tomorrow /
   Pick date). A "Moved to …" snack with **Undo** appears (`snack` in ui.js). One-off
@@ -178,7 +203,7 @@ laptop. So:
 ## Codebase structure
 
 ```
-index.html             Shell: login / calendar / D-Day / settings views, bottom bar, toast, sheets (editor, folder, D-Day, account)
+index.html             Shell: login / calendar / D-Day / settings views, bell, bottom bar, toast, sheets (editor, folder, D-Day, account, social)
 styles.css             All styles. Theme via CSS variables; html[data-theme] light/dark, html[data-accent].
                        Square card size comes from --cal-w / --cell; .month-mode/.week-mode drive layout
 fonts/                 Fraunces variable font (latin, upright woff2) + OFL.txt license
@@ -201,13 +226,16 @@ js/account.js          Login page (sign in / create account / forgot password) +
 supabase/setup.sql     Table + row-level-security policies to run once in Supabase
 js/settings.js         Settings tab: theme, accent color, folders, alerts, backup export/restore
 js/reminders.js        Alert timers, notifications, in-app toast, app icon badge
+js/social.js           Friends & sharing data: profile ID, friend requests, publishing shares, check-offs, bell items
+js/people.js           Friends UI: bell sheet, Settings ID/Friends, Share row + friend picker
+supabase/social.sql    Tables + RLS for profiles, friendships, shares, share_checks (run once after setup.sql)
 icons/                 icon.svg (source) + 180/192/512 PNGs rendered from it
 docs/                  Screenshots of the app
 ```
 
 ## Data model (`js/store.js`)
 
-Keep the internal names (`planner.v1`, `planner.auth`, `planner_data`, `planner-vN`) as they
+Keep the internal names (`planner.v1`, `planner.auth`, `planner.social`, `planner_data`, `planner-vN`) as they
 are, or existing users lose their data/session.
 
 Stored in `localStorage` under `planner.v1`:
@@ -222,6 +250,7 @@ Stored in `localStorage` under `planner.v1`:
   // todos also: track: 'none' | 'count' | 'time', values: { dateKey: number /* count or seconds */ },
   //             timer: { key: dateKey, start: epochMs } | null
   categories: [{ id, name, parent: id | null, open, color: css color | null }],
+  // todos, events and categories may have sharedWith: [friend user id] (see Friends & sharing)
   ddays: [{ id, title, date, yearly }],
   meta: { updatedAt: epochMs },   // last local change (save() stamps it; cloud sync compares it)
   settings: { haptics: bool, theme: 'auto' | 'light' | 'dark', accent: 'mono' | 'blue' | 'red' | 'green' | 'orange' | 'purple' }
@@ -301,7 +330,8 @@ Authentication → Email → "Confirm email" (or add custom SMTP). Free projects
 after ~1 week of no activity; sync then fails until restored in the dashboard. Run `supabase/setup.sql` in its SQL editor,
 set Authentication → URL Configuration → Site URL / Redirect URLs to the Pages URL,
 and put the Project URL + anon (publishable) key in `js/config.js` (done: project
-`rkpsjkssmfjuavdhayie`, table + RLS verified). Never commit the service_role/secret key. The service worker only caches same-origin GETs, so API
+`rkpsjkssmfjuavdhayie`, table + RLS verified). For friends & sharing also run
+`supabase/social.sql` there (safe to run again). Never commit the service_role/secret key. The service worker only caches same-origin GETs, so API
 responses are never cached.
 
 Updates reach phones quickly: the service worker installs with `cache: 'reload'` and
@@ -310,7 +340,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v46`; bump to `planner-v47`, …) and keep its `ASSETS` list in sync
+(currently `planner-v47`; bump to `planner-v48`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

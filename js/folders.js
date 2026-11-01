@@ -2,6 +2,7 @@
 import { h, icon, ICONS } from './util.js';
 import { state, save, ensureCategoryPath, deleteCategory } from './store.js';
 import { ask } from './ui.js';
+import { shareField } from './people.js';
 
 const dialog = document.getElementById('folder-sheet');
 
@@ -54,6 +55,9 @@ export function openFolderSheet({ cat = null, parent = null, onDone = () => {}, 
   }
   paint();
 
+  // Sharing a folder shares every to-do inside it (and in its sub-folders).
+  const share = shareField(cat?.sharedWith || []);
+
   const close = () => dialog.close();
 
   const submit = (ev) => {
@@ -69,6 +73,7 @@ export function openFolderSheet({ cat = null, parent = null, onDone = () => {}, 
       id = ensureCategoryPath(text, parent);
       state.categories.find((c) => c.id === id).color = color;
     }
+    if (share) state.categories.find((c) => c.id === id).sharedWith = share.value();
     finished = true;
     save();
     close();
@@ -91,7 +96,8 @@ export function openFolderSheet({ cat = null, parent = null, onDone = () => {}, 
       h('span', { class: 'spacer' }),
       h('button', { type: 'submit', class: 'icon-btn ok', 'aria-label': 'Save' }, icon(ICONS.check))),
     h('div', { class: 'title-row' }, name),
-    swatches));
+    swatches,
+    share ? h('div', { class: 'fields' }, share.el) : null));
 
   dialog.addEventListener('close', () => { if (!finished) onCancel(); }, { once: true });
   dialog.showModal();

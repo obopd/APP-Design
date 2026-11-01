@@ -43,7 +43,7 @@ function setStatus(next) {
 
 /* ---------- HTTP ---------- */
 
-async function api(path, { method = 'GET', body, auth = false, token = null, headers = {} } = {}) {
+export async function api(path, { method = 'GET', body, auth = false, token = null, headers = {} } = {}) {
   const h = { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json', ...headers };
   if (token || auth) h.Authorization = `Bearer ${token || await accessToken()}`;
   // Patchy mobile networks can leave a request hanging forever, which would block

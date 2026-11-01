@@ -9,6 +9,8 @@ import { refreshReminders, setToast } from './reminders.js';
 import './haptics.js';
 import { onCloudChange, syncNow, handleAuthRedirect, isConfigured, currentUser } from './cloud.js';
 import { openAccountSheet, renderLoginGate } from './account.js';
+import { socialEnabled, socialStatus, onSocialChange, refreshSocial, unseenCount } from './social.js';
+import { openNotifications, redrawNotifications } from './people.js';
 
 const calendarView = document.getElementById('view-calendar');
 const calendarEl = document.getElementById('calendar');
@@ -18,6 +20,8 @@ const ddayEl = document.getElementById('view-dday');
 const loginEl = document.getElementById('view-login');
 const toastEl = document.getElementById('toast');
 const ddaySlot = document.getElementById('dday-slot');
+const bellEl = document.getElementById('bell');
+const bellBadge = bellEl.querySelector('.bell-badge');
 
 // view.selected = 'YYYY-MM-DD' → week mode; null → month mode.
 const now = new Date();
@@ -111,6 +115,7 @@ function render() {
     if (on) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
   });
   calendarView.hidden = view.tab !== 'calendar';
+  paintBell();
   settingsEl.hidden = view.tab !== 'settings';
   ddayEl.hidden = view.tab !== 'dday';
 
@@ -137,6 +142,23 @@ function render() {
   if (animate) flip(first, willWeek, panelFirst);
   prevView = { ...view };
 }
+
+// Bell (top right of the calendar): friend requests, shares, check-offs.
+function paintBell() {
+  bellEl.hidden = !socialEnabled() || socialStatus() === 'missing';
+  const n = bellEl.hidden ? 0 : unseenCount();
+  bellBadge.hidden = !n;
+  bellBadge.textContent = n > 9 ? '9+' : String(n);
+  bellEl.setAttribute('aria-label', n ? `Notifications, ${n} new` : 'Notifications');
+}
+bellEl.addEventListener('click', openNotifications);
+
+// Friends' data changed (shares, requests): redraw what shows it.
+onSocialChange(() => {
+  paintBell();
+  redrawNotifications();
+  if (view.tab === 'settings' || (view.tab === 'calendar' && !isGated())) render();
+});
 
 document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
   view.tab = t.dataset.view;
@@ -168,8 +190,10 @@ onChange(() => { render(); refreshReminders(); });
 
 // Coming back to the app: the date may have changed, so redraw and re-plan alerts.
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') { render(); refreshReminders(); }
+  if (document.visibilityState === 'visible') { render(); refreshReminders(); refreshSocial(); }
 });
+// Friends' changes arrive by checking now and then while the app is open.
+setInterval(() => { if (document.visibilityState === 'visible') refreshSocial(); }, 60 * 1000);
 setInterval(() => { if (view.tab === 'calendar' && view.selected === todayKey()) render(); }, 60 * 1000); // move the "now" line
 
 setInterval(tickTimers, 1000); // running stopwatches
@@ -203,4 +227,4 @@ onCloudChange(() => {
 handleAuthRedirect()
   .then((type) => { if (type === 'recovery') { view.tab = 'settings'; render(); openAccountSheet('new-password'); } })
   .catch(() => {})
-  .finally(() => syncNow());
+  .finally(() => syncNow().then(refreshSocial));

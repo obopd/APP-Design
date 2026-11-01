@@ -18,6 +18,10 @@
 <body>
   <div class="view month-mode" id="view-calendar">
     <img class="brand" src="icons/icon.svg" alt="" aria-hidden="true">
+    <button class="bell" id="bell" aria-label="Notifications" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.5 2h-14z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>
+      <span class="bell-badge" hidden></span>
+    </button>
     <div class="grow top-slot">
       <div id="dday-slot"></div>
     </div>
@@ -50,6 +54,7 @@
   <dialog class="sheet" id="folder-sheet"></dialog>
   <dialog class="sheet" id="dday-sheet"></dialog>
   <dialog class="sheet account-sheet" id="account-sheet"></dialog>
+  <dialog class="sheet social-sheet" id="social-sheet"></dialog>
 
   <script type="module" src="js/app.js"></script>
 </body>

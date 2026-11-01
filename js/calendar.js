@@ -1,6 +1,7 @@
 // Month grid that "rolls up" into the selected week when a date is picked.
 import { h, icon, ICONS, addDays, dateKey, parseKey, todayKey, fmt } from './util.js';
 import { eventsOn, todosOn, isDone, isRoutine, isStarred } from './store.js';
+import { sharedTodosOn, sharedEventsOn, isSharedDone } from './social.js';
 
 let weekdayCache = null;
 const weekdayLabels = () => (weekdayCache ||= Array.from({ length: 7 }, (_, i) => fmt({ weekday: 'narrow' }).format(new Date(2023, 0, 1 + i))));
@@ -15,8 +16,8 @@ function weeksOfMonth(cursor) {
 function dayCell(date, view, month, actions) {
   const key = dateKey(date);
   // Routines only get a dot when starred, so a daily routine doesn't dot every day.
-  const events = eventsOn(key);
-  const todos = todosOn(key).filter((t) => !isDone(t, key));
+  const events = [...eventsOn(key), ...sharedEventsOn(key)];
+  const todos = [...todosOn(key).filter((t) => !isDone(t, key)), ...sharedTodosOn(key).filter((t) => !isSharedDone(t, key))];
   const items = [...events, ...todos].filter((i) => isStarred(i, key) || !isRoutine(i));
   const important = items.some((i) => isStarred(i, key));
 

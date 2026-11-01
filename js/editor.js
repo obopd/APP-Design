@@ -4,6 +4,7 @@ import { state, save, uid, REPEATS, TRACKS, categoryTree, hasDue, todoDate } fro
 import { openFolderSheet } from './folders.js';
 import { ask, selectButton } from './ui.js';
 import { postponeTomorrow, postponePick } from './postpone.js';
+import { shareField } from './people.js';
 
 const dialog = document.getElementById('editor');
 
@@ -82,6 +83,7 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null, 
     });
   });
 
+  const share = shareField(draft.sharedWith || []);
   const timeRow = field('Time', h('span', { class: 'times' }, start, '–', end));
   const untilRow = field('Until', until);
   const dueRow = field('Due', due);
@@ -116,6 +118,7 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null, 
       title: text, date, important, notes: notes.value.trim(),
       repeat: repeat.value, until: repeat.value !== 'none' && until.value >= date ? until.value : '',
     };
+    if (share) base.sharedWith = share.value();
 
     if (type === 'todo') {
       // Due date: one-off only, never before the to-do's date.
@@ -168,7 +171,7 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null, 
       h('span', { class: 'spacer' }),
       h('button', { type: 'submit', class: 'icon-btn ok', 'aria-label': 'Save' }, icon(ICONS.check))),
     h('div', { class: 'title-row' }, title, star),
-    h('div', { class: 'fields' }, field('Date', dateIn), ...todoRows, ...eventRows, field('Repeat', repeat), untilRow, dueRow),
+    h('div', { class: 'fields' }, field('Date', dateIn), ...todoRows, ...eventRows, field('Repeat', repeat), untilRow, dueRow, share?.el),
     postponeRow,
     notes,
   );
