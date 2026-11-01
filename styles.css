@@ -711,3 +711,81 @@ body.gated .tabbar { display: none; }
 .xm-day .chip { font-size: 9px; line-height: 13px; padding: 0 3px; border-radius: 3px; gap: 2px; }
 .xm-day .chip-dash { height: 7px; width: 2px; }
 .xm-more { font-size: 9px; color: var(--muted); padding-left: 3px; }
+
+/* ---------- Chat tab ---------- */
+.tab-badge {
+  position: absolute; top: 5px; left: 26px; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px;
+  background: var(--sun); color: #fff; font-size: 9.5px; font-weight: 700; line-height: 15px; text-align: center;
+}
+.tab-badge[hidden] { display: none; }
+/* Inside a conversation the dock steps aside; the composer takes the bottom. */
+body.chatting .tabbar { display: none; }
+#view-chat { padding-bottom: calc(var(--tabbar) + 8px); }
+body.chatting #view-chat {
+  padding-bottom: 0; height: var(--vvh, 100dvh);
+}
+
+.chat-page { min-height: 0; }
+.chat-empty { display: grid; justify-items: start; gap: 10px; margin: 4px 0 0; }
+.chat-empty .set-note { margin: 0; }
+.chat-list { list-style: none; margin: 0; padding: 0; }
+.chat-list li + li .chat-row { border-top: 1px solid var(--line); }
+.chat-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 2px; text-align: left; }
+.chat-row:active { background: var(--soft); }
+.chat-avatar {
+  flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--soft); font-family: var(--display); font-weight: 600; font-size: 17px; color: var(--fg);
+}
+.chat-avatar.group svg { width: 19px; height: 19px; }
+.chat-main { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.chat-name { display: flex; align-items: baseline; gap: 6px; font-size: 15px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-size { font-size: 11px; font-weight: 500; color: var(--muted); }
+.chat-preview { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-meta { flex-shrink: 0; display: grid; justify-items: end; gap: 4px; align-self: flex-start; padding-top: 3px; }
+.chat-time { font-size: 11px; color: var(--muted); }
+.chat-unread { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: var(--on-accent); font-size: 10.5px; font-weight: 700; line-height: 18px; text-align: center; }
+.new-group { font-weight: 600; }
+.member-row { justify-content: space-between; cursor: default; }
+.member-row .icon-btn { width: 30px; height: 30px; color: var(--muted); }
+.member-row .icon-btn svg { width: 15px; height: 15px; }
+.member-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.info-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.info-actions:empty { display: none; }
+
+/* Conversation */
+.conv { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.conv-head { flex: none; display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; padding: 0 8px 6px; border-bottom: 1px solid var(--line); }
+.conv-title { justify-self: center; font-size: 18px; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msg-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 6px 12px 10px; }
+.msg-earlier { display: block; margin: 4px auto 8px; font-size: 12px; }
+.msgs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.msg { display: flex; flex-direction: column; align-items: flex-start; max-width: 100%; }
+.msg.mine { align-items: flex-end; }
+.msg-day { align-self: center; margin: 12px 0 6px; font-size: 11px; color: var(--muted); }
+.msg-from { font-size: 11px; color: var(--muted); margin: 6px 0 2px 10px; }
+.bubble {
+  max-width: 78%; padding: 7px 12px; border-radius: 18px; background: var(--soft); color: var(--fg);
+  font-size: 15px; line-height: 1.35; white-space: pre-wrap; overflow-wrap: anywhere;
+  -webkit-user-select: text; user-select: text; -webkit-touch-callout: none;
+}
+.msg.mine .bubble { background: var(--accent); color: var(--on-accent); }
+.msg.pending .bubble { opacity: .6; }
+.msg.failed .bubble { opacity: .5; }
+.msg-time { font-size: 10px; color: var(--muted); margin: 2px 8px 6px; }
+.msg-retry { font-size: 11px; color: var(--sun); margin: 2px 8px 6px; }
+
+.composer {
+  flex: none; display: flex; align-items: flex-end; gap: 8px;
+  padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--bg);
+}
+.composer-input {
+  flex: 1; min-width: 0; resize: none; border: 0; outline: none; border-radius: 18px; background: var(--soft); color: var(--fg);
+  font: inherit; font-size: 16px; line-height: 20px; padding: 8px 14px; max-height: 120px;
+}
+.composer-send {
+  flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent); color: var(--on-accent); transition: opacity .15s;
+}
+.composer-send svg { width: 18px; height: 18px; stroke-width: 2.2; }
+.composer-send:disabled { opacity: .3; }
+.msg-earlier[hidden] { display: none; }

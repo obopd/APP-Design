@@ -27,7 +27,7 @@ laptop. So:
 
 - **Bottom bar** = a floating rounded dock like the iPhone home-screen dock (compact,
   hugs its icons and is centered; frosted `--dock-bg`, 52px tall, radius 26px; icon-only):
-  Calendar · D-Day · Settings. There is **no + in the dock**; adding happens via a + next
+  Calendar · D-Day · Chat · Settings. There is **no + in the dock**; adding happens via a + next
   to each section heading (Routines, To-do, D-Day) and by tapping an empty hour. More tabs will be added later; a tab = a `.tab[data-view]` button in
   `index.html` + a `#view-<name>` container, switched by `view.tab` in `js/app.js`.
 - The calendar is a **perfect square card** (always 6 week rows) with space on
@@ -190,6 +190,21 @@ laptop. So:
   pending by the requester, only the addressee can set `status` (column grants); shares
   written only by the owner and only for accepted friends, readable by the friend only
   while still friends; share_checks written only by the share's friend.
+- **Chat** (`js/chat.js` data, `js/chatview.js` UI, tables in `supabase/chat.sql`, run once
+  after social.sql): dock tab with an unread-count badge. **Personal** chats (with one
+  friend, made on first open, reused after) and **group** chats (named; creator or any
+  member adds their own friends; the creator removes people; anyone renames or leaves).
+  Text only, 1–1000 characters; press and hold your own message to delete it (for
+  everyone). Opening a chat hides the dock (`body.chatting`); the composer sits at the
+  bottom and `--vvh` (visualViewport height) keeps it above the iPhone keyboard. No read
+  receipts; unread = messages after `chat_members.last_read` (a message id). Polling, no
+  websockets: open chat every 3s (`pollChat`: only ids newer than the newest cached, plus
+  a cheap id check to drop deleted ones), list every 9s, otherwise every 60s/foreground.
+  Cache: localStorage `planner.chat` (last 200 per chat, older via "Earlier messages";
+  removed on sign-out). RLS (verified on local Postgres): only members read/post, senders
+  delete their own, direct chats never get a 3rd member, you can only add accepted
+  friends, removed members lose access at once, members may only update `last_read`.
+  Not possible as a web app: message notifications while the app is closed (needs push).
 - **Postpone a to-do** (`js/postpone.js`): swipe a to-do left to reveal **Tmrw** and
   **Date** (date card from `askDate`), or use the editor's "Postpone" row (Tomorrow /
   Pick date). A "Moved to …" snack with **Undo** appears (`snack` in ui.js). One-off
@@ -222,7 +237,7 @@ laptop. So:
 ## Codebase structure
 
 ```
-index.html             Shell: login / calendar / D-Day / settings views, bell, bottom bar, toast, sheets (editor, folder, D-Day, account, social)
+index.html             Shell: login / calendar / D-Day / chat / settings views, bell, bottom bar, toast, sheets (editor, folder, D-Day, account, social)
 styles.css             All styles. Theme via CSS variables; html[data-theme] light/dark, html[data-accent].
                        Square card size comes from --cal-w / --cell; .month-mode/.week-mode drive layout
 fonts/                 Fraunces variable font (latin, upright woff2) + OFL.txt license
@@ -248,6 +263,9 @@ js/settings.js         Settings tab: theme, accent color, folders, alerts, backu
 js/reminders.js        Alert timers, notifications, in-app toast, app icon badge
 js/social.js           Friends & sharing data: profile ID, friend requests, publishing shares, check-offs, bell items
 js/people.js           Friends UI: bell sheet, Settings ID/Friends, Share row + friend picker
+js/chat.js             Chat data: chats, members, messages (polling + local cache), send/delete/read marks
+js/chatview.js         Chat tab: chat list, conversation (bubbles + composer), group info
+supabase/chat.sql      Tables + RLS for chats, chat_members, messages (run once after social.sql)
 supabase/social.sql    Tables + RLS for profiles, friendships, shares, share_checks (run once after setup.sql)
 icons/                 icon.svg (source) + 180/192/512 PNGs rendered from it
 docs/                  Screenshots of the app
@@ -255,7 +273,7 @@ docs/                  Screenshots of the app
 
 ## Data model (`js/store.js`)
 
-Keep the internal names (`planner.v1`, `planner.auth`, `planner.social`, `planner.expand`, `planner_data`, `planner-vN`) as they
+Keep the internal names (`planner.v1`, `planner.auth`, `planner.social`, `planner.chat`, `planner.expand`, `planner_data`, `planner-vN`) as they
 are, or existing users lose their data/session.
 
 Stored in `localStorage` under `planner.v1`:
@@ -351,7 +369,7 @@ after ~1 week of no activity; sync then fails until restored in the dashboard. R
 set Authentication → URL Configuration → Site URL / Redirect URLs to the Pages URL,
 and put the Project URL + anon (publishable) key in `js/config.js` (done: project
 `rkpsjkssmfjuavdhayie`, table + RLS verified). For friends & sharing also run
-`supabase/social.sql` there (safe to run again). Never commit the service_role/secret key. The service worker only caches same-origin GETs, so API
+`supabase/social.sql` there, then `supabase/chat.sql` for chat (both safe to run again). Never commit the service_role/secret key. The service worker only caches same-origin GETs, so API
 responses are never cached.
 
 Updates reach phones quickly: the service worker installs with `cache: 'reload'` and
@@ -360,7 +378,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v51`; bump to `planner-v52`, …) and keep its `ASSETS` list in sync
+(currently `planner-v52`; bump to `planner-v53`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

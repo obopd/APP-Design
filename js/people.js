@@ -110,12 +110,14 @@ export function redrawNotifications() {
 /* ---------- Sharing ---------- */
 
 /** Multi-select card of friends. Resolves the chosen user ids, or null when cancelled. */
-export function pickFriends(selected = []) {
+export function pickFriends(selected = [], {
+  title = 'Share with', message = 'Friends can see it and check it off. Only you can edit it.', ok = 'Done', exclude = [],
+} = {}) {
   return new Promise((resolve) => {
     const chosen = new Set(selected);
     let layer;
     const done = (v) => { layer.close(); resolve(v); };
-    const rows = acceptedFriends().map((f) => {
+    const rows = acceptedFriends().filter((f) => !exclude.includes(f.id)).map((f) => {
       const btn = h('button', {
         type: 'button', class: 'menu-item', role: 'checkbox', 'aria-checked': String(chosen.has(f.id)),
         onclick: () => {
@@ -127,12 +129,12 @@ export function pickFriends(selected = []) {
       return btn;
     });
     layer = openLayer('ask', h('div', { class: 'ask-card' },
-      h('p', { class: 'ask-title display' }, 'Share with'),
-      h('p', { class: 'ask-message' }, 'Friends can see it and check it off. Only you can edit it.'),
+      h('p', { class: 'ask-title display' }, title),
+      h('p', { class: 'ask-message' }, rows.length ? message : 'All your friends are already in.'),
       h('div', { class: 'friend-pick' }, rows),
       h('div', { class: 'ask-actions' },
         h('button', { type: 'button', class: 'ask-btn', autofocus: true, onclick: () => done(null) }, 'Cancel'),
-        h('button', { type: 'button', class: 'ask-btn primary', onclick: () => done([...chosen]) }, 'Done'))),
+        h('button', { type: 'button', class: 'ask-btn primary', onclick: () => done([...chosen]) }, ok))),
     { onBackdrop: () => done(null) });
   });
 }

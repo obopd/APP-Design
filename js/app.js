@@ -11,6 +11,8 @@ import { onCloudChange, syncNow, handleAuthRedirect, isConfigured, currentUser }
 import { openAccountSheet, renderLoginGate } from './account.js';
 import { socialEnabled, socialStatus, onSocialChange, refreshSocial, unseenCount } from './social.js';
 import { openNotifications, redrawNotifications } from './people.js';
+import { onChatChange, refreshChats, unreadTotal, chatEnabled } from './chat.js';
+import { renderChat, chatShown } from './chatview.js';
 
 const calendarView = document.getElementById('view-calendar');
 const calendarEl = document.getElementById('calendar');
@@ -18,6 +20,8 @@ const panelEl = document.getElementById('panel');
 const settingsEl = document.getElementById('view-settings');
 const ddayEl = document.getElementById('view-dday');
 const loginEl = document.getElementById('view-login');
+const chatEl = document.getElementById('view-chat');
+const chatBadge = document.querySelector('.tab[data-view="chat"] .tab-badge');
 const toastEl = document.getElementById('toast');
 const ddaySlot = document.getElementById('dday-slot');
 const expandedEl = document.getElementById('expanded');
@@ -229,7 +233,8 @@ function render() {
   document.body.classList.toggle('gated', gated);
   loginEl.hidden = !gated;
   if (gated) {
-    calendarView.hidden = settingsEl.hidden = ddayEl.hidden = true;
+    calendarView.hidden = settingsEl.hidden = ddayEl.hidden = chatEl.hidden = true;
+    chatShown(false);
     if (!gateShown) renderLoginGate(loginEl); // once per visit, so typing isn't wiped
     gateShown = true;
     return;
@@ -250,9 +255,13 @@ function render() {
   calendarView.hidden = view.tab !== 'calendar';
   paintBell();
   settingsEl.hidden = view.tab !== 'settings';
+  chatEl.hidden = view.tab !== 'chat';
+  chatShown(view.tab === 'chat');
+  paintChatBadge();
   ddayEl.hidden = view.tab !== 'dday';
 
   if (view.tab === 'settings') { renderSettings(settingsEl); prevView = { ...view }; return; }
+  if (view.tab === 'chat') { renderChat(chatEl); prevView = { ...view }; return; }
   if (view.tab === 'dday') { renderDdays(ddayEl); prevView = { ...view }; return; }
 
   // Month ⇄ week: lay out the end state at once, then animate only transform / opacity /
@@ -306,11 +315,22 @@ function paintBell() {
 }
 bellEl.addEventListener('click', openNotifications);
 
+// Chat: unread count on the dock's Chat tab; the open tab redraws on new messages.
+function paintChatBadge() {
+  const n = chatEnabled() ? unreadTotal() : 0;
+  chatBadge.hidden = !n;
+  chatBadge.textContent = n > 99 ? '99+' : String(n);
+}
+onChatChange(() => {
+  paintChatBadge();
+  if (view.tab === 'chat' && !isGated()) renderChat(chatEl);
+});
+
 // Friends' data changed (shares, requests): redraw what shows it.
 onSocialChange(() => {
   paintBell();
   redrawNotifications();
-  if (view.tab === 'settings' || (view.tab === 'calendar' && !isGated())) render();
+  if (view.tab === 'settings' || view.tab === 'chat' || (view.tab === 'calendar' && !isGated())) render();
 });
 
 document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
@@ -353,10 +373,17 @@ onChange(() => { render(); refreshReminders(); });
 
 // Coming back to the app: the date may have changed, so redraw and re-plan alerts.
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') { render(); refreshReminders(); refreshSocial(); }
+  if (document.visibilityState === 'visible') { render(); refreshReminders(); refreshSocial(); refreshChats(); }
 });
 // Friends' changes arrive by checking now and then while the app is open.
-setInterval(() => { if (document.visibilityState === 'visible') refreshSocial(); }, 60 * 1000);
+setInterval(() => { if (document.visibilityState === 'visible') { refreshSocial(); refreshChats(); } }, 60 * 1000);
+
+// iPhone keyboard: keep the chat (composer) inside the visible area above the keyboard.
+if (window.visualViewport) {
+  const fit = () => document.documentElement.style.setProperty('--vvh', `${visualViewport.height}px`);
+  visualViewport.addEventListener('resize', fit);
+  fit();
+}
 setInterval(() => { if (view.tab === 'calendar' && view.selected === todayKey()) render(); }, 60 * 1000); // move the "now" line
 
 setInterval(tickTimers, 1000); // running stopwatches
@@ -390,4 +417,4 @@ onCloudChange(() => {
 handleAuthRedirect()
   .then((type) => { if (type === 'recovery') { view.tab = 'settings'; render(); openAccountSheet('new-password'); } })
   .catch(() => {})
-  .finally(() => syncNow().then(refreshSocial));
+  .finally(() => syncNow().then(() => { refreshSocial(); refreshChats(); }));
