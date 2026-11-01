@@ -39,6 +39,25 @@ const { browser, phone, check, wait, done } = require('./helpers');
 
   await p.click('.tab[data-view=settings]');
   check('a new tab fades in', await p.locator('#view-settings.view-enter').count() === 1);
+  // Entering film mode plays the clapperboard show, then leaves film mode switched on.
+  await p.click('.tab[data-view=calendar]'); await wait(300);
+  await p.click('#calendar .cal-title').catch(() => {}); await wait(900);
+  const hold = async (page) => {
+    const bx = await page.locator('#brand').boundingBox();
+    await page.mouse.move(bx.x + 15, bx.y + 15); await page.mouse.down(); await wait(1000); await page.mouse.up();
+  };
+  await hold(p); await wait(200);
+  check('entering shows the clapperboard show', await p.locator('.cine.enter .cine-slate').count() === 1);
+  await wait(1500);
+  check('…then it\'s gone and film mode is on', await p.locator('.cine').count() === 0 && await p.evaluate(() => document.documentElement.classList.contains('film')));
+  await hold(p); await wait(200);
+  check('leaving plays the "Cut." curtains', (await p.locator('.cine.exit .cine-title').innerText()) === 'Cut.');
+  await wait(1000);
+  check('…then film mode is off', await p.locator('.cine').count() === 0 && await p.evaluate(() => !document.documentElement.classList.contains('film')));
+  await p.emulateMedia({ reducedMotion: 'reduce' });
+  await hold(p); await wait(150);
+  check('with Reduce Motion it switches without the show', await p.locator('.cine').count() === 0 && await p.evaluate(() => document.documentElement.classList.contains('film')));
+
   check('no page errors', !p.errors.length, p.errors.join('; '));
   await done(b);
 })();

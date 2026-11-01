@@ -10,6 +10,7 @@ import {
 import { acceptedFriends, myHandle } from './social.js';
 import { pickFriends, chooseHandle } from './people.js';
 import { chatEnabled } from './chat.js';
+import { playFilmSwitch } from './cinema.js';
 
 const HOLD_MS = 900;
 
@@ -27,9 +28,8 @@ export function setupBrand(brand, onSwitched) {
       fired = true;
       brand.classList.remove('pressing');
       if (!chatEnabled()) { tell('Sign in first', 'Film Production Mode needs your account.'); return; }
-      setFilm(!filmOn());
-      paintBrand(true);
-      onSwitched();
+      const entering = !filmOn();
+      playFilmSwitch(entering, () => { setFilm(entering); paintBrand(true); onSwitched(); }, entering ? currentProject()?.name : '');
     }, HOLD_MS);
   });
   brand.addEventListener('pointermove', (e) => { if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) cancel(); });
@@ -114,7 +114,7 @@ export function openProjects() {
       }) }, isOwner(cur) ? 'Delete' : 'Leave') : null),
     h('div', { class: 'ask-actions' },
       h('button', { type: 'button', class: 'ask-btn', autofocus: true, onclick: close }, 'Close'),
-      h('button', { type: 'button', class: 'ask-btn', onclick: () => { close(); setFilm(false); paintBrand(true); } }, 'Exit film mode'))),
+      h('button', { type: 'button', class: 'ask-btn', onclick: () => { close(); playFilmSwitch(false, () => { setFilm(false); paintBrand(true); }); } }, 'Exit film mode'))),
   { onBackdrop: close });
 }
 

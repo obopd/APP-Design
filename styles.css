@@ -1172,3 +1172,104 @@ body.typing #view-chat { padding-bottom: 0; }
 :root[data-theme="dark"] .brand { box-shadow: 0 0 0 1px #2c2c2e; }
 /* Selected segment is a lighter pill in dark mode (it was darker than its track). */
 :root[data-theme="dark"] .segmented button[aria-checked="true"] { background: #3a3a3c; box-shadow: none; }
+
+/* ---------- Entering / leaving Film Production Mode (js/cinema.js) ---------- */
+.cine { position: fixed; inset: 0; z-index: 1000; overflow: hidden; pointer-events: auto; contain: strict; }
+.cine > * { position: absolute; }
+.cine-dim { inset: 0; background: #000; opacity: 0; }
+.cine-bar { left: 0; right: 0; height: 14dvh; background: #000; }
+.cine-bar.top { top: 0; transform: translateY(-100%); }
+.cine-bar.bottom { bottom: 0; transform: translateY(100%); }
+.cine-stage {
+  inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  color: #fff; opacity: 0;
+}
+.cine-slate { width: 46vw; max-width: 220px; height: auto; overflow: visible; }
+.cine-arm { transform-box: view-box; transform-origin: 140px 194px; transform: rotate(-32deg); }
+.cine-title { margin: 6px 0 0; font-size: 30px; letter-spacing: .32em; text-transform: uppercase; text-indent: .32em; opacity: 0; }
+.cine-sub { margin: 0; font-size: 13px; letter-spacing: .18em; text-transform: uppercase; color: rgba(255, 255, 255, .62); opacity: 0; }
+.cine-flash { inset: 0; background: #fff; opacity: 0; }
+/* Projector grain: a tiny noise tile, jittered in steps (cheap: one transform). */
+.cine-grain {
+  inset: -50%; opacity: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .8 0 0 0 0 .8 0 0 0 0 .8 0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: cine-grain .36s steps(3) infinite;
+}
+@keyframes cine-grain { 0% { transform: translate(0, 0); } 33% { transform: translate(-7%, 4%); } 66% { transform: translate(5%, -6%); } 100% { transform: translate(0, 0); } }
+
+/* Enter: 1.4s. The clap lands at ~37% (the mode switches under the flash). */
+.cine.enter .cine-dim { animation: cine-dim 1.4s ease both; }
+.cine.enter .cine-grain { animation: cine-grain .36s steps(3) infinite, cine-grain-in 1.4s ease both; }
+.cine.enter .cine-bar.top { animation: cine-bar-top 1.4s cubic-bezier(.7, 0, .2, 1) both; }
+.cine.enter .cine-bar.bottom { animation: cine-bar-bottom 1.4s cubic-bezier(.7, 0, .2, 1) both; }
+.cine.enter .cine-stage { animation: cine-stage 1.4s both; }
+.cine.enter .cine-arm { animation: cine-arm 1.4s both; }
+.cine.enter .cine-flash { animation: cine-flash 1.4s ease-out both; }
+.cine.enter .cine-title { animation: cine-title 1.4s linear both; }
+.cine.enter .cine-sub { animation: cine-sub 1.4s ease both; }
+@keyframes cine-dim { 0% { opacity: 0; } 12%, 72% { opacity: .94; } 100% { opacity: 0; } }
+@keyframes cine-grain-in { 0% { opacity: 0; } 15%, 70% { opacity: .22; } 100% { opacity: 0; } }
+@keyframes cine-bar-top { 0% { transform: translateY(-100%); } 18%, 72% { transform: translateY(0); } 100% { transform: translateY(-100%); } }
+@keyframes cine-bar-bottom { 0% { transform: translateY(100%); } 18%, 72% { transform: translateY(0); } 100% { transform: translateY(100%); } }
+@keyframes cine-stage {
+  /* Slams in from big (speeding up), lands with a small bounce. */
+  0% { opacity: 0; transform: scale(2.1) rotate(-9deg); animation-timing-function: cubic-bezier(.55, 0, .9, .45); }
+  17% { opacity: 1; transform: scale(.94) rotate(1.5deg); animation-timing-function: cubic-bezier(.2, .8, .3, 1); }
+  25% { transform: scale(1.02) rotate(0); }
+  30% { transform: scale(1); }
+  37% { transform: translate(0, 0); }
+  39% { transform: translate(-7px, 4px); }
+  41% { transform: translate(6px, -3px); }
+  43% { transform: translate(-3px, 2px); }
+  45%, 74% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: scale(.9); }
+}
+@keyframes cine-arm {
+  0%, 22% { transform: rotate(-30deg); animation-timing-function: ease-out; }
+  31% { transform: rotate(-38deg); animation-timing-function: cubic-bezier(.7, 0, 1, .6); } /* pulls back… */
+  37% { transform: rotate(0); } /* …and claps */
+  40% { transform: rotate(-3deg); } 43%, 100% { transform: rotate(0); }
+}
+@keyframes cine-flash { 0%, 36% { opacity: 0; } 38% { opacity: .9; } 58%, 100% { opacity: 0; } }
+@keyframes cine-title {
+  0%, 40% { opacity: 0; transform: translateY(6px); }
+  43% { opacity: 1; transform: none; } 45% { opacity: .35; } 47% { opacity: 1; } 50% { opacity: .6; } 52%, 74% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: none; }
+}
+@keyframes cine-sub { 0%, 48% { opacity: 0; transform: translateY(6px); } 56%, 74% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+
+/* Exit: 0.82s. Curtains close on "Cut.", the planner is switched back, curtains open. */
+.cine.exit .cine-dim, .cine.exit .cine-flash { display: none; }
+.cine.exit .cine-bar { height: 50.5dvh; }
+.cine.exit .cine-bar.top { animation: cine-close-top .82s cubic-bezier(.65, 0, .35, 1) both; }
+.cine.exit .cine-bar.bottom { animation: cine-close-bottom .82s cubic-bezier(.65, 0, .35, 1) both; }
+.cine.exit .cine-grain { animation: cine-grain .36s steps(3) infinite, cine-exit-grain .82s ease both; }
+.cine.exit .cine-stage { opacity: 1; z-index: 1; }
+.cine.exit .cine-title { animation: cine-cut .82s ease both; letter-spacing: .06em; text-transform: none; text-indent: 0; font-size: 34px; }
+@keyframes cine-close-top { 0% { transform: translateY(-100%); } 38%, 60% { transform: translateY(0); } 100% { transform: translateY(-100%); } }
+@keyframes cine-close-bottom { 0% { transform: translateY(100%); } 38%, 60% { transform: translateY(0); } 100% { transform: translateY(100%); } }
+@keyframes cine-exit-grain { 0%, 100% { opacity: 0; } 38%, 60% { opacity: .2; } }
+@keyframes cine-cut { 0%, 32% { opacity: 0; transform: scale(1.15); } 42%, 58% { opacity: 1; transform: none; } 72%, 100% { opacity: 0; transform: scale(.96); } }
+
+/* While it plays, nothing else moves under the finger. */
+body.cine-on { overflow: hidden; }
+
+/* ---------- Film mode's own look ---------- */
+/* A soft vignette and a faint, still film grain over the whole app (taps pass through). */
+html.film body::after {
+  content: ""; position: fixed; inset: 0; z-index: 4; pointer-events: none;
+  background:
+    radial-gradient(ellipse 120% 90% at 50% 45%, transparent 55%, rgba(0, 0, 0, .14) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: fade-in .9s ease .6s both;
+}
+:root[data-theme="dark"].film body::after {
+  background:
+    radial-gradient(ellipse 120% 90% at 50% 45%, transparent 50%, rgba(0, 0, 0, .55) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .9 0 0 0 0 .9 0 0 0 0 .9 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.film-instant body::after { animation: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html.film body::after { animation: none; }
+}
