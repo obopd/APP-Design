@@ -221,8 +221,8 @@ laptop. So:
   **Collaborators** = accepted friends the owner invites; they get full access and are
   added to the project's single **group chat** (created with the project); in film mode
   the Chat tab opens that chat directly (no back button, dock stays). Invites show in the
-  bell ("@x added you to the film project …"). **Write** = Story (logline, synopsis,
-  characters, notes) · Plot (acts of scene cards, ▲▼ moves across acts) · Script
+  bell ("@x added you to the film project …"). **Write** = Theme (theme, message, notes;
+  stored under the `story` section key) · Plot (acts of scene cards, ▲▼ moves across acts) · Script
   (screenplay blocks scene / action / character / dialogue / ( ) / transition; Enter = next
   block of the usual next type, "INT."/"EXT." → scene, Backspace on an empty block removes
   it; read view in Courier with scene numbers). **One editor at a time** per section: Edit
@@ -296,7 +296,7 @@ js/chat.js             Chat data: chats, members, messages (polling + local cach
 js/chatview.js         Chat tab: chat list, conversation (bubbles + composer), group info; film mode = project chat
 js/film.js             Film Production Mode data: mode, projects, collaborators, project items (sync), writing locks
 js/filmui.js           Film mode UI: logo press-and-hold + clapperboard, projects card, project name chip
-js/write.js            Write tab: Story / Plot / Script read + edit (one editor at a time)
+js/write.js            Write tab: Theme / Plot / Script read + edit (one editor at a time)
 supabase/film.sql      Tables + RLS for projects, project_members, project_items, project_docs
 supabase/chat.sql      Tables + RLS for chats, chat_members, messages (run once after social.sql)
 supabase/social.sql    Tables + RLS for profiles, friendships, shares, share_checks (run once after setup.sql)
@@ -411,7 +411,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v55`; bump to `planner-v56`, …) and keep its `ASSETS` list in sync
+(currently `planner-v56`; bump to `planner-v57`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

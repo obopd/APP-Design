@@ -1,4 +1,5 @@
-// Film mode "Write" tab: Story · Plot · Script for the chosen project.
+// Film mode "Write" tab: Theme · Plot · Script for the chosen project.
+// (Theme is stored under the 'story' section key, which the database already allows.)
 // Reading is open to all members; editing takes the section's lock (one editor at a
 // time), autosaves while typing (which also renews the lock) and frees it on Done.
 import { h, icon, ICONS, fmt } from './util.js';
@@ -7,7 +8,7 @@ import {
   currentProject, docOf, editorOf, lockDoc, saveDoc, unlockDoc, nameOf, newId, filmStatus,
 } from './film.js';
 
-const LABELS = { story: 'Story', plot: 'Plot', script: 'Script' };
+const LABELS = { story: 'Theme', plot: 'Plot', script: 'Script' };
 let section = localStorage.getItem('planner.filmsection') || 'story';
 let editing = null; // { section, pid, body, el, saveTimer, beat, lost }
 let rootEl = null;
@@ -16,7 +17,8 @@ let rootEl = null;
 
 function normalize(sec, body = {}) {
   if (sec === 'story') {
-    return { logline: body.logline || '', synopsis: body.synopsis || '', notes: body.notes || '', characters: Array.isArray(body.characters) ? body.characters : [] };
+    // Older fields (logline, synopsis, characters) are kept in the saved body, just not shown.
+    return { ...body, theme: body.theme || '', message: body.message || '', notes: body.notes || '' };
   }
   if (sec === 'plot') {
     const acts = Array.isArray(body.acts) && body.acts.length ? body.acts
@@ -96,33 +98,19 @@ function line(value, placeholder, onInput, cls = '') {
 }
 const tiny = (label, svg, onclick) => h('button', { type: 'button', class: 'icon-btn write-tiny', 'aria-label': label, onclick }, icon(svg));
 
-/* ---------- Story ---------- */
+/* ---------- Theme (the film's message) ---------- */
 
-function storyRead(b) {
+function themeRead(b) {
   const part = (title, text) => h('section', { class: 'w-part' }, h('h3', { class: 'w-h' }, title),
     text ? h('p', { class: 'w-text' }, text) : h('p', { class: 'w-empty' }, 'Not written yet'));
-  return h('div', { class: 'w-doc' },
-    part('Logline', b.logline), part('Synopsis', b.synopsis),
-    h('section', { class: 'w-part' }, h('h3', { class: 'w-h' }, 'Characters'),
-      b.characters.length ? h('ul', { class: 'w-chars' }, b.characters.map((c) => h('li', {},
-        h('b', {}, c.name || 'Unnamed'), c.desc ? h('span', {}, c.desc) : null))) : h('p', { class: 'w-empty' }, 'No characters yet')),
-    part('Notes', b.notes));
+  return h('div', { class: 'w-doc' }, part('Theme', b.theme), part('Message', b.message), part('Notes', b.notes));
 }
 
-function storyEdit(b) {
-  const chars = h('div', { class: 'w-chars-edit' });
-  const drawChars = () => chars.replaceChildren(...b.characters.map((c, i) => h('div', { class: 'w-char' },
-    h('div', { class: 'w-row' },
-      line(c.name, 'Name', (v) => { c.name = v; }, 'w-char-name'),
-      tiny('Remove character', ICONS.close, () => { b.characters.splice(i, 1); changed(); drawChars(); })),
-    area(c.desc || '', 'Who they are, what they want…', (v) => { c.desc = v; }))),
-  h('button', { type: 'button', class: 'pill w-add', onclick: () => { b.characters.push({ id: newId(), name: '', desc: '' }); changed(); drawChars(); } }, '+ Character'));
-  drawChars();
+function themeEdit(b) {
   return h('div', { class: 'w-doc editing' },
-    h('section', { class: 'w-part' }, h('h3', { class: 'w-h' }, 'Logline'), area(b.logline, 'One sentence: who wants what, and what stands in the way.', (v) => { b.logline = v; })),
-    h('section', { class: 'w-part' }, h('h3', { class: 'w-h' }, 'Synopsis'), area(b.synopsis, 'The story from beginning to end…', (v) => { b.synopsis = v; })),
-    h('section', { class: 'w-part' }, h('h3', { class: 'w-h' }, 'Characters'), chars),
-    h('section', { class: 'w-part' }, h('h3', { class: 'w-h' }, 'Notes'), area(b.notes, 'Themes, tone, references…', (v) => { b.notes = v; })));
+    h('section', { class: 'w-part' }, h('h3', { class: 'w-h' }, 'Theme'), area(b.theme, 'What the film is about, in a few words.', (v) => { b.theme = v; })),
+    h('section', { class: 'w-part' }, h('h3', { class: 'w-h' }, 'Message'), area(b.message, 'What the audience should feel or take away.', (v) => { b.message = v; })),
+    h('section', { class: 'w-part' }, h('h3', { class: 'w-h' }, 'Notes'), area(b.notes, 'Motifs, tone, references…', (v) => { b.notes = v; })));
 }
 
 /* ---------- Plot (acts of scene cards) ---------- */
@@ -246,8 +234,8 @@ function scriptEdit(b) {
 
 /* ---------- Page ---------- */
 
-const READ = { story: storyRead, plot: plotRead, script: scriptRead };
-const EDIT = { story: storyEdit, plot: plotEdit, script: scriptEdit };
+const READ = { story: themeRead, plot: plotRead, script: scriptRead };
+const EDIT = { story: themeEdit, plot: plotEdit, script: scriptEdit };
 
 function since(iso) {
   const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);

@@ -4,7 +4,7 @@
 -- projects          a film project (its group chat lives in chats, linked by chat_id)
 -- project_members   owner + invited collaborators (full access to everything in the project)
 -- project_items     the project's to-dos, schedule items and folders (one row each)
--- project_docs      Story / Plot / Script, each editable by one person at a time (lock)
+-- project_docs      Theme (key 'story') / Plot / Script, each editable by one person at a time (lock)
 
 create table if not exists public.projects (
   id         uuid primary key default gen_random_uuid(),
