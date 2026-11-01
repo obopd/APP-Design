@@ -1226,3 +1226,19 @@ body.fx-dissolve .view:not([hidden]) { animation: fx-dissolve 1s cubic-bezier(.4
 body.fx-dissolve .tabbar { animation: fx-dissolve-dock 1s cubic-bezier(.45, 0, .55, 1) both; }
 @keyframes fx-dissolve { 0% { opacity: 1; transform: none; } 45% { opacity: 0; transform: scale(.97); } 46% { opacity: 0; transform: scale(1.03); } 100% { opacity: 1; transform: none; } }
 @keyframes fx-dissolve-dock { 0% { opacity: 1; } 45%, 46% { opacity: 0; } 100% { opacity: 1; } }
+
+/* ---------- Small iPhones (SE / mini) ---------- */
+/* The month title stays on one line, and the to-do column's headings keep their words. */
+.cal-title { white-space: nowrap; font-size: clamp(17px, 5.6vw, 21px); }
+@media (max-width: 400px) {
+  .section-head .section-label { padding-left: 10px; padding-right: 2px; font-size: 15px; }
+  .section-head .icon-btn { width: 30px; }
+  .section-head .section-folder { margin-right: -4px; }
+}
+@media (max-width: 340px) {
+  .section-head .section-label { padding-left: 8px; font-size: 14px; }
+  .section-head .icon-btn { width: 28px; }
+  .todo-title, .todo-text { font-size: 13px; }
+  .cal-title { font-size: 16px; padding-inline: 6px; }
+  .grid-btn { width: 26px; }
+}

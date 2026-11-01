@@ -257,14 +257,17 @@ every `supabase/*.sql` on top of `db/stub.sql` (stand-ins for Supabase auth / st
 vault / pg_net / pg_cron) and `db/seed.sql` (users a@x, b@x, c@x, password `secret1`; alice
 is friends with bob and carol; an alice↔bob chat), runs `mock-server.js` on :54321
 (PostgREST + GoTrue + Storage + RPC + Realtime stand-in with real RLS; `Bearer service` =
-service role) and the app on :8765. Suites: `sync`, `storage`, `motion`, `preview`, `shoot`,
+service role) and the app on :8765. Suites: `sync`, `storage`, `resilience` (offline, 2 minutes open: errors + memory,
+sign-out cleanup), `motion`, `preview`, `shoot`,
 `app-features` (push sign-up, instant chat, search, backups, clean-up, ping) and
 `push-function` (the Edge Function in Node, decrypting real Web Push). Write tests with
 `helpers.js` (`phone`, `inApp`, `sql`, `check`, `filmProject`). **Add a test with each
 feature and run the suite before pushing.** Also look at screenshots of UI changes
 (iPhone 13, light and dark). `node tests/audit.js` (after `start.sh`) walks every screen
 in light and dark: page / console errors, content wider than the screen, small tap targets,
-screenshots in `tests/out/audit/`. Never create real accounts in the owner's Supabase project;
+screenshots in `tests/out/audit/`. `PW_DEVICE` (e.g. 'iPhone SE', 'iPhone SE (3rd gen)'),
+`PW_TZ` (e.g. Asia/Seoul) and `PW_LOCALE` (e.g. ko-KR) rerun any test or the audit as
+another phone; small screens have their own CSS block (≤400px / ≤340px). Never create real accounts in the owner's Supabase project;
 anon-key requests are safe checks.
 
 ## Deployment
@@ -279,7 +282,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v81`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v82`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 

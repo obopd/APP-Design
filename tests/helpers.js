@@ -18,11 +18,16 @@ function check(name, ok, detail = '') {
   if (!ok) { failed += 1; process.exitCode = 1; }
 }
 
-async function browser() { return chromium.launch(); }
+async function browser() { return chromium.launch({ args: ['--enable-precise-memory-info', '--js-flags=--expose-gc'] }); }
 
 /** A signed-in phone. extraConfig adds exports to js/config.js (e.g. a VAPID key). */
 async function phone(b, email, { extraConfig = '', init = null } = {}) {
-  const ctx = await b.newContext({ ...devices['iPhone 13'] });
+  // PW_DEVICE / PW_TZ / PW_LOCALE run the same tests as another phone, time zone or language.
+  const ctx = await b.newContext({
+    ...devices[process.env.PW_DEVICE || 'iPhone 13'],
+    ...(process.env.PW_TZ ? { timezoneId: process.env.PW_TZ } : {}),
+    ...(process.env.PW_LOCALE ? { locale: process.env.PW_LOCALE } : {}),
+  });
   await ctx.route('**/js/config.js', (r) => r.fulfill({
     contentType: 'text/javascript',
     body: `export const SUPABASE_URL='${MOCK}'; export const SUPABASE_ANON_KEY='anon'; ${extraConfig}`,

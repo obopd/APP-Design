@@ -372,7 +372,11 @@ setupBrand(document.getElementById('brand'), () => {
   if (!filmOn() && FILM_TABS.includes(view.tab)) view.tab = 'calendar';
   render();
 });
-onFilmChange(() => { if (!isGated()) render(); });
+onFilmChange(() => {
+  // The film look follows the mode even when it changes without the logo (e.g. signing out).
+  if (document.documentElement.classList.contains('film') !== filmOn()) paintBrand(false);
+  if (!isGated()) render();
+});
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') writeBackgrounded();
   else refreshFilm(); // also outside film mode: project invites show in the bell
