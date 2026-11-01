@@ -4,7 +4,8 @@
 // the Home Screen. There is no way to schedule a local notification in advance, so
 // alerts fire from timers that only run while the app is open or recently used.
 import { addDays, dateKey, todayKey, toMinutes, formatTime } from './util.js';
-import { eventsOn, todosOn, isDone, isStarred } from './store.js';
+import { eventsOn, todosOn, isDone, isStarred, inFilm } from './store.js';
+import { pushActive } from './push.js';
 
 let timers = [];
 const fired = new Set(JSON.parse(sessionStorage.getItem('planner.fired') || '[]'));
@@ -18,7 +19,7 @@ export async function requestNotifications() {
   return result;
 }
 
-function alertTime(event, key) {
+export function alertTime(event, key) {
   const [y, m, d] = key.split('-').map(Number);
   const base = event.allDay ? 9 * 60 : toMinutes(event.start);
   return new Date(y, m - 1, d, 0, base - Number(event.alert));
@@ -32,7 +33,8 @@ async function fire(event, key, showToast) {
 
   const when = event.allDay ? (key === todayKey() ? 'Today' : 'Tomorrow') : formatTime(event.start);
   const body = `${when}${event.notes ? ` · ${event.notes}` : ''}`;
-  if (notificationsSupported() && Notification.permission === 'granted') {
+  // With push on, the server sends personal alerts itself (film project alerts stay local).
+  if (notificationsSupported() && Notification.permission === 'granted' && !(pushActive() && !inFilm())) {
     const reg = await navigator.serviceWorker.ready;
     reg.showNotification(event.title, { body, tag: id, icon: 'icons/icon-192.png' });
   }

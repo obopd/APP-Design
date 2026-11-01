@@ -219,7 +219,7 @@ laptop. So:
   removed on sign-out). RLS (verified on local Postgres): only members read/post, senders
   delete their own, direct chats never get a 3rd member, you can only add accepted
   friends, removed members lose access at once, members may only update `last_read`.
-  Not possible as a web app: message notifications while the app is closed (needs push).
+  New messages also arrive as push notifications while the app is closed (see Push notifications).
 - **Film Production Mode** (`js/film.js` data, `js/filmui.js` logo/projects, `js/write.js`
   Write tab, tables in `supabase/film.sql`, run once after chat.sql). Hidden: **press and
   hold the logo** (`#brand`, a button) ~0.9s → `html.film`; the calendar logo flips into a
@@ -317,12 +317,31 @@ laptop. So:
   "Routines" heading reveals per-routine stats: times done so far + total recorded.
 - **Important reminders** (e.g. a parent's birthday): items marked Important ★ get
   an accent-colored dot on the calendar and are counted in the home-screen icon badge.
-- **Alerts** at schedule times via notifications.
+- **Alerts** at schedule times via notifications: local timers while the app is open
+  (`reminders.js`), and server push when the app is closed (below).
+- **Push notifications** (Web Push; `js/push.js`, `supabase/push.sql`, Edge Function
+  `supabase/functions/push/index.ts`). Settings → Alerts "Turn on" (a tap: iOS needs it)
+  asks permission and subscribes this phone with `VAPID_PUBLIC_KEY` (config.js; read via
+  `import * as config` so a config without it still loads); the subscription is saved with
+  the `save_push_subscription` RPC (an endpoint moves to whoever signed in last; local
+  record `planner.push`). The app uploads the personal planner's alerts for the next 8 days
+  (`replace_push_alerts`, only when the list changed; film project alerts stay local). Database
+  triggers call the function for chat messages (title = sender or group, tag per chat so
+  they stack), friend requests / accepts, first-time shares and film project invites; a
+  pg_cron job each minute calls it when alerts are due (sent once, skipped if >30 min late,
+  then deleted). The function is called only by the database (`push_call` reads the URL +
+  `x-push-secret` from Vault; users can't execute it), reads subscriptions with the service
+  role, encrypts with `npm:web-push`, and forgets endpoints that answer 404/410. With push on,
+  `reminders.js` shows only the in-app toast for personal alerts (no duplicate). The service
+  worker's `push` handler always shows a notification (iOS requires it); tapping one opens
+  its tab (`view`: chat / bell / calendar, via postMessage or `#view=` on a cold start).
+  Signing out deletes this phone's subscription and unsubscribes. Tested with Node (function
+  + a fake HTTPS push endpoint that decrypts with http_ece) and local Postgres (stub
+  vault / net / cron); headless Chromium can't show notifications, so the SW handler was
+  checked by recording `showNotification` calls.
 - Chosen approach: *simple web app*. Known limits on iPhone (tell the owner,
   don't hide them): notifications need iOS 16.4+ and the app on the Home Screen;
-  a web app can't schedule notifications in advance, so alerts only fire while
-  the app is open or recently used; no home-screen widgets. Upgrading later
-  means a push server or a native (Expo/React Native) app.
+  no home-screen widgets.
 
 ## Codebase structure
 
@@ -350,6 +369,7 @@ js/account.js          Login page (sign in / create account / forgot password) +
 supabase/setup.sql     Table + row-level-security policies to run once in Supabase
 js/settings.js         Settings tab: theme, accent color, folders, alerts, backup export/restore
 js/reminders.js        Alert timers, notifications, in-app toast, app icon badge
+js/push.js             Push notifications: subscribe this phone, upload upcoming alerts, sign-out cleanup
 js/social.js           Friends & sharing data: profile ID, friend requests, publishing shares, check-offs, bell items
 js/people.js           Friends UI: bell sheet, Settings ID/Friends, Share row + friend picker
 js/chat.js             Chat data: chats, members, messages (polling + local cache), send/delete/read marks
@@ -362,13 +382,15 @@ js/preview.js          Preview tab (film mode): Concept image grid + viewer (Sto
 supabase/film.sql      Tables + RLS for projects, project_members, project_items, project_docs; `concepts` Storage bucket + policies
 supabase/chat.sql      Tables + RLS for chats, chat_members, messages (run once after social.sql)
 supabase/social.sql    Tables + RLS for profiles, friendships, shares, share_checks (run once after setup.sql)
+supabase/push.sql      Push: subscriptions, alerts, notify triggers, minute timer (run once after film.sql)
+supabase/functions/push/index.ts  Edge Function that sends the pushes (deployed in the dashboard, Verify JWT off)
 icons/                 icon.svg (source) + 180/192/512 PNGs rendered from it
 docs/                  Screenshots of the app
 ```
 
 ## Data model (`js/store.js`)
 
-Keep the internal names (`planner.v1`, `planner.auth`, `planner.social`, `planner.friendsopen`, `planner.chat`, `planner.expand`, `planner.film`, `planner.filmdata`, `planner.filmsection`, `planner.orgsection`, `planner.previewsection`, `planner.previewurls`, `planner.syncbase`, `planner_data`, `planner-vN`) as they
+Keep the internal names (`planner.v1`, `planner.auth`, `planner.social`, `planner.friendsopen`, `planner.chat`, `planner.expand`, `planner.film`, `planner.filmdata`, `planner.filmsection`, `planner.orgsection`, `planner.previewsection`, `planner.previewurls`, `planner.syncbase`, `planner.push`, `planner_data`, `planner-vN`) as they
 are, or existing users lose their data/session.
 
 Stored in `localStorage` under `planner.v1`:
@@ -464,7 +486,10 @@ after ~1 week of no activity; sync then fails until restored in the dashboard. R
 set Authentication → URL Configuration → Site URL / Redirect URLs to the Pages URL,
 and put the Project URL + anon (publishable) key in `js/config.js` (done: project
 `rkpsjkssmfjuavdhayie`, table + RLS verified). For friends & sharing also run
-`supabase/social.sql` there, then `supabase/chat.sql` for chat and `supabase/film.sql` for film mode (all safe to run again). Never commit the service_role/secret key. The service worker only caches same-origin GETs, so API
+`supabase/social.sql` there, then `supabase/chat.sql` for chat and `supabase/film.sql` for film mode (all safe to run again). Push: deploy the `push` Edge
+Function (Verify JWT off) with secrets `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `PUSH_SECRET`,
+create Vault secrets `push_url` / `push_secret`, then run `supabase/push.sql`. The VAPID
+private key and push secret are never committed. Never commit the service_role/secret key. The service worker only caches same-origin GETs, so API
 responses are never cached.
 
 Updates reach phones quickly: the service worker installs with `cache: 'reload'` and
@@ -473,7 +498,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v74`; bump to `planner-v75`, …) and keep its `ASSETS` list in sync
+(currently `planner-v75`; bump to `planner-v76`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

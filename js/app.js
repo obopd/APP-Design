@@ -6,6 +6,7 @@ import { setupBrand, renderProjectChip, paintBrand } from './filmui.js';
 import { renderWrite, finishEditing, writeBackgrounded, isEditing } from './write.js';
 import { renderOrganize } from './organize.js';
 import { renderPreview, leavePreview } from './preview.js';
+import { syncPush } from './push.js';
 import { renderDay, tickTimers } from './day.js';
 import { openEditor } from './editor.js';
 import { renderSettings, applyTheme } from './settings.js';
@@ -462,6 +463,19 @@ applyTheme();
 render();
 refreshReminders();
 
+// Notification taps open the right tab (the service worker sends the view, or #view= on a cold start).
+function openFromNotification(target) {
+  if (!target || isGated()) return;
+  if (target === 'bell') { view.tab = 'calendar'; render(); if (!bellEl.hidden) openNotifications(); return; }
+  view.tab = target;
+  render();
+}
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (e) => { if (e.data?.type === 'open-view') openFromNotification(e.data.view); });
+}
+const launchView = new URLSearchParams(location.hash.slice(1)).get('view');
+if (launchView) history.replaceState(null, '', location.pathname + location.search);
+
 // Account: keep Settings' sync status fresh, handle links from Supabase emails, sync on open.
 onCloudChange(() => {
   // Signing in/out swaps between the login page and the app; otherwise only Settings shows sync status.
@@ -470,4 +484,4 @@ onCloudChange(() => {
 handleAuthRedirect()
   .then((type) => { if (type === 'recovery') { view.tab = 'settings'; render(); openAccountSheet('new-password'); } })
   .catch(() => {})
-  .finally(() => syncNow().then(() => { refreshSocial(); refreshChats(); refreshFilm(); }));
+  .finally(() => syncNow().then(() => { refreshSocial(); refreshChats(); refreshFilm(); syncPush(); openFromNotification(launchView); }));

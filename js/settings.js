@@ -5,6 +5,7 @@ import { openFolderSheet } from './folders.js';
 import { ask, tell } from './ui.js';
 import { isConfigured, currentUser, syncStatus, syncNow, signOut, hasUnsyncedChanges } from './cloud.js';
 import { notificationsSupported, requestNotifications } from './reminders.js';
+import { pushSupported, pushActive, enablePush, pushSignOut } from './push.js';
 import { peopleSection } from './people.js';
 
 const media = matchMedia('(prefers-color-scheme: dark)');
@@ -31,7 +32,9 @@ media.addEventListener('change', applyTheme);
 
 function alertsControl(rerender) {
   if (!notificationsSupported()) return h('span', { class: 'status' }, 'Add to Home Screen');
-  if (Notification.permission === 'granted') return h('span', { class: 'status' }, 'On');
+  // Granted but this phone isn't subscribed for push yet (e.g. turned on before push existed).
+  if (Notification.permission === 'granted' && (pushActive() || !pushSupported())) return h('span', { class: 'status' }, 'On');
+  if (pushSupported()) return h('button', { class: 'pill', onclick: async () => { await enablePush().catch(() => {}); await requestNotifications(); rerender(); } }, 'Turn on');
   if (Notification.permission === 'denied') return h('span', { class: 'status' }, 'Off in iPhone Settings');
   return h('button', { class: 'pill', onclick: async () => { await requestNotifications(); rerender(); } }, 'Turn on');
 }
@@ -83,7 +86,9 @@ async function confirmSignOut() {
       message: 'Your planner is saved in your account and leaves this phone until you sign in again.',
       ok: 'Sign out',
     });
-  if (ok) await signOut();
+  if (!ok) return;
+  await pushSignOut();
+  await signOut();
 }
 
 // Account: email/password login (required when accounts are set up) that backs up and syncs.
