@@ -43,18 +43,19 @@ function setStatus(next) {
 
 /* ---------- HTTP ---------- */
 
-export async function api(path, { method = 'GET', body, auth = false, token = null, headers = {} } = {}) {
-  const h = { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json', ...headers };
+export async function api(path, { method = 'GET', body, auth = false, token = null, headers = {}, timeout = REQUEST_TIMEOUT } = {}) {
+  const raw = body instanceof Blob; // file uploads (Storage) are sent as they are
+  const h = { apikey: SUPABASE_ANON_KEY, 'Content-Type': raw ? body.type : 'application/json', ...headers };
   if (token || auth) h.Authorization = `Bearer ${token || await accessToken()}`;
   // Patchy mobile networks can leave a request hanging forever, which would block
   // every later sync; give up after REQUEST_TIMEOUT so the next attempt can run.
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT);
+  const timer = setTimeout(() => ctrl.abort(), timeout);
   let res;
   let text;
   try {
     res = await fetch(SUPABASE_URL.replace(/\/$/, '') + path, {
-      method, headers: h, body: body === undefined ? undefined : JSON.stringify(body), signal: ctrl.signal,
+      method, headers: h, body: body === undefined || raw ? body : JSON.stringify(body), signal: ctrl.signal,
     });
     text = await res.text();
   } catch (e) {
@@ -90,6 +91,20 @@ function friendly(code, msg, status) {
   if (status >= 500) return 'The server had a problem. Please try again in a moment.';
   return msg;
 }
+
+/* ---------- Storage (film mode's concept images; policies in supabase/film.sql) ---------- */
+
+const storageBase = () => SUPABASE_URL.replace(/\/$/, '') + '/storage/v1';
+export const uploadFile = (bucket, path, blob) => api(`/storage/v1/object/${bucket}/${path}`, {
+  method: 'POST', auth: true, body: blob, timeout: 60_000, headers: { 'cache-control': '31536000', 'x-upsert': 'true' },
+});
+/** Signed links (valid `seconds`) for private files: { path: url }. */
+export async function signFiles(bucket, paths, seconds) {
+  const list = await api(`/storage/v1/object/sign/${bucket}`, { method: 'POST', auth: true, body: { expiresIn: seconds, paths } });
+  return Object.fromEntries((list || []).filter((x) => x.signedURL).map((x) => [x.path, storageBase() + x.signedURL]));
+}
+export const removeFiles = (bucket, paths) => (paths.length
+  ? api(`/storage/v1/object/${bucket}`, { method: 'DELETE', auth: true, body: { prefixes: paths } }) : Promise.resolve());
 
 /* ---------- Auth ---------- */
 

@@ -217,8 +217,8 @@ laptop. So:
   hold the logo** (`#brand`, a button) ~0.9s → `html.film`; the calendar logo flips into a
   clapperboard whose arm claps shut (`.brand-cal` / `.brand-slate` / `.slate-arm`, CSS
   only); hold again (or "Exit film mode" in the projects card) to leave. Saved per device
-  (`planner.film` = { on, project }). In film mode the dock is Calendar · **Write** · **Organize** · Chat ·
-  Settings (D-Day hidden); the project name sits above the month (`renderProjectChip`,
+  (`planner.film` = { on, project }). In film mode the dock is Calendar · **Write** · **Organize** · **Preview** · Chat ·
+  Settings (D-Day hidden; 6 icons, so `.film .tabbar` has a smaller gap); the project name sits above the month (`renderProjectChip`,
   where D-Days go) and tapping it or the clapperboard opens the **projects card**
   (choose / New project / Invite / Rename / Delete or Leave / Exit). The calendar, day view,
   editor, folders and expanded grid then show and edit **only the project's** to-dos,
@@ -264,6 +264,29 @@ laptop. So:
   database's `project_items_kind_check` must allow the Organize kinds (film.sql re-creates
   it); until then (`23514`) Organize entries stay on the phone with a notice
   (`orgNeedsSetup`), calendar items keep syncing, and they upload on a later refresh.
+- **Preview tab** (film mode; `js/preview.js`, `#view-preview`; section saved in
+  `planner.previewsection`): **Concept** = a 2-column grid of concept art / storyboards /
+  reference shots. + opens the photo picker (several at once); each image is shrunk on the
+  phone (canvas → ≤1600px JPEG + ≤480px thumbnail, white behind transparency) and uploaded to
+  the private Storage bucket `concepts` at `<project id>/<item id>.jpg` / `_t.jpg`
+  (`uploadFile` / `signFiles` / `removeFiles` in cloud.js; `api()` sends Blob bodies as-is).
+  Details are project items of kind `concept` ({ path, thumb, caption, w, h, created }).
+  Images are shown through signed links (24h, cached in localStorage `planner.previewurls`,
+  removed on sign-out) and one reused `<img>` per file so redraws never flash. Tapping a tile
+  opens a full-screen dark viewer (`.pv-viewer` dialog): swipe sideways = next/previous, swipe
+  down = close, tap the caption to edit, trash deletes the item and its files. Deleting a
+  project deletes its concept files first (`leaveProject`). **Result** = one YouTube link
+  (item kind `result`, id `result`: { url, video, start }; `parseYouTube` accepts youtu.be,
+  watch?v=, shorts, embed, live, a bare id and `t=`). Its thumbnail (i.ytimg.com maxres, else
+  hq) sits big in the middle of the free space with a play button; tapping swaps in a
+  youtube-nocookie embed that plays in the app. Redraws that change nothing are skipped
+  (`stable()` signature: the database reorders JSON keys), so the 15s refresh doesn't restart
+  the video; leaving the tab removes the iframe (`leavePreview`). Storage RLS (verified on
+  local Postgres with a stub `storage` schema): only members of the project named by the
+  first folder can read / add / change / delete (`is_project_folder_member`). Until the setup
+  is run, kinds the database refuses (`23514`) are held on the phone per kind
+  (`film.js` `blocked` → `needsSetup(kinds)`, banner), other kinds keep syncing, and they
+  upload on a later refresh; uploads without the bucket say to run the setup step.
 - **Postpone a to-do** (`js/postpone.js`): swipe a to-do left to reveal **Tmrw** and
   **Date** (date card from `askDate`), or use the editor's "Postpone" row (Tomorrow /
   Pick date). A "Moved to …" snack with **Undo** appears (`snack` in ui.js). One-off
@@ -296,7 +319,7 @@ laptop. So:
 ## Codebase structure
 
 ```
-index.html             Shell: login / calendar / D-Day / chat / settings views, bell, bottom bar, toast, sheets (editor, folder, D-Day, account, social)
+index.html             Shell: login / calendar / D-Day / write / organize / preview / chat / settings views, bell, bottom bar, toast, sheets (editor, folder, D-Day, account, social)
 styles.css             All styles. Theme via CSS variables; html[data-theme] light/dark, html[data-accent].
                        Square card size comes from --cal-w / --cell; .month-mode/.week-mode drive layout
 fonts/                 Fraunces variable font (latin, upright woff2) + OFL.txt license
@@ -327,7 +350,8 @@ js/film.js             Film Production Mode data: mode, projects, collaborators,
 js/filmui.js           Film mode UI: logo press-and-hold + clapperboard, projects card, project name chip
 js/write.js            Write tab: Theme / Characters / Plot / Script read + edit (one editor at a time)
 js/organize.js         Organize tab: Supplies / Locations / Cast / Budget (film mode), entry sheet, totals
-supabase/film.sql      Tables + RLS for projects, project_members, project_items, project_docs
+js/preview.js          Preview tab (film mode): Concept image grid + viewer (Storage uploads), Result YouTube player
+supabase/film.sql      Tables + RLS for projects, project_members, project_items, project_docs; `concepts` Storage bucket + policies
 supabase/chat.sql      Tables + RLS for chats, chat_members, messages (run once after social.sql)
 supabase/social.sql    Tables + RLS for profiles, friendships, shares, share_checks (run once after setup.sql)
 icons/                 icon.svg (source) + 180/192/512 PNGs rendered from it
@@ -336,7 +360,7 @@ docs/                  Screenshots of the app
 
 ## Data model (`js/store.js`)
 
-Keep the internal names (`planner.v1`, `planner.auth`, `planner.social`, `planner.friendsopen`, `planner.chat`, `planner.expand`, `planner.film`, `planner.filmdata`, `planner.filmsection`, `planner.orgsection`, `planner_data`, `planner-vN`) as they
+Keep the internal names (`planner.v1`, `planner.auth`, `planner.social`, `planner.friendsopen`, `planner.chat`, `planner.expand`, `planner.film`, `planner.filmdata`, `planner.filmsection`, `planner.orgsection`, `planner.previewsection`, `planner.previewurls`, `planner_data`, `planner-vN`) as they
 are, or existing users lose their data/session.
 
 Stored in `localStorage` under `planner.v1`:
@@ -441,7 +465,7 @@ fetches with `cache: 'no-cache'` (bypassing Pages' 10-minute HTTP cache), the ap
 `controllerchange`. So the owner only needs to close and reopen the app once.
 
 **When you change any file the app loads, bump `CACHE` in `sw.js`**
-(currently `planner-v72`; bump to `planner-v73`, …) and keep its `ASSETS` list in sync
+(currently `planner-v73`; bump to `planner-v74`, …) and keep its `ASSETS` list in sync
 with every file in `js/` and `fonts/`, otherwise installed phones keep stale files.
 
 ## Git conventions

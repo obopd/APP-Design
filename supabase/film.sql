@@ -33,10 +33,11 @@ create table if not exists public.project_items (
 );
 
 -- Kinds: calendar items (todo, event, category) and the Organize tab's entries
--- (supply, location, actor, expense, budget). Re-created so older setups accept the new kinds.
+-- (supply, location, actor, expense, budget) and the Preview tab's (concept, result).
+-- Re-created so older setups accept the new kinds.
 alter table public.project_items drop constraint if exists project_items_kind_check;
 alter table public.project_items add constraint project_items_kind_check
-  check (kind in ('todo', 'event', 'category', 'supply', 'location', 'actor', 'expense', 'budget'));
+  check (kind in ('todo', 'event', 'category', 'supply', 'location', 'actor', 'expense', 'budget', 'concept', 'result'));
 
 create table if not exists public.project_docs (
   project_id uuid not null references public.projects (id) on delete cascade,
@@ -114,3 +115,28 @@ create policy "docs: add" on public.project_docs for insert to authenticated wit
 create policy "docs: lock and save" on public.project_docs for update to authenticated
   using (public.is_project_member(project_id) and (locked_by is null or locked_by = auth.uid() or lock_until < now()))
   with check (public.is_project_member(project_id) and (locked_by is null or locked_by = auth.uid()));
+
+-- Preview tab: concept images in a private Storage bucket, one folder per project
+-- (<project id>/<image>.jpg). Only the project's members can see, add or delete them.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('concepts', 'concepts', false, 3145728, array['image/jpeg'])
+on conflict (id) do update set public = false, file_size_limit = 3145728, allowed_mime_types = array['image/jpeg'];
+
+create or replace function public.is_project_folder_member(object_name text) returns boolean
+  language sql stable security definer set search_path = public as
+  $$ select exists (select 1 from project_members
+       where user_id = auth.uid() and project_id::text = split_part(object_name, '/', 1)) $$;
+
+drop policy if exists "concepts: see" on storage.objects;
+drop policy if exists "concepts: add" on storage.objects;
+drop policy if exists "concepts: change" on storage.objects;
+drop policy if exists "concepts: delete" on storage.objects;
+create policy "concepts: see" on storage.objects for select to authenticated
+  using (bucket_id = 'concepts' and public.is_project_folder_member(name));
+create policy "concepts: add" on storage.objects for insert to authenticated
+  with check (bucket_id = 'concepts' and public.is_project_folder_member(name));
+create policy "concepts: change" on storage.objects for update to authenticated
+  using (bucket_id = 'concepts' and public.is_project_folder_member(name))
+  with check (bucket_id = 'concepts' and public.is_project_folder_member(name));
+create policy "concepts: delete" on storage.objects for delete to authenticated
+  using (bucket_id = 'concepts' and public.is_project_folder_member(name));

@@ -5,6 +5,7 @@ import { filmOn, onFilmChange, refreshFilm, editorOf } from './film.js';
 import { setupBrand, renderProjectChip, paintBrand } from './filmui.js';
 import { renderWrite, finishEditing, writeBackgrounded, isEditing } from './write.js';
 import { renderOrganize } from './organize.js';
+import { renderPreview, leavePreview } from './preview.js';
 import { renderDay, tickTimers } from './day.js';
 import { openEditor } from './editor.js';
 import { renderSettings, applyTheme } from './settings.js';
@@ -26,6 +27,7 @@ const loginEl = document.getElementById('view-login');
 const chatEl = document.getElementById('view-chat');
 const writeEl = document.getElementById('view-write');
 const organizeEl = document.getElementById('view-organize');
+const previewEl = document.getElementById('view-preview');
 const chatBadge = document.querySelector('.tab[data-view="chat"] .tab-badge');
 const toastEl = document.getElementById('toast');
 const ddaySlot = document.getElementById('dday-slot');
@@ -230,6 +232,7 @@ function swapExpanded(oldNodes, { kind, dir }) {
 }
 
 // Accounts are required: while signed out, only the login page shows (no dock).
+const FILM_TABS = ['write', 'organize', 'preview'];
 const isGated = () => isConfigured() && !currentUser();
 let gateShown = false;
 
@@ -238,7 +241,8 @@ function render() {
   document.body.classList.toggle('gated', gated);
   loginEl.hidden = !gated;
   if (gated) {
-    calendarView.hidden = settingsEl.hidden = ddayEl.hidden = chatEl.hidden = writeEl.hidden = organizeEl.hidden = true;
+    calendarView.hidden = settingsEl.hidden = ddayEl.hidden = chatEl.hidden = writeEl.hidden = organizeEl.hidden = previewEl.hidden = true;
+    leavePreview();
     chatShown(false);
     if (!gateShown) renderLoginGate(loginEl); // once per visit, so typing isn't wiped
     gateShown = true;
@@ -254,8 +258,9 @@ function render() {
 
   // Film mode has a Write tab instead of D-Day.
   if (filmOn() && view.tab === 'dday') view.tab = 'calendar';
-  if (!filmOn() && (view.tab === 'write' || view.tab === 'organize')) view.tab = 'calendar';
+  if (!filmOn() && FILM_TABS.includes(view.tab)) view.tab = 'calendar';
   if (view.tab !== 'write' && isEditing()) finishEditing();
+  if (view.tab !== 'preview') leavePreview(); // stop a playing video
 
   document.querySelectorAll('.tab').forEach((t) => {
     const on = t.dataset.view === view.tab;
@@ -271,12 +276,14 @@ function render() {
   ddayEl.hidden = view.tab !== 'dday';
   writeEl.hidden = view.tab !== 'write';
   organizeEl.hidden = view.tab !== 'organize';
+  previewEl.hidden = view.tab !== 'preview';
 
   if (view.tab === 'settings') { renderSettings(settingsEl); prevView = { ...view }; return; }
   if (view.tab === 'chat') { renderChat(chatEl); prevView = { ...view }; return; }
   if (view.tab === 'dday') { renderDdays(ddayEl); prevView = { ...view }; return; }
   if (view.tab === 'write') { renderWrite(writeEl); prevView = { ...view }; return; }
   if (view.tab === 'organize') { renderOrganize(organizeEl); prevView = { ...view }; return; }
+  if (view.tab === 'preview') { renderPreview(previewEl); prevView = { ...view }; return; }
 
   // Month ⇄ week: lay out the end state at once, then animate only transform / opacity /
   // clip-path from where things were (FLIP), so the phone never re-lays out mid-animation.
@@ -333,7 +340,7 @@ bellEl.addEventListener('click', () => { openNotifications(); refreshFilm(); });
 // Film Production Mode: the logo (press and hold) switches; project data redraws the views.
 setupBrand(document.getElementById('brand'), () => {
   if (filmOn() && view.tab === 'dday') view.tab = 'calendar';
-  if (!filmOn() && (view.tab === 'write' || view.tab === 'organize')) view.tab = 'calendar';
+  if (!filmOn() && FILM_TABS.includes(view.tab)) view.tab = 'calendar';
   render();
 });
 onFilmChange(() => { if (!isGated()) render(); });

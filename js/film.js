@@ -7,7 +7,7 @@
 //
 // While film mode is on, store.js shows and edits this project's lists instead of the
 // personal planner (useLists); edits are pushed here, row by row, shortly after.
-import { api, currentUser, isConfigured, onCloudChange } from './cloud.js';
+import { api, currentUser, isConfigured, onCloudChange, removeFiles } from './cloud.js';
 import { useLists, uid } from './store.js';
 import { createGroup, addMembers, removeMember, leaveChat, renameGroup } from './chat.js';
 import { addNoteSource, notifySocial, loadProfiles, displayName } from './social.js';
@@ -86,9 +86,10 @@ export function chooseProject(pid) {
 /* ---------- The project's to-dos / schedule / folders ---------- */
 
 // Item kinds: to-dos / events / folders feed the calendar (store.js); the Organize tab's
-// kinds (supplies, locations, cast, budget lines, budget settings) live in lists.org.
+// kinds (supplies, locations, cast, budget lines, budget settings) and the Preview tab's
+// (concept images, the result video) live in lists.org.
 const CAL = { todo: 'todos', event: 'events', category: 'categories' };
-export const ORG_KINDS = ['supply', 'location', 'actor', 'expense', 'budget'];
+export const ORG_KINDS = ['supply', 'location', 'actor', 'expense', 'budget', 'concept', 'result'];
 const blankLists = () => ({ todos: [], events: [], categories: [], org: Object.fromEntries(ORG_KINDS.map((k) => [k, []])) });
 function listFor(l, kind) {
   if (CAL[kind]) return l[CAL[kind]];
@@ -117,7 +118,8 @@ function applyLists() {
   const p = currentProject();
   const rows = p ? data.items[p.id] || [] : [];
   const l = rowsToLists(rows);
-  synced = Object.fromEntries(rows.map((r) => [r.id, JSON.stringify({ kind: r.kind, data: r.data })]));
+  // Rows of refused kinds were never sent: leave them unsynced so they go up once allowed.
+  synced = Object.fromEntries(rows.filter((r) => !blocked().includes(r.kind)).map((r) => [r.id, JSON.stringify({ kind: r.kind, data: r.data })]));
   lists = { ...l, persist: () => schedulePush() };
   useLists(lists);
 }
@@ -143,40 +145,53 @@ async function pushItems() {
   if (!p || !lists || !canSync()) return;
   const rows = localRows();
   const now = new Date().toISOString();
-  // Organize entries need the database to accept their kinds (film.sql's newer check);
-  // until that setup step has run they stay on this phone and the rest still syncs.
-  const changed = rows.filter((r) => synced[r.id] !== JSON.stringify({ kind: r.kind, data: r.data }))
-    .filter((r) => !orgMissing || retryOrg || CAL[r.kind]);
+  // Organize / Preview entries need the database to accept their kinds (film.sql's newer
+  // check); until that setup step has run they stay on this phone and the rest still syncs.
+  const held = (k) => !retryBlocked && blocked().includes(k);
+  let changed = rows.filter((r) => synced[r.id] !== JSON.stringify({ kind: r.kind, data: r.data })).filter((r) => !held(r.kind));
   const ids = new Set(rows.map((r) => r.id));
   const removed = Object.keys(synced).filter((id) => !ids.has(id));
+  const upsert = (list) => rest('project_items?on_conflict=project_id,id', {
+    method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: list.map((r) => ({ project_id: p.id, id: r.id, kind: r.kind, data: r.data, updated_by: me(), updated_at: now })),
+  });
+  const before = blocked().join();
   try {
     if (changed.length) {
-      await rest('project_items?on_conflict=project_id,id', {
-        method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: changed.map((r) => ({ project_id: p.id, id: r.id, kind: r.kind, data: r.data, updated_by: me(), updated_at: now })),
-      });
+      try {
+        await upsert(changed);
+      } catch (e) {
+        if (e.code !== '23514') throw e;
+        // Some kinds aren't known to this database yet: send kind by kind, keep the refused ones here.
+        const sent = [];
+        for (const kind of new Set(changed.map((r) => r.kind))) {
+          const part = changed.filter((r) => r.kind === kind);
+          try { await upsert(part); sent.push(...part); } catch (e2) {
+            if (e2.code !== '23514' || CAL[kind]) throw e2;
+            if (!blocked().includes(kind)) blocked().push(kind);
+          }
+        }
+        changed = sent;
+      }
+      const ok = new Set(changed.map((r) => r.kind));
+      data.blocked = blocked().filter((k) => !ok.has(k));
     }
     if (removed.length) await rest(`project_items?project_id=eq.${p.id}&id=in.(${removed.map(encodeURIComponent).join(',')})`, { method: 'DELETE' });
-    if (retryOrg && changed.some((r) => !CAL[r.kind])) { orgMissing = false; notify(); }
-    retryOrg = false;
+    retryBlocked = false;
     changed.forEach((r) => { synced[r.id] = JSON.stringify({ kind: r.kind, data: r.data }); });
     removed.forEach((id) => { delete synced[id]; });
     data.items[p.id] = rows.map((r) => ({ ...r, updated_at: now }));
     writeCache();
-  } catch (e) {
-    if (e.code === '23514' && changed.some((r) => !CAL[r.kind])) {
-      orgMissing = true;
-      retryOrg = false;
-      notify();
-      pushItems();
-      return;
-    }
+    if (blocked().join() !== before) notify();
+  } catch {
+    retryBlocked = false;
     schedulePushLater();
   }
 }
-let orgMissing = false;
-let retryOrg = false;
-export const orgNeedsSetup = () => orgMissing;
+let retryBlocked = false;
+const blocked = () => (data.blocked ||= []); // kinds the database refused (setup step not run yet)
+export const needsSetup = (kinds) => kinds.some((k) => blocked().includes(k));
+export const orgNeedsSetup = () => needsSetup(['supply', 'location', 'actor', 'expense', 'budget']);
 function schedulePushLater() { clearTimeout(pushTimer); pushTimer = setTimeout(pushItems, 10000); }
 
 // Bring in collaborators' changes without losing my unsent ones (kept by object identity,
@@ -218,7 +233,7 @@ export function refreshFilm() {
   // A refresh asked for mid-run (e.g. film mode just switched on) runs once more after.
   if (running) { again = true; return running; }
   running = (async () => {
-    if (orgMissing && lists) { retryOrg = true; schedulePush(); } // try Organize again (the setup may have run)
+    if (blocked().length && lists) { retryBlocked = true; schedulePush(); } // try Organize again (the setup may have run)
     try {
       const u = me();
       if (data.uid !== u) data = blank(u);
@@ -322,6 +337,9 @@ export async function removeCollaborator(pid, userId) {
 export async function leaveProject(pid) {
   const p = data.projects[pid];
   if (p?.owner === me()) {
+    // Concept images live in Storage, which doesn't follow the row's delete.
+    const files = (data.items[pid] || []).filter((r) => r.kind === 'concept').flatMap((r) => [r.data.path, r.data.thumb]).filter(Boolean);
+    await removeFiles('concepts', files).catch(() => {});
     await rest(`projects?id=eq.${pid}`, { method: 'DELETE' }); // owner: delete it for everyone
     if (p.chat_id) await rest(`chats?id=eq.${p.chat_id}`, { method: 'DELETE' }).catch(() => {});
   } else {
