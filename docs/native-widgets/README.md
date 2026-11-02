@@ -47,6 +47,22 @@ D-Day (small), Next event (small), To-do (medium), Today (large: routines + to-d
 schedule), Routines (small, ring), Film (small / medium, film look), Schedule (medium). They
 also appear big in StandBy. Light and dark follow the phone.
 
+## 4 · Card + wallpaper together — `4-card-with-wallpaper.png`
+
+Designs 1 and 2 used at the same time. The wallpaper keeps to the space **between the clock
+and the card** (roughly the middle third of the screen), so the card never hides it, and it
+shows **different** things than the card so nothing is repeated:
+
+- **Everyday + card**: wallpaper = this week strip, today's schedule, nearest D-Day; card =
+  to-dos to check off (other tabs as in 1).
+- **Film + card**: wallpaper = next shoot day (call / wrap / location) and the shoot-days
+  strip, film look; card = project to-dos with "Call in 3 days".
+- **Minimal + card**: wallpaper = just today's schedule and routines as text; card = to-dos
+  and the countdown to the next event.
+
+When the card isn't showing (ended after ~8 h, or turned off), the plain wallpaper layouts
+from 2 can be used instead; the "Get Planner Wallpaper" intent can take a "with card" option.
+
 ## Data
 
 All widgets need the same "today" data the web app already computes: unfinished to-dos
