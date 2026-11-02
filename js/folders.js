@@ -34,8 +34,9 @@ export const FOLDER_COLORS = [
 /**
  * openFolderSheet({ cat?, parent?, onDone?(id), onCancel? })
  * New folder: "Academic/Biology" creates nested folders; the color goes on the last one.
+ * Editing (cat) with onSubfolder(id): a button makes a folder inside it, then calls onSubfolder.
  */
-export function openFolderSheet({ cat = null, parent = null, onDone = () => {}, onCancel = () => {} } = {}) {
+export function openFolderSheet({ cat = null, parent = null, onDone = () => {}, onCancel = () => {}, onSubfolder = null } = {}) {
   let color = cat ? cat.color || null : null;
   let finished = false;
 
@@ -87,12 +88,19 @@ export function openFolderSheet({ cat = null, parent = null, onDone = () => {}, 
     deleteCategory(cat.id);
   };
 
+  const subfolder = () => {
+    finished = true;
+    close();
+    openFolderSheet({ parent: cat.id, onDone: onSubfolder });
+  };
+
   dialog.replaceChildren(h('form', { novalidate: true, onsubmit: submit },
     h('div', { class: 'grabber' }),
     h('div', { class: 'sheet-head' },
       h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Cancel', onclick: close }, icon(ICONS.close)),
       h('span', { class: 'spacer' }),
       cat ? h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Delete folder', onclick: remove }, icon(ICONS.trash)) : null,
+      cat && onSubfolder ? h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'New folder inside', onclick: subfolder }, icon(ICONS.folderPlus)) : null,
       h('span', { class: 'spacer' }),
       h('button', { type: 'submit', class: 'icon-btn ok', 'aria-label': 'Save' }, icon(ICONS.check))),
     h('div', { class: 'title-row' }, name),

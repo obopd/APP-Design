@@ -73,6 +73,10 @@ count and + (folder-plus icon left of it). Done mark = slim vertical dash (`.das
 stretches either column to full width (`layout`: split | todo | schedule, kept across days);
 sideways swipe on empty list space returns to split. Swipe a to-do left = **postpone**
 (Tmrw / Date, Undo snack; routines move only that day via `skipOn`).
+Folder heading: tap the name = folder sheet (rename / color / share / delete / sub-folder),
++ = new to-do in it, elsewhere = fold. **Hold a to-do ~0.45s and drag** onto a folder (its
+heading or any to-do in it; a section heading = no folder) to move it (`makeMovable`, Undo
+snack; the list auto-scrolls at its edges; page scroll is blocked while moving).
 
 **To-dos & events** (`js/editor.js`): repeat daily / weekly / every 2 weeks / monthly /
 yearly with optional Until; routine to-dos checked off per day (`doneOn`). **Every
@@ -277,7 +281,8 @@ every `supabase/*.sql` on top of `db/stub.sql` (stand-ins for Supabase auth / st
 vault / pg_net / pg_cron) and `db/seed.sql` (users a@x, b@x, c@x, password `secret1`; alice
 is friends with bob and carol; an alice↔bob chat), runs `mock-server.js` on :54321
 (PostgREST + GoTrue + Storage + RPC + Realtime stand-in with real RLS; `Bearer service` =
-service role) and the app on :8765. Suites: `sync`, `todos` (roll-over across days with a fake clock), `desktop` (Desktop
+service role) and the app on :8765. Suites: `sync`, `todos` (roll-over across days with a fake clock), `folders` (folder
+sheet, + in a folder, drag between folders), `desktop` (Desktop
 Chrome: mouse, keyboard, window sizes), `storage`, `resilience` (offline, 2 minutes open: errors + memory,
 sign-out cleanup), `motion`, `preview`, `shoot`,
 `app-features` (push sign-up, instant chat, search, backups, clean-up, ping) and
@@ -303,7 +308,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v90`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v91`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 
