@@ -1,8 +1,8 @@
 // The area below the calendar when a day is selected: to-dos + hourly schedule.
-import { h, icon, ICONS, fmt, todayKey, daysBetween, toMinutes, shortTime, formatDuration, formatClock, formatNumber } from './util.js';
+import { h, icon, ICONS, fmt, todayKey, parseKey, daysBetween, toMinutes, shortTime, formatDuration, formatClock, formatNumber } from './util.js';
 import {
   cur, save, eventsOn, todosOn, isDone, isRoutine, toggleDone, childCategories,
-  isTracked, valueOn, setValue, startTimer, stopTimer, routineStats, hasDue, isStarred,
+  isTracked, valueOn, setValue, startTimer, stopTimer, routineStats, hasDue, rollsOver, isStarred,
 } from './store.js';
 import { askText, tell } from './ui.js';
 import { sharedTodosOn, sharedEventsOn, isSharedDone, toggleShared, nameOf } from './social.js';
@@ -116,6 +116,12 @@ function dueTag(t, key) {
   return h('span', { class: `due-tag${left <= 0 ? ' due-now' : ''}`, 'aria-label': `Due ${t.due}` }, text);
 }
 
+// A one-off to-do carried over from an earlier day shows that day, small and gray.
+function laterTag(t, key) {
+  return h('span', { class: 'due-tag', 'aria-label': `Moved from ${t.date}` }, fmt({ month: 'short', day: 'numeric' }).format(parseKey(t.date)));
+}
+const tagFor = (t, key, done) => (done ? null : hasDue(t) ? dueTag(t, key) : rollsOver(t) && t.date < key ? laterTag(t, key) : null);
+
 // The slim mark checks a to-do off; tapping the text opens it for editing.
 function todoItem(t, key, actions) {
   const done = isDone(t, key);
@@ -129,7 +135,7 @@ function todoItem(t, key, actions) {
       t.title,
       starred ? h('span', { class: 'mark star', 'aria-hidden': 'true' }, '★') : null,
       t.sharedWith?.length ? h('span', { class: 'mark shared-mark', 'aria-label': 'Shared' }, icon(ICONS.people)) : null,
-      hasDue(t) && !done ? dueTag(t, key) : null),
+      tagFor(t, key, done)),
     isTracked(t) ? tracker(t, key) : null);
   const li = h('li', { class: `todo${done ? ' done' : ''}${starred ? ' imp' : ''}` },
     h('div', { class: 'todo-actions' },
@@ -187,7 +193,7 @@ function sharedItem(t, key) {
       h('button', { class: 'todo-title', onclick: details },
         t.title,
         starred ? h('span', { class: 'mark star', 'aria-hidden': 'true' }, '★') : null,
-        hasDue(t) && !done ? dueTag(t, key) : null,
+        tagFor(t, key, done),
         h('span', { class: 'by-tag' }, nameOf(t.owner)))));
 }
 

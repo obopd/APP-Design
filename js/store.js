@@ -155,8 +155,11 @@ export const isDone = (todo, key) => (isRoutine(todo) ? !!todo.doneOn?.[key] : !
 // An unfinished to-do with a due date moves forward to today each day until it's done.
 // Computed, not stored, so opening the app never creates an edit that could win a sync.
 export const hasDue = (todo) => !!todo.due && !isRoutine(todo);
+// One-off to-dos that aren't done move forward to today, day after day, until checked off.
+// Computed (never written on open), so just opening the app can't create an edit.
+export const rollsOver = (todo) => !isRoutine(todo);
 export const todoDate = (todo, today = todayKey()) =>
-  (hasDue(todo) && !todo.done && todo.date < today ? today : todo.date);
+  (rollsOver(todo) && !todo.done && todo.date < today ? today : todo.date);
 
 // Starred by hand, or automatically from its due date on while unfinished.
 export const isStarred = (item, key = todayKey()) =>
@@ -168,7 +171,7 @@ export function toggleDone(todo, key) {
     if (todo.doneOn[key]) delete todo.doneOn[key];
     else todo.doneOn[key] = true;
   } else {
-    if (!todo.done && hasDue(todo)) todo.date = key; // stays on the day it was finished
+    if (!todo.done && rollsOver(todo)) todo.date = key; // stays on the day it was finished
     todo.done = !todo.done;
   }
   save();
@@ -181,7 +184,7 @@ export const eventsOn = (key) => cur().events.filter((e) => occursOn(e, key)).so
 // Important first; done items sink to the bottom.
 export const todosOn = (key) =>
   cur().todos
-    .filter((t) => (hasDue(t) ? todoDate(t) === key : occursOn(t, key)) && !t.skipOn?.[key])
+    .filter((t) => (rollsOver(t) ? todoDate(t) === key : occursOn(t, key)) && !t.skipOn?.[key])
     .sort((a, b) => isDone(a, key) - isDone(b, key) || isStarred(b, key) - isStarred(a, key));
 
 /* ---------- Categories (folders) ---------- */

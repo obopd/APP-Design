@@ -72,9 +72,11 @@ sideways swipe on empty list space returns to split. Swipe a to-do left = **post
 (Tmrw / Date, Undo snack; routines move only that day via `skipOn`).
 
 **To-dos & events** (`js/editor.js`): repeat daily / weekly / every 2 weeks / monthly /
-yearly with optional Until; routine to-dos checked off per day (`doneOn`). **Due date**
-(one-off only): an unfinished to-do moves to today daily and is starred from its due day —
-computed (`todoDate`, `isStarred`, `hasDue`), never written on open; shows "D-3" tags.
+yearly with optional Until; routine to-dos checked off per day (`doneOn`). **Every
+unfinished one-off to-do moves forward to today** until checked off (`rollsOver`,
+`todoDate`; computed, never written on open, so opening can't create a sync edit); it shows
+its original date as a small gray tag, and checking it off pins `date` to that day.
+**Due date** (one-off only): starred from its due day, "D-3" tag (instead of the date tag).
 **Tracking** (optional): Count or Time (stopwatch stored as a start timestamp,
 `values[dateKey]`); tapping "Routines" shows per-routine stats. **Important ★** = accent
 dot + home-screen badge. **Folders** nest ("Academic/Biology"); open/closed saved in
@@ -270,7 +272,7 @@ every `supabase/*.sql` on top of `db/stub.sql` (stand-ins for Supabase auth / st
 vault / pg_net / pg_cron) and `db/seed.sql` (users a@x, b@x, c@x, password `secret1`; alice
 is friends with bob and carol; an alice↔bob chat), runs `mock-server.js` on :54321
 (PostgREST + GoTrue + Storage + RPC + Realtime stand-in with real RLS; `Bearer service` =
-service role) and the app on :8765. Suites: `sync`, `storage`, `resilience` (offline, 2 minutes open: errors + memory,
+service role) and the app on :8765. Suites: `sync`, `todos` (roll-over across days with a fake clock), `storage`, `resilience` (offline, 2 minutes open: errors + memory,
 sign-out cleanup), `motion`, `preview`, `shoot`,
 `app-features` (push sign-up, instant chat, search, backups, clean-up, ping) and
 `push-function` (the Edge Function in Node, decrypting real Web Push). Write tests with
@@ -295,7 +297,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v88`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v89`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 

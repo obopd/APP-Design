@@ -2,7 +2,7 @@
 // and, in film mode, the project's writing. Everything searched is already on the phone.
 // Tapping a result goes there: a day, a chat, the D-Day tab or a Write section.
 import { h, icon, ICONS, dateKey, addDays, parseKey, fmt, todayKey } from './util.js';
-import { state, cur, inFilm, occursOn, todoDate, hasDue } from './store.js';
+import { state, cur, inFilm, occursOn, todoDate, rollsOver } from './store.js';
 import { openLayer } from './ui.js';
 import { chatList, messagesOf } from './chat.js';
 import { docOf, currentProject } from './film.js';
@@ -12,7 +12,7 @@ const norm = (s) => String(s || '').toLocaleLowerCase();
 
 // The day to open for a to-do / event: its date, or for a routine the next time it happens.
 function dayFor(item, isTodo) {
-  if (isTodo && hasDue(item)) return todoDate(item);
+  if (isTodo && rollsOver(item)) return todoDate(item);
   if (!item.repeat || item.repeat === 'none') return item.date;
   const today = todayKey();
   if (item.date >= today) return item.date;

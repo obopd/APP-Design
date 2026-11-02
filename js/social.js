@@ -7,7 +7,7 @@
 // A friend can check a shared to-do off: that writes a `share_checks` row, which the
 // owner's app applies to its own to-do and then deletes.
 import { api, currentUser, isConfigured, onCloudChange } from './cloud.js';
-import { state, save, onChange, isRoutine, hasDue, todoDate, occursOn, inFilm } from './store.js';
+import { state, save, onChange, isRoutine, rollsOver, todoDate, occursOn, inFilm } from './store.js';
 
 const CACHE_KEY = 'planner.social';
 export const HANDLE_RE = /^[a-z0-9_.]{3,20}$/;
@@ -301,7 +301,7 @@ async function applyFriendChecks() {
       todo.doneOn = { ...todo.doneOn };
       if (c.done) todo.doneOn[c.day] = true; else delete todo.doneOn[c.day];
     } else {
-      if (c.done && hasDue(todo)) todo.date = c.day;
+      if (c.done && rollsOver(todo)) todo.date = c.day;
       todo.done = c.done;
     }
     changed = true;
@@ -346,8 +346,8 @@ export function sharedTodosOn(key) {
   return sharedTodos().map((t) => {
     if (isRoutine(t)) return t;
     const o = override(t.shareId, t, key);
-    return o ? { ...t, done: o.done, date: o.done && hasDue(t) ? o.day : t.date } : t;
-  }).filter((t) => (isRoutine(t) ? occursOn(t, key) && !t.skipOn?.[key] : hasDue(t) ? todoDate(t) === key : t.date === key));
+    return o ? { ...t, done: o.done, date: o.done && rollsOver(t) ? o.day : t.date } : t;
+  }).filter((t) => (isRoutine(t) ? occursOn(t, key) && !t.skipOn?.[key] : rollsOver(t) ? todoDate(t) === key : t.date === key));
 }
 
 export const sharedEventsOn = (key) => (inFilm() ? [] : inbox()).filter((s) => s.kind === 'event')

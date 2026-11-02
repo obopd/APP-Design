@@ -1,6 +1,6 @@
 // Bottom sheet for creating / editing a to-do or a schedule item.
 import { h, icon, ICONS, todayKey, toMinutes, fromMinutes, pad } from './util.js';
-import { cur, save, uid, REPEATS, TRACKS, categoryTree, hasDue, todoDate } from './store.js';
+import { cur, save, uid, REPEATS, TRACKS, categoryTree, rollsOver, todoDate } from './store.js';
 import { openFolderSheet } from './folders.js';
 import { ask, selectButton } from './ui.js';
 import { postponeTomorrow, postponePick } from './postpone.js';
@@ -39,7 +39,7 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null, 
   let type = kind;
   const startHour = hour ?? Math.min(new Date().getHours() + 1, 23);
   // A due to-do that has rolled forward shows the day it's on now.
-  const draft = item ? { ...item, date: kind === 'todo' && hasDue(item) ? todoDate(item) : item.date } : {
+  const draft = item ? { ...item, date: kind === 'todo' && rollsOver(item) ? todoDate(item) : item.date } : {
     title: '', date, important: false, notes: '',
     allDay: false, start: `${pad(startHour)}:00`, end: fromMinutes(Math.min(startHour * 60 + 60, 23 * 60 + 59)),
     repeat: presetRepeat, until: '', alert: 'none', category: presetCategory,
