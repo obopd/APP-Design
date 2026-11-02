@@ -1293,7 +1293,7 @@ body { transition: background-color .6s ease, color .6s ease; }
 
 /* Film-strip sprocket holes down both edges of the month card. */
 .film .month-mode .calendar {
-  background-color: var(--bg);
+  background-color: var(--card, var(--bg));
   background-image:
     repeating-linear-gradient(to bottom, var(--perf) 0 7px, transparent 7px 15px),
     repeating-linear-gradient(to bottom, var(--perf) 0 7px, transparent 7px 15px);
@@ -1301,3 +1301,79 @@ body { transition: background-color .6s ease, color .6s ease; }
   background-position: 9px 30px, calc(100% - 9px) 30px;
   background-repeat: no-repeat;
 }
+
+/* ---------- Film mode backgrounds (html[data-filmbg]) ---------- */
+/* A still, full-screen layer behind everything (no animation, so no cost while scrolling).
+   Cards sit on it as raised surfaces; pinned headers and bars turn to frosted glass. */
+:root.film { --card: #fbf8f2; --glass: rgba(246, 241, 232, .72); }
+:root.film[data-theme="dark"] { --card: #15130f; --glass: rgba(13, 12, 10, .66); }
+html.film body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  animation: fade-in .6s ease both;
+}
+
+/* 1 · Projector glow: a soft warm beam from the top, edges falling into shade. */
+:root.film[data-filmbg="glow"] body::before {
+  background:
+    radial-gradient(ellipse 95% 55% at 50% -6%, rgba(255, 205, 140, .55), transparent 72%),
+    radial-gradient(ellipse 130% 85% at 50% 45%, transparent 60%, rgba(110, 80, 40, .10) 100%);
+}
+:root.film[data-theme="dark"][data-filmbg="glow"] body::before {
+  background:
+    radial-gradient(ellipse 90% 52% at 50% -8%, rgba(226, 162, 74, .30), transparent 72%),
+    radial-gradient(ellipse 130% 85% at 50% 45%, transparent 55%, rgba(0, 0, 0, .65) 100%);
+}
+
+/* 2 · Color grade: the classic teal-shadows / warm-highlights movie look. */
+:root.film[data-filmbg="grade"] body::before {
+  background:
+    radial-gradient(ellipse 110% 60% at 50% 110%, rgba(240, 160, 100, .35), transparent 70%),
+    linear-gradient(180deg, rgba(150, 190, 190, .38) 0%, transparent 45%);
+}
+:root.film[data-theme="dark"][data-filmbg="grade"] body::before {
+  background:
+    radial-gradient(ellipse 110% 60% at 50% 112%, rgba(214, 120, 52, .26), transparent 70%),
+    linear-gradient(180deg, rgba(30, 92, 100, .40) 0%, transparent 50%),
+    radial-gradient(ellipse 130% 85% at 50% 45%, transparent 60%, rgba(0, 0, 0, .55) 100%);
+}
+
+/* 3 · Darkroom: a faint red safelight glow (photographic darkroom). */
+:root.film[data-filmbg="darkroom"] body::before {
+  background:
+    radial-gradient(ellipse 80% 50% at 82% -4%, rgba(214, 70, 52, .20), transparent 70%),
+    radial-gradient(ellipse 130% 85% at 50% 45%, transparent 60%, rgba(90, 40, 30, .10) 100%);
+}
+:root.film[data-theme="dark"][data-filmbg="darkroom"] body::before {
+  background:
+    radial-gradient(ellipse 85% 55% at 80% -6%, rgba(190, 32, 28, .38), transparent 72%),
+    radial-gradient(ellipse 70% 40% at 10% 105%, rgba(150, 24, 20, .18), transparent 70%),
+    radial-gradient(ellipse 130% 85% at 50% 45%, transparent 55%, rgba(0, 0, 0, .65) 100%);
+}
+
+/* 4 · Film grain: a fine, still grain with a soft vignette. */
+:root.film[data-filmbg="grain"] body::before {
+  background:
+    radial-gradient(ellipse 125% 85% at 50% 45%, transparent 58%, rgba(90, 70, 40, .14) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .2 0 0 0 0 .16 0 0 0 0 .1 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+:root.film[data-theme="dark"][data-filmbg="grain"] body::before {
+  background:
+    radial-gradient(ellipse 125% 85% at 50% 45%, transparent 52%, rgba(0, 0, 0, .7) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .95 0 0 0 0 .9 0 0 0 0 .8 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Surfaces on the film background */
+.film .calendar, .film .expanded { background-color: var(--card); box-shadow: 0 10px 34px rgba(60, 40, 15, .07); }
+:root.film[data-theme="dark"] .calendar, :root.film[data-theme="dark"] .expanded { box-shadow: 0 14px 44px rgba(0, 0, 0, .55); }
+.film .page-sticky, .film .sp-bar, .film .composer {
+  background: var(--glass); -webkit-backdrop-filter: blur(18px) saturate(1.2); backdrop-filter: blur(18px) saturate(1.2);
+}
+.film .conv { background: transparent; }
+.film .hour span { background: transparent; }
+/* To-do rows let the film background through; the swipe actions underneath show only
+   while a row is being swiped or is open (otherwise they'd show through the row). */
+.film .todo-row { background: transparent; }
+.film .routines .todo-row { background: transparent; }
+.film .todo-actions { opacity: 0; transition: opacity .15s; }
+.film .todo:has(.todo-row.dragging, .todo-row.open) .todo-actions { opacity: 1; }
+.film .todo:has(.todo-row.dragging, .todo-row.open) .todo-row { background: var(--card); }
