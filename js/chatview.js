@@ -296,6 +296,13 @@ function convView(root, id, fixed = false) {
   });
   sendBtn.addEventListener('mousedown', (e) => e.preventDefault());
   sendBtn.addEventListener('click', send);
+  // On a computer (mouse / trackpad), Enter sends and Shift+Enter makes a new line.
+  // Phones keep Enter as a new line.
+  input.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.shiftKey || e.isComposing || !matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    e.preventDefault();
+    send();
+  });
 
   const items = h('ul', { class: 'msgs' });
   const earlier = h('button', {

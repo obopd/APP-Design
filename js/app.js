@@ -446,6 +446,15 @@ expandedEl.addEventListener('touchend', (e) => {
   if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) actions.shift(dx < 0 ? 1 : -1);
 });
 
+// Computers: ← / → move by month (or week / expanded page), Esc goes back to the month.
+// Not while typing or while a sheet or card is open.
+document.addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey || isGated() || view.tab !== 'calendar') return;
+  if (e.target.closest?.('input, textarea, [contenteditable="true"]') || document.querySelector('dialog[open]')) return;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); actions.shift(e.key === 'ArrowRight' ? 1 : -1); }
+  else if (e.key === 'Escape' && view.selected) actions.showMonth();
+});
+
 onChange(() => { render(); refreshReminders(); });
 
 // Coming back to the app: the date may have changed, so redraw and re-plan alerts.

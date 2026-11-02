@@ -99,6 +99,8 @@ export function openSearch(go) {
   const input = h('input', {
     type: 'search', class: 'search-input', placeholder: 'Search', autocomplete: 'off', enterkeyhint: 'search', 'aria-label': 'Search',
     oninput: () => draw(),
+    // Esc closes the card in one press (a search field's own Esc would only clear the text).
+    onkeydown: (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } },
   });
   const close = () => layer.close();
   function draw() {

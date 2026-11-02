@@ -28,6 +28,9 @@ to Home Screen). The owner (film director, photographer, reader, college student
   `snack` from `js/ui.js` (red button for deletes). Forms use `novalidate`.
 - **Opening any sheet or card must not focus a text field** (no keyboard until tapped).
 - **No haptics** (removed at the owner's request).
+- **Computers** (mouse / trackpad): ← / → move by month / week, Esc returns to the month,
+  Enter sends a chat message (Shift+Enter = new line; phones keep Enter = new line), Esc closes
+  search in one press. The layout is still the phone one, centered.
 - **No text selection** (no blue highlight) anywhere except chat messages (`.bubble`) and
   fields you type in: `body` has `user-select: none`, inputs / textareas opt back in.
 - Animations only animate `transform` / `opacity` (FLIP), never layout. Measure with CDP
@@ -272,7 +275,8 @@ every `supabase/*.sql` on top of `db/stub.sql` (stand-ins for Supabase auth / st
 vault / pg_net / pg_cron) and `db/seed.sql` (users a@x, b@x, c@x, password `secret1`; alice
 is friends with bob and carol; an alice↔bob chat), runs `mock-server.js` on :54321
 (PostgREST + GoTrue + Storage + RPC + Realtime stand-in with real RLS; `Bearer service` =
-service role) and the app on :8765. Suites: `sync`, `todos` (roll-over across days with a fake clock), `storage`, `resilience` (offline, 2 minutes open: errors + memory,
+service role) and the app on :8765. Suites: `sync`, `todos` (roll-over across days with a fake clock), `desktop` (Desktop
+Chrome: mouse, keyboard, window sizes), `storage`, `resilience` (offline, 2 minutes open: errors + memory,
 sign-out cleanup), `motion`, `preview`, `shoot`,
 `app-features` (push sign-up, instant chat, search, backups, clean-up, ping) and
 `push-function` (the Edge Function in Node, decrypting real Web Push). Write tests with
@@ -297,7 +301,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v89`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v90`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 
