@@ -39,13 +39,7 @@ to-dos, shoot days list), **Minimal** (just today, no boxes). Not tappable; upda
 the automation runs. When the Live Activity card is showing it covers the bottom, so keep the
 lower part of the wallpaper clear in that case.
 
-## 3 · Small Lock Screen widgets — `3-lock-screen-small-widgets.png`
-
-WidgetKit accessory widgets (rendered by iOS in its white, see-through style): To-do,
-Routines (circle ring "1/3" or list), D-Day (circle or rectangle), Next event, Schedule,
-Film, and the inline line above the clock.
-
-## 4 · Home Screen widgets — `4-home-screen-widgets.png`
+## 3 · Home Screen widgets — `3-home-screen-widgets.png`
 
 D-Day (small), Next event (small), To-do (medium), Today (large: routines + to-dos | hourly
 schedule), Routines (small, ring), Film (small / medium, film look), Schedule (medium). They
