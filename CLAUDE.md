@@ -151,8 +151,8 @@ palette — light = "script paper" (warm off-white `#f6f1e8`, ink text), dark = 
 room" (warm black `#0d0c0a`, cream text) — with a tungsten-amber accent over the chosen
 accent, warm sheets in dark, film-strip sprocket holes down both edges of the month card
 (`--perf`, month mode only), and the status bar color follows `--bg` (`applyTheme`). **Backgrounds** (`html[data-filmbg]`, set from `FILM_BACKGROUND` in
-filmui.js; offered: `glow` projector beam (default), `grade` teal/orange, `darkroom` red
-safelight, `grain` still grain + vignette): a fixed, still `body::before` layer; in film
+filmui.js; offered: `grain` still grain + vignette — the owner's choice; also `glow`
+projector beam, `grade` teal/orange, `darkroom` red safelight): a fixed, still `body::before` layer; in film
 mode cards use `--card` with a soft shadow, pinned headers / script bar / composer are
 frosted `--glass`, to-do rows are transparent (swipe actions only show while swiping,
 `:has`), timeline hour labels have no fill. The project name chip / clapperboard opens the projects card (New /
@@ -293,7 +293,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v86`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v87`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 

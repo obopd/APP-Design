@@ -14,7 +14,7 @@ import { playFilmSwitch } from './cinema.js';
 
 const HOLD_MS = 900;
 // Film mode's background style (styles.css "Film mode backgrounds"): glow | grade | darkroom | grain.
-export const FILM_BACKGROUND = 'glow';
+export const FILM_BACKGROUND = 'grain';
 document.documentElement.dataset.filmbg = FILM_BACKGROUND;
 
 /** Press and hold the logo to switch modes; a tap in film mode opens the projects. */
