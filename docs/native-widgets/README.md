@@ -13,7 +13,7 @@ open, solid = done, done = struck through). Film mode = warm black `#0d0c0a`, cr
 ## 1 · Lock Screen card (Live Activity) — `1-lock-screen-card.png` ★ owner's favorite
 
 One interactive card at the bottom of the Lock Screen (ActivityKit Live Activity), with
-**tabs**: Today · Schedule · Routines · Film. Buttons use App Intents (iOS 17+).
+**tabs**: Today · Schedule · Routines · D-Day · Film. Buttons use App Intents (iOS 17+).
 
 - **Today**: to-dos left (moved-over ones show their original date, ★ starred, "D-Day" for
   due), tap the dash to check off; a self-ticking countdown to the next event
@@ -22,6 +22,8 @@ One interactive card at the bottom of the Lock Screen (ActivityKit Live Activity
   running on the Lock Screen; nearest D-Day in the corner.
 - **Schedule**: the next event with a big live countdown, today's other events (past ones
   faded), "+ to-do" opens the app.
+- **D-Day**: the nearest countdown big ("D-12 · Graduation · Sat, Nov 14"), the next ones
+  beside it (yearly ones marked ↻), and the latest "Since" count-up (D+430).
 - **Film**: next shoot day (date, call / wrap, location, scenes) and project to-dos left; on
   shoot weeks the card can open on this tab by itself.
 - **StandBy** (charging, sideways): the same card full screen. **Dynamic Island**: compact
