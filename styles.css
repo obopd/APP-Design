@@ -1272,3 +1272,32 @@ body.fx-dissolve .tabbar { animation: fx-dissolve-dock 1.4s cubic-bezier(.45, 0,
   .cal-title { font-size: 16px; padding-inline: 6px; }
   .grid-btn { width: 26px; }
 }
+
+/* ---------- Film mode's own look ---------- */
+/* Light = "script paper": warm off-white, ink text. Dark = "screening room": warm cinema
+   black, cream text. Both use a tungsten-amber accent. Applies over the chosen accent. */
+:root.film {
+  --bg: #f6f1e8; --fg: #1d1a16; --muted: #8f877c; --line: #e6dfd3; --soft: #eee8dd;
+  --accent: #a8641f; --on-accent: #fff8ee; --sun: #c2493f; --sat: #3f6fb0;
+  --dock-bg: rgba(238, 232, 221, .82); --perf: #ddd4c5;
+}
+:root.film[data-theme="dark"] {
+  --bg: #0d0c0a; --fg: #f1ebe0; --muted: #8a8278; --line: #23201c; --soft: #1a1815;
+  --accent: #e2a24a; --on-accent: #1a1207; --sun: #f0736b; --sat: #6f9de0;
+  --dock-bg: rgba(30, 27, 24, .82); --perf: #2b2722;
+}
+:root.film[data-theme="dark"] .sheet { --bg: #1d1a17; --soft: #2a2622; --line: #35302a; }
+:root.film[data-theme="dark"] .segmented button[aria-checked="true"] { background: #3a352f; }
+/* The background eases from one look to the other (hidden behind the dissolve). */
+body { transition: background-color .6s ease, color .6s ease; }
+
+/* Film-strip sprocket holes down both edges of the month card. */
+.film .month-mode .calendar {
+  background-color: var(--bg);
+  background-image:
+    repeating-linear-gradient(to bottom, var(--perf) 0 7px, transparent 7px 15px),
+    repeating-linear-gradient(to bottom, var(--perf) 0 7px, transparent 7px 15px);
+  background-size: 4px calc(100% - 60px);
+  background-position: 9px 30px, calc(100% - 9px) 30px;
+  background-repeat: no-repeat;
+}

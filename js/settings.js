@@ -26,7 +26,8 @@ export function applyTheme() {
   const root = document.documentElement;
   root.dataset.theme = dark ? 'dark' : 'light';
   root.dataset.accent = accent;
-  document.querySelector('meta[name="theme-color"]').content = dark ? '#000000' : '#ffffff';
+  // The page's own background (film mode has a warmer one).
+  document.querySelector('meta[name="theme-color"]').content = getComputedStyle(root).getPropertyValue('--bg').trim() || (dark ? '#000000' : '#ffffff');
 }
 media.addEventListener('change', applyTheme);
 
