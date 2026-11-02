@@ -1,0 +1,142 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: Fraunces; src: url('../../../fonts/fraunces-latin-wght-normal.woff2') format('woff2'); font-weight: 100 900; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; background: #fff; color: #0a0a0a; }
+.wrap { display: flex; gap: 26px; flex-wrap: wrap; width: 1260px; padding: 0 0 10px; }
+.screen { width: 390px; height: 560px; position: relative; overflow: hidden; border-radius: 0 0 34px 34px; background: linear-gradient(170deg, #4a5a6e, #1d2534 55%, #0c1016); color: #fff; }
+.date { position: absolute; top: 40px; left: 0; right: 0; text-align: center; font: 600 16px -apple-system, Arial; opacity: .9; }
+.clock { position: absolute; top: 58px; left: 0; right: 0; text-align: center; font: 700 88px -apple-system, Arial; letter-spacing: -2px; line-height: 1; }
+.card { position: absolute; left: 12px; right: 12px; bottom: 96px; height: 172px; border-radius: 24px; background: #fff; color: #0a0a0a; padding: 10px 14px 10px; overflow: hidden; }
+.card.dark { background: #1c1c1e; color: #f5f5f7; }
+.card.film { background: #0d0c0a; color: #f1ebe0; }
+.card.film::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 130% 90% at 50% 45%, transparent 50%, rgba(0,0,0,.6) 100%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .95 0 0 0 0 .9 0 0 0 0 .8 0 0 0 .08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.card > * { position: relative; }
+.tabs { display: flex; gap: 4px; margin-bottom: 7px; }
+.tabs span { font-size: 10.5px; font-weight: 600; padding: 4px 8px; border-radius: 999px; background: #f2f2f4; color: #8a8a90; }
+.tabs span.on { background: #0a0a0a; color: #fff; }
+.dark .tabs span { background: #2c2c2e; color: #8a8a90; } .dark .tabs span.on { background: #f5f5f7; color: #0a0a0a; }
+.film .tabs span { background: #24201b; color: #8a8278; } .film .tabs span.on { background: #e2a24a; color: #1a1207; }
+.display { font-family: Fraunces, Georgia, serif; font-weight: 600; letter-spacing: -.01em; }
+.row { display: flex; align-items: center; gap: 9px; font-size: 13px; line-height: 17px; padding: 4px 0; }
+.chk { flex: none; width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; background: #f2f2f4; }
+.chk i { width: 3px; height: 11px; border-radius: 2px; background: #b9b9be; }
+.chk.done i { background: #0a0a0a; }
+.dark .chk { background: #2c2c2e; } .dark .chk.done i { background: #f5f5f7; }
+.done .tx { text-decoration: line-through; color: #a0a0a5; }
+.tx { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tag { font-size: 10px; color: #9a9a9f; }
+.btn { flex: none; font-size: 10.5px; font-weight: 700; padding: 4px 9px; border-radius: 999px; background: #0a0a0a; color: #fff; }
+.dark .btn { background: #e2a24a; color: #1a1207; }
+.timer { font-variant-numeric: tabular-nums; font-weight: 600; }
+.amber { color: #e2a24a; }
+.fm { color: #8a8278; }
+.chip { display: inline-block; font-size: 10px; font-weight: 600; border: 1px solid #3a352f; border-radius: 6px; padding: 2px 6px; margin-right: 3px; color: #d9d1c4; }
+.hint { position: absolute; left: 12px; right: 12px; bottom: 74px; text-align: center; font: 600 11px -apple-system, Arial; opacity: .75; }
+.label { width: 390px; font: 600 13px -apple-system, Arial; text-align: center; margin-top: 8px; color: #0a0a0a; }
+.tap { position: absolute; width: 34px; height: 34px; border-radius: 50%; border: 2px solid #e2a24a; box-shadow: 0 0 0 6px rgba(226,162,74,.25); }
+</style></head>
+<body>
+<div class="wrap">
+
+<!-- 1 · To-do tab: check off from the Lock Screen -->
+<div>
+<div class="screen">
+  <div class="date">Monday, November 2</div><div class="clock">9:41</div>
+  <div class="card">
+    <div class="tabs"><span class="on">Today</span><span>Schedule</span><span>Routines</span><span>Film</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="display" style="font-size:16px">To-do <small style="font:600 10px -apple-system;color:#9a9a9f">3 left</small></span><span style="font-size:11px;font-weight:600">Next: Table read <span class="timer">in 1:19:58</span></span></div>
+    <div class="row"><span class="chk"><i></i></span><span class="tx">Write treatment draft</span><span class="tag">Oct 30</span></div>
+    <div class="row"><span class="chk"><i></i></span><span class="tx">Book camera rental ★</span><span class="tag">D-Day</span></div>
+    <div class="row done"><span class="chk done"><i></i></span><span class="tx">Return library books</span></div>
+    <div class="tap" style="left:10px;top:110px"></div>
+  </div>
+  <div class="hint">Tap a mark to check it off · tap a tab to switch</div>
+</div>
+<div class="label">1 · Today tab: check off to-dos, live countdown</div>
+</div>
+
+<!-- 2 · Routines tab with stopwatch -->
+<div>
+<div class="screen">
+  <div class="date">Monday, November 2</div><div class="clock">9:41</div>
+  <div class="card dark">
+    <div class="tabs"><span>Today</span><span>Schedule</span><span class="on">Routines</span><span>Film</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="display" style="font-size:16px">Routines <small style="font:600 10px -apple-system;color:#8a8a90">1/3</small></span><span class="display" style="font-size:13px;color:#8a8a90">D-12 Graduation</span></div>
+    <div class="row done"><span class="chk done"><i></i></span><span class="tx">Stretch</span><span class="tag">12 days in a row</span></div>
+    <div class="row"><span class="chk"><i></i></span><span class="tx">Read 30 min</span><span class="timer amber">12:04</span><span class="btn">■ Stop</span></div>
+    <div class="row"><span class="chk"><i></i></span><span class="tx">Journal</span><span class="btn" style="background:#2c2c2e;color:#f5f5f7">▶ Start</span></div>
+  </div>
+  <div class="hint">The timer keeps running on the Lock Screen</div>
+</div>
+<div class="label">2 · Routines tab: check off, start / stop the stopwatch</div>
+</div>
+
+<!-- 3 · Schedule tab -->
+<div>
+<div class="screen">
+  <div class="date">Monday, November 2</div><div class="clock">9:41</div>
+  <div class="card dark">
+    <div class="tabs"><span>Today</span><span class="on">Schedule</span><span>Routines</span><span>Film</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px"><span class="display" style="font-size:16px">Next · Table read</span><span class="timer amber" style="font-size:15px">1:19:58</span></div>
+    <div style="font-size:11px;color:#8a8a90;margin-bottom:4px">2:00 – 3:30 · Studio B</div>
+    <div class="row" style="opacity:.45"><span class="timer" style="width:38px;font-size:12px">10:00</span><span class="tx">Seminar</span></div>
+    <div class="row"><span class="timer" style="width:38px;font-size:12px">7:30</span><span class="tx">Dinner with crew</span><span class="btn" style="background:#2c2c2e;color:#f5f5f7">+ to-do</span></div>
+  </div>
+  <div class="hint">Countdown ticks by itself · "+ to-do" opens a quick add</div>
+</div>
+<div class="label">3 · Schedule tab: live countdown to the next event</div>
+</div>
+
+<!-- 4 · Film tab -->
+<div>
+<div class="screen" style="background:linear-gradient(165deg,#5b4a3e,#2a211c 50%,#0e0b09)">
+  <div class="date">Monday, November 2</div><div class="clock">9:41</div>
+  <div class="card film">
+    <div class="tabs"><span>Today</span><span>Schedule</span><span>Routines</span><span class="on">Film</span></div>
+    <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:10px">
+      <div>
+        <div class="display" style="font-size:15px">Night Bus</div>
+        <div class="fm" style="font-size:10px;font-weight:600;letter-spacing:.04em;margin-top:6px">SHOOT DAY 3 · IN 3 DAYS</div>
+        <div class="display amber" style="font-size:26px;line-height:1.1">Thu, Nov 5</div>
+      </div>
+      <div style="font-size:11.5px;display:grid;gap:3px;align-content:start">
+        <div><span class="fm">Call</span> <b>6:30</b> <span class="fm">· Wrap</span> <b>7:00</b></div>
+        <div><span class="fm">At</span> <b>Old bus depot</b></div>
+        <div><span class="chip">Sc 3</span><span class="chip">Sc 5</span><span class="chip">Sc 12</span></div>
+        <div class="fm">2 project to-dos left</div>
+      </div>
+    </div>
+  </div>
+  <div class="hint">On shoot weeks it can open on this tab by itself</div>
+</div>
+<div class="label">4 · Film tab: next shoot day and project to-dos</div>
+</div>
+
+<!-- 5 · StandBy -->
+<div>
+<div style="width:844px;height:390px;background:#000;border-radius:34px;padding:22px;position:relative;overflow:hidden">
+  <div class="card" style="position:absolute;inset:22px;height:auto;border-radius:30px;padding:22px 26px">
+    <div class="tabs" style="margin-bottom:14px"><span class="on" style="font-size:14px;padding:6px 14px">Today</span><span style="font-size:14px;padding:6px 14px">Schedule</span><span style="font-size:14px;padding:6px 14px">Routines</span><span style="font-size:14px;padding:6px 14px">Film</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:26px">
+      <div>
+        <div class="display" style="font-size:24px;margin-bottom:6px">To-do <small style="font:600 13px -apple-system;color:#9a9a9f">3 left</small></div>
+        <div class="row" style="font-size:18px;line-height:24px"><span class="chk" style="width:30px;height:30px"><i style="height:14px"></i></span><span class="tx">Write treatment draft</span></div>
+        <div class="row" style="font-size:18px;line-height:24px"><span class="chk" style="width:30px;height:30px"><i style="height:14px"></i></span><span class="tx">Book camera rental ★</span></div>
+        <div class="row done" style="font-size:18px;line-height:24px"><span class="chk done" style="width:30px;height:30px"><i style="height:14px"></i></span><span class="tx">Return library books</span></div>
+      </div>
+      <div>
+        <div class="display" style="font-size:24px;margin-bottom:6px">Next</div>
+        <div class="display" style="font-size:44px;line-height:1">2:00</div>
+        <div style="font-size:18px;font-weight:600;margin-top:6px">Table read</div>
+        <div style="font-size:14px;color:#8a8a90;margin-top:2px">Studio B · <span class="timer" style="color:#0a0a0a">in 1:19:58</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="label" style="width:844px">5 · StandBy (charging, sideways): the same card, full screen</div>
+</div>
+
+</div>
+</body></html>

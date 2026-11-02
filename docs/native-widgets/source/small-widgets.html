@@ -1,0 +1,143 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: Fraunces; src: url('../../../fonts/fraunces-latin-wght-normal.woff2') format('woff2'); font-weight: 100 900; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #fff; background: #fff; }
+.row { display: flex; gap: 28px; padding: 0; }
+.screen { width: 390px; height: 844px; position: relative; overflow: hidden; }
+.bg1 { background: linear-gradient(170deg, #4a5a6e, #1d2534 55%, #0c1016); }
+.bg2 { background: linear-gradient(165deg, #5b4a3e, #2a211c 50%, #0e0b09); }
+.bg3 { background: linear-gradient(170deg, #36425a, #171d2b 55%, #090b10); }
+.inline { position: absolute; top: 58px; left: 0; right: 0; text-align: center; font: 600 15px -apple-system, Arial; color: rgba(255,255,255,.85); display: flex; justify-content: center; gap: 6px; align-items: center; }
+.clock { position: absolute; top: 76px; left: 0; right: 0; text-align: center; font: 700 98px -apple-system, "SF Pro Display", Arial; letter-spacing: -2px; line-height: 1; }
+.slots { position: absolute; top: 196px; left: 0; right: 0; display: flex; justify-content: center; gap: 10px; }
+.wd { background: rgba(255,255,255,.16); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-radius: 20px; color: #fff; }
+.circ { width: 74px; height: 74px; border-radius: 50%; display: grid; place-items: center; text-align: center; position: relative; }
+.rect { width: 164px; height: 74px; padding: 8px 11px; font-size: 13px; line-height: 16.5px; overflow: hidden; }
+.display { font-family: Fraunces, Georgia, serif; font-weight: 600; letter-spacing: -.01em; }
+.rect .t { font-weight: 700; font-size: 13.5px; display: flex; justify-content: space-between; align-items: baseline; }
+.rect .t small { font-weight: 600; font-size: 11px; opacity: .7; }
+.rect .l { display: flex; gap: 6px; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .92; }
+.dash { flex: none; width: 2.5px; height: 10px; border-radius: 2px; background: rgba(255,255,255,.55); }
+.done { text-decoration: line-through; opacity: .5; }
+.done .dash { background: #fff; }
+.ring { position: absolute; inset: 5px; border-radius: 50%; background: conic-gradient(#fff 0 33%, rgba(255,255,255,.22) 33% 100%); -webkit-mask: radial-gradient(circle, transparent 28px, #000 29px); mask: radial-gradient(circle, transparent 28px, #000 29px); }
+.big { font-size: 21px; line-height: 1; }
+.tiny { font-size: 9.5px; opacity: .8; margin-top: 2px; }
+.slate { width: 13px; height: 13px; vertical-align: -1px; }
+.cap { position: absolute; bottom: 26px; left: 18px; right: 18px; text-align: center; font: 600 13px -apple-system, Arial; color: rgba(255,255,255,.75); line-height: 1.4; }
+/* gallery */
+.gallery { width: 390px; height: 844px; background: #f2f2f4; color: #0a0a0a; padding: 28px 22px; }
+.gallery h2 { font: 600 22px Fraunces, Georgia, serif; margin-bottom: 4px; }
+.gallery p.sub { font-size: 12.5px; color: #6b6b70; margin-bottom: 14px; line-height: 1.4; }
+.item { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.item .demo { background: linear-gradient(160deg, #3b4a5c, #1b2230); border-radius: 16px; padding: 8px; flex: none; width: 184px; display: flex; justify-content: center; }
+.item .info b { display: block; font-size: 14px; }
+.item .info span { font-size: 11.5px; color: #6b6b70; line-height: 1.35; display: block; margin-top: 2px; }
+.gallery .wd { background: rgba(255,255,255,.18); }
+</style></head>
+<body>
+<div class="row">
+
+<!-- Gallery: every lock-screen widget -->
+<div class="gallery" id="g">
+  <h2>Lock Screen widgets</h2>
+  <p class="sub">Every Home Screen widget, in Lock Screen size. Pick any; they're shown in iPhone's own white, see-through style.</p>
+
+  <div class="item"><div class="demo"><div class="wd rect">
+    <div class="t">To-do <small>3 left</small></div>
+    <div class="l"><span class="dash"></span>Write treatment draft</div>
+    <div class="l"><span class="dash"></span>Book camera rental ★</div>
+  </div></div><div class="info"><b>To-do</b><span>What's left today, moved-over ones included.</span></div></div>
+
+  <div class="item"><div class="demo"><div style="display:flex;gap:10px"><div class="wd circ"><div class="ring"></div><div><div class="display big">1/3</div><div class="tiny">routines</div></div></div>
+    <div class="wd circ"><div><div class="display big">D-12</div><div class="tiny">Grad.</div></div></div></div></div>
+    <div class="info"><b>Routines · D-Day</b><span>Circles: routines done today; the nearest countdown.</span></div></div>
+
+  <div class="item"><div class="demo"><div class="wd rect">
+    <div class="t">Routines <small>1/3</small></div>
+    <div class="l done"><span class="dash"></span>Stretch</div>
+    <div class="l"><span class="dash"></span>Read 30 min · Journal</div>
+  </div></div><div class="info"><b>Routines</b><span>Today's routines as a list.</span></div></div>
+
+  <div class="item"><div class="demo"><div class="wd rect">
+    <div class="t"><span class="display" style="font-size:20px">D-12</span><small>Sat, Nov 14</small></div>
+    <div class="l" style="font-weight:600">Graduation</div>
+    <div class="l" style="opacity:.7">Premiere D-45</div>
+  </div></div><div class="info"><b>D-Day</b><span>Nearest countdown, plus the next one.</span></div></div>
+
+  <div class="item"><div class="demo"><div class="wd rect">
+    <div class="t">2:00 Table read</div>
+    <div class="l">Studio B</div>
+    <div class="l" style="opacity:.7">in 1h 20m · until 3:30</div>
+  </div></div><div class="info"><b>Next event</b><span>The next thing on your schedule.</span></div></div>
+
+  <div class="item"><div class="demo"><div class="wd rect">
+    <div class="l" style="opacity:.5"><b style="width:36px">10:00</b>Seminar</div>
+    <div class="l"><b style="width:36px">2:00</b>Table read</div>
+    <div class="l"><b style="width:36px">7:30</b>Dinner w/ crew</div>
+  </div></div><div class="info"><b>Schedule</b><span>Today's events in order; past ones fade.</span></div></div>
+
+  <div class="item"><div class="demo"><div class="wd rect">
+    <div class="t"><span><svg class="slate" viewBox="0 0 512 512"><rect x="136" y="214" width="240" height="162" rx="30" fill="none" stroke="#fff" stroke-width="30"/><circle cx="256" cy="300" r="24" fill="#fff"/><rect x="128" y="146" width="256" height="48" rx="12" fill="#fff"/></svg> Night Bus</span><small>Day 3</small></div>
+    <div class="l"><b>Thu 5</b>· Call 6:30</div>
+    <div class="l" style="opacity:.75">Old depot · Sc 3, 5, 12</div>
+  </div></div><div class="info"><b>Film</b><span>Next shoot day: date, call time, place, scenes.</span></div></div>
+</div>
+
+<!-- Lock 1: everyday -->
+<div class="screen bg1" id="l1">
+  <div class="inline">Mon 2 · D-12 Graduation</div>
+  <div class="clock">9:41</div>
+  <div class="slots">
+    <div class="wd rect">
+      <div class="t">To-do <small>3 left</small></div>
+      <div class="l"><span class="dash"></span>Write treatment draft</div>
+      <div class="l"><span class="dash"></span>Book camera rental ★</div>
+    </div>
+    <div class="wd circ"><div class="ring"></div><div><div class="display big">1/3</div><div class="tiny">routines</div></div></div>
+    <div class="wd circ"><div><div class="display big">D-12</div><div class="tiny">Grad.</div></div></div>
+  </div>
+  <div class="cap">Example 1 · Everyday<br>To-do + Routines + D-Day</div>
+</div>
+
+<!-- Lock 2: schedule -->
+<div class="screen bg3" id="l2">
+  <div class="inline">Next · 2:00 Table read</div>
+  <div class="clock">9:41</div>
+  <div class="slots">
+    <div class="wd rect">
+      <div class="l" style="opacity:.5"><b style="width:36px">10:00</b>Seminar</div>
+      <div class="l"><b style="width:36px">2:00</b>Table read</div>
+      <div class="l"><b style="width:36px">7:30</b>Dinner w/ crew</div>
+    </div>
+    <div class="wd rect">
+      <div class="t">2:00 Table read</div>
+      <div class="l">Studio B</div>
+      <div class="l" style="opacity:.7">in 1h 20m · until 3:30</div>
+    </div>
+  </div>
+  <div class="cap">Example 2 · Busy day<br>Schedule + Next event</div>
+</div>
+
+<!-- Lock 3: film -->
+<div class="screen bg2" id="l3">
+  <div class="inline"><svg class="slate" viewBox="0 0 512 512"><rect x="136" y="214" width="240" height="162" rx="30" fill="none" stroke="#fff" stroke-width="30"/><circle cx="256" cy="300" r="24" fill="#fff"/><rect x="128" y="146" width="256" height="48" rx="12" fill="#fff"/></svg>Night Bus · shoot in 3 days</div>
+  <div class="clock">9:41</div>
+  <div class="slots">
+    <div class="wd rect">
+      <div class="t"><span>Night Bus</span><small>Day 3</small></div>
+      <div class="l"><b>Thu 5</b>· Call 6:30</div>
+      <div class="l" style="opacity:.75">Old depot · Sc 3, 5, 12</div>
+    </div>
+    <div class="wd rect">
+      <div class="t">To-do <small>2 left</small></div>
+      <div class="l"><span class="dash"></span>Rent rain machine</div>
+      <div class="l"><span class="dash"></span>Confirm depot permit</div>
+    </div>
+  </div>
+  <div class="cap">Example 3 · During a production<br>Film + project To-do</div>
+</div>
+</div>
+</body></html>

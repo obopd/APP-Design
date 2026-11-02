@@ -214,6 +214,8 @@ js/film.js  js/filmui.js  js/write.js  js/organize.js  js/preview.js
 supabase/    setup → social → chat → film → push → maintenance (.sql, run in this order;
              all safe to re-run) + functions/push/index.ts
 tests/       test suite (see below)          docs/  screenshots, logo images
+docs/native-widgets/  the owner's chosen Lock Screen / widget designs for the native iOS app
+             (mockups + README for the friend building it in Xcode; not built yet)
 ```
 
 ## Data model (`js/store.js`)

@@ -1,0 +1,60 @@
+# Planner — Lock Screen & widget designs (for the native iOS app)
+
+The owner's chosen designs for the native app (built in Xcode). These are **mockups only**:
+nothing here is built yet. The web app (repo root) is the source of truth for features,
+colors and fonts; see `CLAUDE.md`. The HTML files in `source/` render the mockups (open them
+in a browser from this folder; they use `fonts/fraunces-latin-wght-normal.woff2`).
+
+Style everywhere: minimal black & white, **Fraunces** (semi-bold, upright) for headings, dates
+and numbers, the system font for small text, slim vertical "dash" marks for to-dos (gray =
+open, solid = done, done = struck through). Film mode = warm black `#0d0c0a`, cream text
+`#f1ebe0`, tungsten-amber accent `#e2a24a`, still film grain + vignette, sprocket holes.
+
+## 1 · Lock Screen card (Live Activity) — `1-lock-screen-card.png` ★ owner's favorite
+
+One interactive card at the bottom of the Lock Screen (ActivityKit Live Activity), with
+**tabs**: Today · Schedule · Routines · Film. Buttons use App Intents (iOS 17+).
+
+- **Today**: to-dos left (moved-over ones show their original date, ★ starred, "D-Day" for
+  due), tap the dash to check off; a self-ticking countdown to the next event
+  (`Text(timerInterval:)`).
+- **Routines**: check off; ▶ Start / ■ Stop for tracked (time) routines — the stopwatch keeps
+  running on the Lock Screen; nearest D-Day in the corner.
+- **Schedule**: the next event with a big live countdown, today's other events (past ones
+  faded), "+ to-do" opens the app.
+- **Film**: next shoot day (date, call / wrap, location, scenes) and project to-dos left; on
+  shoot weeks the card can open on this tab by itself.
+- **StandBy** (charging, sideways): the same card full screen. **Dynamic Island**: compact
+  countdown; long-press for the expanded card.
+- Apple limits: one card, ~160 pt tall, lasts ~8 h (restart each morning / when the app
+  opens); updates while the app is closed need ActivityKit push (APNs).
+
+## 2 · Lock Screen wallpaper — `2-lock-screen-wallpaper.png`
+
+The app draws a picture of the planner over the owner's photo and a **Shortcuts** automation
+("Set Wallpaper", e.g. hourly / each morning) sets it. Provide an App Intent like "Get
+Planner Wallpaper" returning the image. Three layouts: **Everyday** (this week strip with
+event bars, To-do, Schedule, Routines ring, D-Day), **Film** (next shoot day card, project
+to-dos, shoot days list), **Minimal** (just today, no boxes). Not tappable; updates only when
+the automation runs. When the Live Activity card is showing it covers the bottom, so keep the
+lower part of the wallpaper clear in that case.
+
+## 3 · Small Lock Screen widgets — `3-lock-screen-small-widgets.png`
+
+WidgetKit accessory widgets (rendered by iOS in its white, see-through style): To-do,
+Routines (circle ring "1/3" or list), D-Day (circle or rectangle), Next event, Schedule,
+Film, and the inline line above the clock.
+
+## 4 · Home Screen widgets — `4-home-screen-widgets.png`
+
+D-Day (small), Next event (small), To-do (medium), Today (large: routines + to-dos | hourly
+schedule), Routines (small, ring), Film (small / medium, film look), Schedule (medium). They
+also appear big in StandBy. Light and dark follow the phone.
+
+## Data
+
+All widgets need the same "today" data the web app already computes: unfinished to-dos
+(including ones rolled over from earlier days), today's routines and their done state,
+today's events in order, the nearest D-Days, and in film mode the next shoot day
+(`event.shoot` = location, scenes, cast) and project to-dos. Check-offs and the stopwatch
+tapped on the Lock Screen must be written back to the planner and synced like any edit.

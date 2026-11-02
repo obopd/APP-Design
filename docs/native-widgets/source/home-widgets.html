@@ -1,0 +1,238 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: Fraunces; src: url('../../../fonts/fraunces-latin-wght-normal.woff2') format('woff2'); font-weight: 100 900; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+.screen { width: 390px; height: 844px; position: relative; overflow: hidden; padding: 62px 22px 0; }
+.light { background: radial-gradient(120% 70% at 20% 0%, #e9e4dc, #cfd6dc 60%, #b9c4cc); color: #0a0a0a; }
+.dark { background: radial-gradient(120% 70% at 80% 0%, #2a2f3a, #121418 60%, #08090b); color: #f5f5f7; }
+.status { position: absolute; top: 16px; left: 34px; right: 30px; display: flex; justify-content: space-between; font: 600 16px -apple-system, Arial; }
+.grid { display: grid; grid-template-columns: 170px 170px; gap: 24px 6px; justify-content: space-between; }
+.w { border-radius: 22px; padding: 14px 15px; position: relative; overflow: hidden; }
+.light .w { background: #fff; box-shadow: 0 8px 22px rgba(0,0,0,.08); }
+.dark .w { background: #1c1c1e; }
+.s { width: 170px; height: 170px; }
+.m { grid-column: span 2; height: 170px; }
+.l { grid-column: span 2; height: 382px; }
+.label { position: absolute; bottom: -19px; left: 0; right: 0; text-align: center; font: 500 11.5px -apple-system, Arial; color: rgba(0,0,0,.55); }
+.dark .label { color: rgba(255,255,255,.6); }
+.cell { position: relative; }
+.display { font-family: Fraunces, Georgia, serif; font-weight: 600; letter-spacing: -.01em; }
+.muted { color: #9a9a9f; }
+.dark .muted { color: #8a8a90; }
+.head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+.head .t { font-size: 17px; }
+.head .d { font-size: 12px; font-weight: 600; }
+.cnt { font-size: 11px; font-weight: 600; color: #9a9a9f; }
+.todo { display: flex; align-items: center; gap: 9px; font-size: 13.5px; line-height: 17px; padding: 4px 0; }
+.dash { flex: none; width: 3px; height: 12px; border-radius: 2px; background: #c9c9cd; }
+.done .dash { background: #0a0a0a; }
+.dark .done .dash { background: #f5f5f7; }
+.done .tx { text-decoration: line-through; color: #a0a0a5; }
+.tx { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tag { font-size: 10px; color: #9a9a9f; font-weight: 500; }
+.star { font-size: 10px; margin-left: 3px; }
+.sec { font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 13px; margin: 2px 0 2px; display: flex; gap: 5px; align-items: baseline; }
+.sec small { font: 600 10px -apple-system, Arial; color: #9a9a9f; }
+.box { background: #f5f5f6; border-radius: 12px; padding: 6px 9px 4px; margin-bottom: 8px; }
+.dark .box { background: #2c2c2e; }
+/* D-Day */
+.dday { display: flex; flex-direction: column; justify-content: space-between; height: 100%; }
+.dday .big { font-size: 46px; line-height: 1; }
+.pill { display: inline-block; font: 700 9.5px -apple-system, Arial; letter-spacing: .08em; background: #0a0a0a; color: #fff; border-radius: 6px; padding: 3px 6px; }
+.dark .pill { background: #f5f5f7; color: #0a0a0a; }
+/* Next event */
+.ev { display: flex; flex-direction: column; justify-content: space-between; height: 100%; }
+.ev .time { font-size: 34px; line-height: 1; }
+.ev .title { font-size: 15px; font-weight: 600; margin-top: 4px; }
+.bar { width: 3px; border-radius: 2px; background: #0a0a0a; }
+.dark .bar { background: #f5f5f7; }
+.soon { font-size: 11px; font-weight: 600; }
+/* Schedule */
+.tl { position: relative; margin-top: 2px; }
+.hr { display: flex; align-items: center; gap: 6px; height: 26px; font-size: 9px; color: #a0a0a5; }
+.hr::after { content: ""; flex: 1; height: 1px; background: #efeff1; }
+.dark .hr::after { background: #2a2a2d; }
+.blk { position: absolute; left: 36px; right: 0; border-left: 2.5px solid #0a0a0a; background: #f4f4f5; border-radius: 4px; padding: 3px 7px; font-size: 11px; line-height: 13px; }
+.dark .blk { border-color: #f5f5f7; background: #2c2c2e; }
+.blk b { font-weight: 600; display: block; }
+.blk span { color: #8a8a90; font-size: 9.5px; }
+.now { position: absolute; left: 30px; right: 0; height: 1.5px; background: #0a0a0a; }
+.now::before { content: ""; position: absolute; left: -3px; top: -2.5px; width: 6px; height: 6px; border-radius: 50%; background: #0a0a0a; }
+.dark .now, .dark .now::before { background: #e2a24a; }
+/* Today (large) */
+.cols { display: grid; grid-template-columns: 1fr 1.15fr; gap: 12px; height: calc(100% - 30px); }
+/* Film */
+.film { background: #0d0c0a !important; color: #f1ebe0; }
+.film::before { content: ""; position: absolute; inset: 0; background:
+  radial-gradient(ellipse 130% 90% at 50% 45%, transparent 50%, rgba(0,0,0,.6) 100%),
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .95 0 0 0 0 .9 0 0 0 0 .8 0 0 0 .08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.film > * { position: relative; }
+.film .amber { color: #e2a24a; }
+.film .muted { color: #8a8278; }
+.perf { position: absolute; top: 12px; bottom: 12px; width: 3px; background: repeating-linear-gradient(to bottom, #2b2722 0 6px, transparent 6px 12px); }
+.slate { width: 22px; height: 22px; }
+.chip { display: inline-block; font-size: 10px; font-weight: 600; border: 1px solid #3a352f; border-radius: 6px; padding: 2px 6px; margin: 0 3px 3px 0; color: #d9d1c4; }
+/* Lock screen */
+.lock { background: linear-gradient(170deg, #3b4a5c, #1b2230 55%, #0d1017); color: #fff; padding-top: 0; }
+.lock .date { text-align: center; margin-top: 70px; font: 600 19px -apple-system, Arial; opacity: .9; }
+.lock .clock { text-align: center; font: 700 96px -apple-system, "SF Pro Display", Arial; letter-spacing: -2px; line-height: 1; margin-top: 2px; }
+.lw { display: flex; justify-content: center; gap: 10px; margin-top: 18px; }
+.lw > div { background: rgba(255,255,255,.14); backdrop-filter: blur(10px); border-radius: 18px; }
+.circ { width: 72px; height: 72px; border-radius: 50% !important; display: grid; place-items: center; text-align: center; }
+.rect { width: 168px; height: 72px; padding: 9px 12px; font-size: 12.5px; line-height: 16px; }
+.rect b { font-size: 13px; display: block; }
+.inline { text-align: center; font: 600 14px -apple-system, Arial; opacity: .85; margin-top: 54px; }
+.caption { position: absolute; left: 0; right: 0; bottom: 18px; text-align: center; font: 600 12px -apple-system, Arial; opacity: .7; }
+.ring { width: 54px; height: 54px; border-radius: 50%; background: conic-gradient(#0a0a0a 0 40%, #e5e5e7 40% 100%); display: grid; place-items: center; }
+.ring > div { width: 44px; height: 44px; border-radius: 50%; background: #fff; display: grid; place-items: center; font-size: 15px; }
+.dark .ring { background: conic-gradient(#f5f5f7 0 40%, #3a3a3c 40% 100%); }
+.dark .ring > div { background: #1c1c1e; }
+.icons { display: grid; grid-template-columns: repeat(4, 62px); justify-content: space-between; gap: 26px 0; margin-top: 28px; }
+.app { width: 62px; height: 62px; border-radius: 15px; background: rgba(255,255,255,.55); }
+.dark .app { background: rgba(255,255,255,.12); }
+</style></head>
+<body>
+
+<!-- 1 · Home screen, light -->
+<div class="screen light" id="s1">
+  <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+  <div class="grid">
+    <div class="cell"><div class="w s dday">
+      <div><span class="pill">D-DAY</span></div>
+      <div>
+        <div class="display big">D-12</div>
+        <div style="font-size:14px;font-weight:600;margin-top:6px">Graduation</div>
+        <div class="muted" style="font-size:11.5px;margin-top:2px">Sat, Nov 14</div>
+      </div>
+    </div><div class="label">D-Day</div></div>
+
+    <div class="cell"><div class="w s ev">
+      <div class="soon">In 1h 20m</div>
+      <div style="display:flex;gap:9px">
+        <div class="bar"></div>
+        <div>
+          <div class="display time">2:00</div>
+          <div class="title">Table read</div>
+          <div class="muted" style="font-size:11.5px;margin-top:2px">Until 3:30 · Studio B</div>
+        </div>
+      </div>
+    </div><div class="label">Next event</div></div>
+
+    <div class="cell" style="grid-column: span 2"><div class="w m">
+      <div class="head"><span class="display t">To-do <small class="cnt">4</small></span><span class="d">Mon, Nov 2</span></div>
+      <div class="todo"><span class="dash"></span><span class="tx">Write treatment draft</span><span class="tag">Oct 30</span></div>
+      <div class="todo"><span class="dash"></span><span class="tx">Book camera rental<span class="star">★</span></span><span class="tag">D-Day</span></div>
+      <div class="todo"><span class="dash"></span><span class="tx">Email Professor Kim</span></div>
+      <div class="todo done"><span class="dash"></span><span class="tx">Return library books</span></div>
+    </div><div class="label">To-do</div></div>
+
+    <div class="cell" style="grid-column: span 2"><div class="w l">
+      <div class="head"><span class="display t">Today</span><span class="d">Mon, Nov 2</span></div>
+      <div class="cols">
+        <div>
+          <div class="box">
+            <div class="sec">Routines <small>2</small></div>
+            <div class="todo done"><span class="dash"></span><span class="tx">Stretch</span></div>
+            <div class="todo"><span class="dash"></span><span class="tx">Read 30 min</span></div>
+            <div class="todo"><span class="dash"></span><span class="tx">Journal</span></div>
+          </div>
+          <div class="sec" style="padding-left:9px">To-do <small>3</small></div>
+          <div style="padding-left:9px">
+            <div class="todo"><span class="dash"></span><span class="tx">Write treatment</span></div>
+            <div class="todo"><span class="dash"></span><span class="tx">Book camera<span class="star">★</span></span></div>
+            <div class="todo"><span class="dash"></span><span class="tx">Email Prof. Kim</span></div>
+          </div>
+        </div>
+        <div class="tl">
+          <div class="hr">9 AM</div><div class="hr">10</div><div class="hr">11</div><div class="hr">12 PM</div>
+          <div class="hr">1</div><div class="hr">2</div><div class="hr">3</div><div class="hr">4</div>
+          <div class="hr">5</div><div class="hr">6</div><div class="hr">7 PM</div><div class="hr">8</div>
+          <div class="blk" style="top:30px;height:44px"><b>Seminar</b><span>10:00–11:30</span></div>
+          <div class="now" style="top:122px"></div>
+          <div class="blk" style="top:134px;height:40px"><b>Table read</b><span>2:00–3:30</span></div>
+          <div class="blk" style="top:265px;height:36px"><b>Dinner w/ crew</b><span>7:30</span></div>
+        </div>
+      </div>
+    </div><div class="label">Today</div></div>
+  </div>
+</div>
+
+<!-- 2 · Home screen, dark -->
+<div class="screen dark" id="s2">
+  <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+  <div class="grid">
+    <div class="cell"><div class="w s" style="display:flex;flex-direction:column;justify-content:space-between">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="display" style="font-size:16px">Routines</span>
+        <div class="ring"><div class="display">1/3</div></div>
+      </div>
+      <div>
+        <div class="todo done"><span class="dash"></span><span class="tx">Stretch</span></div>
+        <div class="todo"><span class="dash"></span><span class="tx">Read 30 min</span></div>
+        <div class="todo"><span class="dash"></span><span class="tx">Journal</span></div>
+      </div>
+    </div><div class="label">Routines</div></div>
+
+    <div class="cell"><div class="w s film" style="display:flex;flex-direction:column;justify-content:space-between">
+      <div class="perf" style="left:6px"></div><div class="perf" style="right:6px"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:0 4px">
+        <span class="display" style="font-size:14px">Night Bus</span>
+        <svg class="slate" viewBox="0 0 512 512"><rect x="136" y="214" width="240" height="162" rx="30" fill="none" stroke="#e2a24a" stroke-width="26"/><circle cx="256" cy="300" r="22" fill="#e2a24a"/><rect x="128" y="146" width="256" height="48" rx="12" fill="#e2a24a"/></svg>
+      </div>
+      <div style="padding:0 4px">
+        <div class="muted" style="font-size:11px;font-weight:600">SHOOT DAY 3</div>
+        <div class="display amber" style="font-size:30px;line-height:1.05">Thu 5</div>
+        <div style="font-size:12px;margin-top:3px">Call 6:30 · Old depot</div>
+      </div>
+    </div><div class="label">Film</div></div>
+
+    <div class="cell" style="grid-column: span 2"><div class="w m">
+      <div class="head"><span class="display t">Schedule</span><span class="d">Mon, Nov 2</span></div>
+      <div style="display:grid;gap:8px">
+        <div style="display:flex;gap:10px;align-items:stretch;opacity:.45"><div class="bar"></div><div style="flex:1"><b style="font-size:13.5px">Seminar</b><div class="muted" style="font-size:11px">10:00 – 11:30 · Room 204</div></div></div>
+        <div style="display:flex;gap:10px;align-items:stretch"><div class="bar" style="background:#e2a24a"></div><div style="flex:1"><b style="font-size:13.5px">Table read</b><div class="muted" style="font-size:11px">2:00 – 3:30 · Studio B</div></div><span class="soon" style="color:#e2a24a">in 1h 20m</span></div>
+        <div style="display:flex;gap:10px;align-items:stretch"><div class="bar"></div><div style="flex:1"><b style="font-size:13.5px">Dinner with crew</b><div class="muted" style="font-size:11px">7:30 PM</div></div></div>
+      </div>
+    </div><div class="label">Schedule</div></div>
+
+    <div class="cell" style="grid-column: span 2"><div class="w m film">
+      <div class="perf" style="left:7px"></div><div class="perf" style="right:7px"></div>
+      <div style="padding:0 8px;display:grid;grid-template-columns:1.15fr 1fr;gap:12px;height:100%">
+        <div style="display:flex;flex-direction:column;justify-content:space-between">
+          <div style="display:flex;gap:7px;align-items:center">
+            <svg class="slate" viewBox="0 0 512 512"><rect x="136" y="214" width="240" height="162" rx="30" fill="none" stroke="#e2a24a" stroke-width="26"/><circle cx="256" cy="300" r="22" fill="#e2a24a"/><rect x="128" y="146" width="256" height="48" rx="12" fill="#e2a24a"/></svg>
+            <span class="display" style="font-size:16px">Night Bus</span>
+          </div>
+          <div>
+            <div class="muted" style="font-size:10.5px;font-weight:600;letter-spacing:.04em">SHOOT DAY 3 · IN 3 DAYS</div>
+            <div class="display amber" style="font-size:28px;line-height:1.1;white-space:nowrap">Thu, Nov 5</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;justify-content:center;gap:6px;font-size:12px">
+          <div><span class="muted">Call</span> <b>6:30 AM</b></div><div><span class="muted">Wrap</span> <b>7:00 PM</b></div>
+          <div><span class="muted">At</span> <b>Old bus depot</b></div>
+          <div><span class="chip">Sc 3</span><span class="chip">Sc 5</span><span class="chip">Sc 12</span></div>
+          <div class="muted" style="font-size:11px">Jane Kim, Leo Park +2</div>
+        </div>
+      </div>
+    </div><div class="label">Film</div></div>
+  </div>
+</div>
+
+<!-- 3 · Lock screen -->
+<div class="screen lock" id="s3">
+  <div class="date">Monday, November 2</div>
+  <div class="clock">9:41</div>
+  <div class="lw">
+    <div class="circ"><div><div class="display" style="font-size:19px;line-height:1">D-12</div><div style="font-size:9px;opacity:.8;margin-top:2px">Grad.</div></div></div>
+    <div class="rect"><b>2:00 Table read</b><span style="opacity:.8">Studio B · in 1h 20m</span></div>
+  </div>
+  <div class="lw">
+    <div class="rect"><b>3 to-dos · 2 routines</b><span style="opacity:.8">Write treatment draft</span></div>
+    <div class="circ"><div><div class="display" style="font-size:20px;line-height:1">1/3</div><div style="font-size:9px;opacity:.8;margin-top:2px">routines</div></div></div>
+  </div>
+  <div class="caption">Lock Screen: D-Day · Next event · To-dos · Routines</div>
+</div>
+</body></html>
