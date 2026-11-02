@@ -28,6 +28,8 @@ to Home Screen). The owner (film director, photographer, reader, college student
   `snack` from `js/ui.js` (red button for deletes). Forms use `novalidate`.
 - **Opening any sheet or card must not focus a text field** (no keyboard until tapped).
 - **No haptics** (removed at the owner's request).
+- **No text selection** (no blue highlight) anywhere except chat messages (`.bubble`) and
+  fields you type in: `body` has `user-select: none`, inputs / textareas opt back in.
 - Animations only animate `transform` / `opacity` (FLIP), never layout. Measure with CDP
   4× CPU throttling and rAF frame times. Sheets (`js/motion.js`) slide away on close, fade
   their backdrop and can be dragged down by the grabber / header; tabs fade in
@@ -293,7 +295,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v87`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v88`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 

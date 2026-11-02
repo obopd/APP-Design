@@ -77,6 +77,15 @@ const { browser, phone, check, wait, done } = require('./helpers');
   const quiet = await p.evaluate(async () => { const c = await import('./js/cinema.js'); let on = false; await c.playFilmSwitch(true, () => { on = true; }, '', 'dip'); return on && !document.querySelector('.fx'); });
   check('with Reduce Motion every style just switches', quiet);
 
+  // Text isn't selectable (no blue highlight) except chat messages and typing fields.
+  const sel = (q) => p.evaluate((q) => { const el = document.querySelector(q); return el && (getComputedStyle(el).webkitUserSelect || getComputedStyle(el).userSelect); }, q);
+  check('ordinary text can\'t be selected', await sel('#calendar .cal-title') === 'none');
+  check('chat bubbles and fields can', await p.evaluate(() => {
+    const t = document.createElement('textarea'); const m = document.createElement('div'); m.className = 'bubble';
+    document.body.append(t, m);
+    const ok = [t, m].every((el) => (getComputedStyle(el).webkitUserSelect || getComputedStyle(el).userSelect) === 'text');
+    t.remove(); m.remove(); return ok;
+  }));
   check('no page errors', !p.errors.length, p.errors.join('; '));
   await done(b);
 })();
