@@ -63,6 +63,18 @@ shows **different** things than the card so nothing is repeated:
 When the card isn't showing (ended after ~8 h, or turned off), the plain wallpaper layouts
 from 2 can be used instead; the "Get Planner Wallpaper" intent can take a "with card" option.
 
+## How the owner turns each one on (please build these steps in)
+
+- **Home Screen widgets**: nothing extra; added the normal way (long-press → Edit → Add
+  Widget → Planner).
+- **Lock Screen card**: can't be added from the widget gallery, so add a switch in the
+  app's Settings, "Show on Lock Screen". When on, the app starts the Live Activity each
+  morning / when opened (it ends after ~8 h).
+- **Wallpaper**: needs a one-time Shortcuts automation (Automation → Time of Day, e.g.
+  hourly → "Get Planner Wallpaper" → "Set Wallpaper", run without asking). Please add a
+  button in Settings that explains or opens this, so the owner doesn't have to work it out.
+  The intent should have a "with card" option for layout 4.
+
 ## Data
 
 All widgets need the same "today" data the web app already computes: unfinished to-dos
