@@ -49,15 +49,15 @@ also appear big in StandBy. Light and dark follow the phone.
 
 ## 4 · Card + wallpaper together — `4-card-with-wallpaper.png`
 
-Designs 1 and 2 used at the same time. The wallpaper keeps to the space **between the clock
-and the card** (roughly the middle third of the screen), so the card never hides it, and it
+Designs 1 and 2 used at the same time. The wallpaper fills the whole space **from the clock down
+to the card** (no empty gap; it ends just above the card), so the card never hides it, and it
 shows **different** things than the card so nothing is repeated:
 
-- **Everyday + card**: wallpaper = this week strip, today's schedule, nearest D-Day; card =
+- **Everyday + card**: wallpaper = this week strip, today's and tomorrow's schedule, D-Days; card =
   to-dos to check off (other tabs as in 1).
-- **Film + card**: wallpaper = next shoot day (call / wrap / location) and the shoot-days
-  strip, film look; card = project to-dos with "Call in 3 days".
-- **Minimal + card**: wallpaper = just today's schedule and routines as text; card = to-dos
+- **Film + card**: wallpaper = next shoot day (call / wrap / location), the shoot-days
+  strip, its scenes and cast, film look; card = project to-dos with "Call in 3 days".
+- **Minimal + card**: wallpaper = today's schedule, routines and tomorrow as plain text; card = to-dos
   and the countdown to the next event.
 
 When the card isn't showing (ended after ~8 h, or turned off), the plain wallpaper layouts
