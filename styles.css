@@ -378,9 +378,15 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .folder-add::after { content: ""; position: absolute; inset: -4px; }
 .folder-add svg { width: 15px; height: 15px; }
 /* Moving a to-do: it lifts, and the folder (or section heading) under the finger lights up. */
-.todo.moving { z-index: 5; overflow: visible; box-shadow: 0 8px 24px rgba(0,0,0,.18); background: var(--bg); transition: box-shadow .15s; }
-.film .todo.moving { background: var(--card, var(--bg)); }
-.drop-on { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.todo.moving {
+  z-index: 5; border-radius: 14px; background: var(--row-bg, var(--bg));
+  box-shadow: 0 8px 24px rgba(0,0,0,.16), 0 0 0 1px color-mix(in srgb, var(--fg) 6%, transparent);
+}
+.todo.moving .todo-actions { visibility: hidden; }
+.todo.moving .todo-row { border-radius: 14px; padding-right: 8px; }
+.film .todo.moving, .film .todo.moving .todo-row { background: var(--card, var(--bg)); }
+.drop-on { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 12px; }
+:root[data-theme="dark"]:not(.film) .todo.moving, :root[data-theme="dark"]:not(.film) .todo.moving .todo-row { background: #2c2c2e; }
 .section-head.drop-on { border-radius: 8px; }
 .folder-count { font-weight: 500; font-size: 11px; color: var(--muted); }
 .folder > .todos { display: none; padding: 2px 0 0 10px; }
