@@ -4,7 +4,7 @@
 // the Home Screen. There is no way to schedule a local notification in advance, so
 // alerts fire from timers that only run while the app is open or recently used.
 import { addDays, dateKey, todayKey, toMinutes, formatTime } from './util.js';
-import { eventsOn, todosOn, isDone, isStarred, inFilm } from './store.js';
+import { eventsOn, inFilm } from './store.js';
 import { serverHasAlert } from './push.js';
 
 let timers = [];
@@ -42,15 +42,6 @@ async function fire(event, key, showToast) {
   if (document.visibilityState === 'visible') showToast(event.title, body);
 }
 
-// Badge = today's important, unfinished items. Shown on the Home Screen icon (iOS 16.4+).
-function updateBadge() {
-  if (!('setAppBadge' in navigator)) return;
-  const key = todayKey();
-  const count = eventsOn(key).filter((e) => e.important).length
-    + todosOn(key).filter((t) => isStarred(t, key) && !isDone(t, key)).length;
-  (count ? navigator.setAppBadge(count) : navigator.clearAppBadge()).catch(() => {});
-}
-
 let toastFn = () => {};
 export function setToast(fn) { toastFn = fn; }
 
@@ -58,7 +49,6 @@ export function setToast(fn) { toastFn = fn; }
 export function refreshReminders() {
   timers.forEach(clearTimeout);
   timers = [];
-  updateBadge();
 
   const now = Date.now();
   const horizon = now + 48 * 3600 * 1000;

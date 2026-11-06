@@ -86,7 +86,7 @@ its original date as a small gray tag, and checking it off pins `date` to that d
 **Due date** (one-off only): starred from its due day, "D-3" tag (instead of the date tag).
 **Tracking** (optional): Count or Time (stopwatch stored as a start timestamp,
 `values[dateKey]`); tapping "Routines" shows per-routine stats. **Important ★** = accent
-dot + home-screen badge. **Folders** nest ("Academic/Biology"); open/closed saved in
+dot. **Folders** nest ("Academic/Biology"); open/closed saved in
 `category.open`; underline color from 20 `FOLDER_COLORS` (`js/folders.js`); a folder shows
 in a day only if it has that day's to-dos; Settings lists them (rename/recolor/sub-folder/
 delete), hidden when there are none.
@@ -129,7 +129,8 @@ open chat is a full page and the dock fades (`body.chatting`). Sending keeps the
 up; swiping down on messages folds it. While typing in page fields the dock fades
 (`body.typing`); don't re-pin layouts to the visual viewport (it fought iOS scrolling);
 bottom padding eases to 0 and messages stack from the bottom. Unread = after
-`chat_members.last_read`. **Instant**: a Realtime WebSocket (`live.js`, Phoenix protocol,
+`chat_members.last_read`. The Home Screen icon badge = unread chats + new bell items
+(`paintAppBadge` in app.js; 0 when signed out). **Instant**: a Realtime WebSocket (`live.js`, Phoenix protocol,
 joined once the `system` reply confirms) nudges fetches; polling is the fallback (3s / 9s,
 or 15s / 45s while live). Cache `planner.chat` (last 200 per chat). Messages older than a
 year are deleted nightly.
@@ -212,7 +213,7 @@ js/motion.js sheet close animation + drag-down to close
 js/cinema.js film mode switch animation (candidate styles)
 js/config.js Supabase URL + publishable key + VAPID public key (all public)
 js/cloud.js  auth, sync + merge, storage helpers   js/account.js  login page
-js/settings.js  js/reminders.js (local alerts, badge)  js/push.js  js/live.js  js/search.js
+js/settings.js  js/reminders.js (local alerts)  js/push.js  js/live.js  js/search.js
 js/social.js  js/people.js  js/chat.js  js/chatview.js
 js/film.js  js/filmui.js  js/write.js  js/organize.js  js/preview.js
 supabase/    setup → social → chat → film → push → maintenance (.sql, run in this order;
@@ -282,7 +283,7 @@ vault / pg_net / pg_cron) and `db/seed.sql` (users a@x, b@x, c@x, password `secr
 is friends with bob and carol; an alice↔bob chat), runs `mock-server.js` on :54321
 (PostgREST + GoTrue + Storage + RPC + Realtime stand-in with real RLS; `Bearer service` =
 service role) and the app on :8765. Suites: `sync`, `todos` (roll-over across days with a fake clock), `folders` (folder
-sheet, + in a folder, drag between folders), `desktop` (Desktop
+sheet, + in a folder, drag between folders), `badge` (icon badge = unread only), `desktop` (Desktop
 Chrome: mouse, keyboard, window sizes), `storage`, `resilience` (offline, 2 minutes open: errors + memory,
 sign-out cleanup), `motion`, `preview`, `shoot`,
 `app-features` (push sign-up, instant chat, search, backups, clean-up, ping) and
@@ -308,7 +309,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v91`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v92`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 

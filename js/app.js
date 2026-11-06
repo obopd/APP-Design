@@ -248,6 +248,7 @@ function render() {
     calendarView.hidden = settingsEl.hidden = ddayEl.hidden = chatEl.hidden = writeEl.hidden = organizeEl.hidden = previewEl.hidden = true;
     leavePreview();
     chatShown(false);
+    paintAppBadge();
     if (!gateShown) renderLoginGate(loginEl); // once per visit, so typing isn't wiped
     gateShown = true;
     return;
@@ -343,6 +344,16 @@ function paintBell() {
   bellBadge.hidden = !n;
   bellBadge.textContent = n > 9 ? '9+' : String(n);
   bellEl.setAttribute('aria-label', n ? `Notifications, ${n} new` : 'Notifications');
+  paintAppBadge();
+}
+
+// Home Screen icon badge = things really waiting for you: unread chats + new bell items.
+function paintAppBadge() {
+  if (!('setAppBadge' in navigator)) return;
+  const n = isGated() ? 0 : (bellEl.hidden ? 0 : unseenCount()) + (chatEnabled() ? unreadTotal() : 0);
+  if (n === paintAppBadge.last) return;
+  paintAppBadge.last = n;
+  (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
 }
 bellEl.addEventListener('click', () => { openNotifications(); refreshFilm(); });
 
@@ -397,6 +408,7 @@ function paintChatBadge() {
   const n = chatEnabled() ? unreadTotal() : 0;
   chatBadge.hidden = !n;
   chatBadge.textContent = n > 99 ? '99+' : String(n);
+  paintAppBadge();
 }
 onChatChange(() => {
   paintChatBadge();
