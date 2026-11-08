@@ -386,6 +386,8 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .todo.moving .todo-row { border-radius: 14px; padding-right: 8px; }
 .film .todo.moving, .film .todo.moving .todo-row { background: var(--card, var(--bg)); }
 .drop-on { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 12px; }
+/* The space a moved to-do will drop into. */
+.todo-gap { list-style: none; border-radius: 14px; background: color-mix(in srgb, var(--accent) 7%, transparent); }
 :root[data-theme="dark"]:not(.film) .todo.moving, :root[data-theme="dark"]:not(.film) .todo.moving .todo-row { background: #2c2c2e; }
 .section-head.drop-on { border-radius: 8px; }
 .folder-count { font-weight: 500; font-size: 11px; color: var(--muted); }

@@ -74,9 +74,12 @@ stretches either column to full width (`layout`: split | todo | schedule, kept a
 sideways swipe on empty list space returns to split. Swipe a to-do left = **postpone**
 (Tmrw / Date, Undo snack; routines move only that day via `skipOn`).
 Folder heading: tap the name = folder sheet (rename / color / share / delete / sub-folder),
-+ = new to-do in it, elsewhere = fold. **Hold a to-do ~0.45s and drag** onto a folder (its
-heading or any to-do in it; a section heading = no folder) to move it (`makeMovable`, Undo
-snack; the list auto-scrolls at its edges; page scroll is blocked while moving).
++ = new to-do in it, elsewhere = fold. **Hold a to-do ~0.45s and drag** (`makeMovable`):
+between two to-dos = put it there (a `.todo-gap` opens there, rows slide by FLIP; that list is
+renumbered in `todo.order`),
+onto a folder heading = last in that folder, onto a section heading = out of any folder;
+Undo snack when the folder changes; the list auto-scrolls at its edges; page scroll is
+blocked while moving. Sort = done last, then `order`, then starred.
 
 **To-dos & events** (`js/editor.js`): repeat daily / weekly / every 2 weeks / monthly /
 yearly with optional Until; routine to-dos checked off per day (`doneOn`). **Every
@@ -88,8 +91,9 @@ its original date as a small gray tag, and checking it off pins `date` to that d
 `values[dateKey]`); tapping "Routines" shows per-routine stats. **Important ★** = accent
 dot. **Folders** nest ("Academic/Biology"); open/closed saved in
 `category.open`; underline color from 20 `FOLDER_COLORS` (`js/folders.js`); a folder shows
-in a day only if it has that day's to-dos; Settings lists them (rename/recolor/sub-folder/
-delete), hidden when there are none.
+in a day if it has that day's to-dos; Settings lists them (rename/recolor/sub-folder/
+delete), hidden when there are none. A folder also shows **empty** in its home section
+(`folderHome`: `category.section` set where it was made, else where its to-dos are).
 
 **D-Day** (`js/dday.js`): countdowns ("D-12" / "D-Day" / "D+30"), yearly ones roll over
 (`ddayTarget`). On the day itself they show above the calendar as a swipeable row with
@@ -237,10 +241,10 @@ Keep the internal names as they are, or users lose data/sessions: `planner.v1`,
   todos:  [{ id, title, date: 'YYYY-MM-DD', important, notes, category: id | null,
              repeat, until, done /* one-off */, doneOn: { key: true } /* routines */,
              due: '' | key, skipOn: { key: true }, track: 'none'|'count'|'time',
-             values: { key: number }, timer: { key, start } | null }],
+             values: { key: number }, timer: { key, start } | null, order? /* hand-sorted */ }],
   events: [{ id, title, date, allDay, start: 'HH:MM', end: 'HH:MM', repeat, until,
              alert: 'none' | '<minutes before>', important, notes, shoot? /* film */ }],
-  categories: [{ id, name, parent: id | null, open, color }],
+  categories: [{ id, name, parent: id | null, open, color, section?: 'routine'|'todo' }],
   // todos / events / categories may have sharedWith: [friend user id]
   ddays: [{ id, title, date, yearly }],
   meta: { updatedAt, replacedAt? },
@@ -309,7 +313,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v93`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v94`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 

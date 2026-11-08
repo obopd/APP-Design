@@ -185,12 +185,24 @@ export const eventsOn = (key) => cur().events.filter((e) => occursOn(e, key)).so
 export const todosOn = (key) =>
   cur().todos
     .filter((t) => (rollsOver(t) ? todoDate(t) === key : occursOn(t, key)) && !t.skipOn?.[key])
-    .sort((a, b) => isDone(a, key) - isDone(b, key) || isStarred(b, key) - isStarred(a, key));
+    .sort((a, b) => isDone(a, key) - isDone(b, key) || orderOf(a) - orderOf(b) || isStarred(b, key) - isStarred(a, key));
+// Hand-arranged to-dos keep their place (todo.order); new ones go after them.
+const orderOf = (t) => (Number.isFinite(t.order) ? t.order : 1e9);
 
 /* ---------- Categories (folders) ---------- */
 
 export const categoryById = (id) => cur().categories.find((c) => c.id === id) || null;
 export const childCategories = (parent) => cur().categories.filter((c) => (c.parent || null) === parent);
+
+// Which day section a folder lives in ('routine' | 'todo'): where it was made, else where
+// its to-dos are, else its parent's. It shows there even when empty.
+export function folderHome(cat, seen = new Set()) {
+  if (cat.section) return cat.section;
+  const inside = cur().todos.filter((t) => t.category === cat.id);
+  if (inside.length) return inside.some((t) => !isRoutine(t)) ? 'todo' : 'routine';
+  const parent = cat.parent && !seen.has(cat.parent) ? categoryById(cat.parent) : null;
+  return parent ? folderHome(parent, seen.add(cat.id)) : 'todo';
+}
 
 // Depth-first list of { cat, depth } for pickers and the settings tree.
 export function categoryTree(parent = null, depth = 0) {
@@ -204,12 +216,13 @@ export function categoryPath(id) {
 }
 
 // 'Academic/Biology' → finds or creates each level; returns the last id. Folders start open.
-export function ensureCategoryPath(path, parent = null) {
+export function ensureCategoryPath(path, parent = null, section = null) {
   let id = parent;
   for (const name of path.split('/').map((s) => s.trim()).filter(Boolean)) {
     let cat = childCategories(id).find((c) => c.name.toLowerCase() === name.toLowerCase());
     if (!cat) {
       cat = { id: uid(), name, parent: id, open: true };
+      if (section) cat.section = section;
       cur().categories.push(cat);
     }
     id = cat.id;

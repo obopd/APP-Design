@@ -2,7 +2,7 @@
 import { h, icon, ICONS, fmt, todayKey, parseKey, daysBetween, toMinutes, shortTime, formatDuration, formatClock, formatNumber } from './util.js';
 import {
   cur, save, eventsOn, todosOn, isDone, isRoutine, toggleDone, childCategories,
-  isTracked, valueOn, setValue, startTimer, stopTimer, routineStats, hasDue, rollsOver, isStarred,
+  isTracked, valueOn, setValue, startTimer, stopTimer, routineStats, hasDue, rollsOver, isStarred, folderHome,
 } from './store.js';
 import { askText, tell, snack } from './ui.js';
 import { sharedTodosOn, sharedEventsOn, isSharedDone, toggleShared, nameOf } from './social.js';
@@ -110,31 +110,72 @@ function makeSwipeable(li, row) {
   row.addEventListener('click', (e) => { if (dragged) { e.stopPropagation(); e.preventDefault(); dragged = false; } }, true);
 }
 
-// Press and hold a to-do, then drag it onto a folder (or a section heading = no folder).
+// Press and hold a to-do, then drag it: between two to-dos = put it there (a gap opens;
+// it joins their folder), onto a folder = into that folder, onto a section heading = out of any folder.
 const HOLD_MS = 450;
 let moving = false;
 // While a to-do is being moved, the page mustn't scroll under the finger.
 document.addEventListener('touchmove', (e) => { if (moving) e.preventDefault(); }, { passive: false });
 
+const headOf = (ul) => ul.closest('li.folder')?.querySelector(':scope > .folder-head')
+  || ul.closest('.todo-section')?.querySelector(':scope > .section-head');
+
 function makeMovable(li, row, t) {
   let hold = null; // { x, y, id, timer }
-  let drag = null; // { x, y, y0, target, scroller, raf }
+  let drag = null; // { x, y, y0, drop, scroller, raf, gap }
   let swallowClick = false;
 
-  // The folder (or section) under the finger: its heading, or any to-do inside it.
-  const targetAt = (x, y) => {
-    const el = document.elementFromPoint(x, y);
-    if (!el) return null;
-    return el.closest('[data-drop]')
-      || el.closest('li.folder')?.querySelector(':scope > .folder-head')
-      || el.closest('.todo-section:not(.shared-section)')?.querySelector(':scope > .section-head')
-      || null;
+  // Slide everything in the list from where it was to where it is now (FLIP).
+  const slide = (change) => {
+    const sc = drag.scroller || document;
+    const els = [...sc.querySelectorAll('li.todo:not(.moving), .folder-head, .section-head')];
+    const tops = els.map((el) => el.getBoundingClientRect().top);
+    const liTop = li.getBoundingClientRect().top;
+    change();
+    // The lifted to-do stays under the finger even if the list above it changed.
+    drag.y0 += li.getBoundingClientRect().top - liTop;
+    li.style.transform = `translateY(${drag.y - drag.y0}px) scale(1.03)`;
+    els.forEach((el, i) => {
+      const dy = tops[i] - el.getBoundingClientRect().top;
+      if (!dy) return;
+      el.style.transition = 'none';
+      el.style.transform = `translateY(${dy}px)`;
+      requestAnimationFrame(() => { el.style.transition = 'transform .2s var(--ease)'; el.style.transform = ''; });
+    });
   };
-  const mark = (el) => {
-    if (drag.target === el) return;
-    drag.target?.classList.remove('drop-on');
-    drag.target = el;
-    el?.classList.add('drop-on');
+  const resetSlides = () => (drag?.scroller || document).querySelectorAll('li.todo, .folder-head, .section-head')
+    .forEach((el) => { if (el !== li) { el.style.transition = ''; el.style.transform = ''; } });
+
+  // What's under the finger: a to-do row (the gap opens above / below it), or a folder /
+  // section heading.
+  const dropAt = (x, y) => {
+    const el = document.elementFromPoint(x, y);
+    if (!el || el.closest('.shared-section')) return null;
+    if (el === drag.gap || el.closest('li.todo-gap')) return drag.drop;
+    const over = el.closest('li.todo');
+    if (over && over !== li && over.parentElement.matches('ul.todos')) {
+      const box = over.getBoundingClientRect();
+      const ul = over.parentElement;
+      let before = y < box.top + box.height / 2 ? over : over.nextElementSibling;
+      while (before && (before === li || before === drag.gap)) before = before.nextElementSibling;
+      return { head: headOf(ul), ul, before };
+    }
+    const head = el.closest('[data-drop]')
+      || el.closest('li.folder')?.querySelector(':scope > .folder-head')
+      || el.closest('.todo-section')?.querySelector(':scope > .section-head');
+    return head ? { head } : null;
+  };
+  const mark = (d) => {
+    const old = drag.drop;
+    if (old === d || (old && d && old.head === d.head && old.ul === d.ul && old.before === d.before)) return;
+    old?.head?.classList.remove('drop-on');
+    drag.drop = d;
+    if (d && !d.ul) d.head.classList.add('drop-on');
+    // Open the gap where it will land; over a heading it goes back to its own place.
+    const ul = d?.ul || li.parentElement;
+    const before = d?.ul ? d.before : li.nextElementSibling === drag.gap ? drag.gap.nextElementSibling : li.nextElementSibling;
+    if (drag.gap.parentElement === ul && (drag.gap.nextElementSibling === before || drag.gap === before)) return;
+    slide(() => ul.insertBefore(drag.gap, before));
   };
   const cancelHold = () => { if (hold) clearTimeout(hold.timer); hold = null; };
 
@@ -146,7 +187,12 @@ function makeMovable(li, row, t) {
       hold = null;
       moving = true;
       swallowClick = true;
-      drag = { x: e.clientX, y: e.clientY, y0: e.clientY, target: null, scroller: li.closest('.col-scroll') };
+      const height = li.offsetHeight;
+      // The lifted to-do gives its space to a gap that travels to where it will land.
+      const gap = h('li', { class: 'todo-gap', style: `height:${height}px` });
+      drag = { x: e.clientX, y: e.clientY, y0: e.clientY, drop: null, scroller: li.closest('.col-scroll'), gap };
+      li.after(gap);
+      li.style.marginBottom = `${-height}px`;
       try { row.setPointerCapture(id); } catch { /* pointer already gone */ }
       li.classList.add('moving');
       loop();
@@ -164,9 +210,9 @@ function makeMovable(li, row, t) {
     }
     li.style.transform = `translateY(${drag.y - drag.y0}px) scale(1.03)`;
     li.style.pointerEvents = 'none';
-    const el = targetAt(drag.x, drag.y);
+    const d = dropAt(drag.x, drag.y);
     li.style.pointerEvents = '';
-    mark(el);
+    mark(d);
   };
   const loop = () => { if (!drag) return; follow(); drag.raf = requestAnimationFrame(loop); };
   row.addEventListener('pointermove', (e) => {
@@ -179,24 +225,56 @@ function makeMovable(li, row, t) {
     cancelHold();
     if (!drag) return;
     cancelAnimationFrame(drag.raf);
-    const target = drag.target;
-    target?.classList.remove('drop-on');
+    const d = drag.drop;
+    d?.head?.classList.remove('drop-on');
+    // Where the gap sits = the order to save (the to-do's id in the gap's place).
+    const ids = d?.ul ? [...d.ul.children].flatMap((x) => (x === drag.gap ? [t.id] : x.matches('li.todo') && x !== li ? [x.dataset.id] : [])) : null;
+    resetSlides();
+    drag.gap.remove();
     drag = null;
     moving = false;
     li.classList.remove('moving');
     li.style.transform = '';
+    li.style.marginBottom = '';
     setTimeout(() => { swallowClick = false; }, 400);
-    if (!target) return;
-    const to = target.dataset.drop || null;
-    if ((t.category || null) === to) return;
+    if (!d?.head) return;
+    drop(d, ids);
+  };
+
+  const drop = (d, ids) => {
+    const to = d.head.dataset.drop || null;
+    const todos = cur().todos;
+    const byId = (id) => todos.find((x) => x.id === id);
+    // Remember everything this can change, for Undo.
+    const before = new Map([[t, { category: t.category, order: t.order }]]);
+    const remember = (x) => { if (x && !before.has(x)) before.set(x, { category: x.category, order: x.order }); };
+
     const from = t.category || null;
     t.category = to;
+    if (ids) {
+      // Put it exactly where it was dropped; number that list top to bottom.
+      ids.forEach((id, i) => { const x = byId(id); if (x) { remember(x); x.order = i; } });
+    } else {
+      // Onto a folder heading: last in that folder.
+      const orders = todos.filter((x) => x !== t && (x.category || null) === to && Number.isFinite(x.order)).map((x) => x.order);
+      t.order = orders.length ? Math.max(...orders) + 1 : undefined;
+      if (t.order === undefined) delete t.order;
+    }
+    const changed = [...before].some(([x, was]) => (x.category || null) !== (was.category || null) || x.order !== was.order);
+    if (!changed) return;
     save();
+    const undo = () => {
+      for (const [x, was] of before) {
+        x.category = was.category;
+        if (was.order === undefined) delete x.order; else x.order = was.order;
+      }
+      save();
+    };
+    if (to === from) return; // just rearranged
     const name = to ? cur().categories.find((c) => c.id === to)?.name : null;
-    snack(name ? `Moved to ${name}` : 'Moved out of the folder', {
-      action: 'Undo', onAction: () => { t.category = from; save(); },
-    });
+    snack(name ? `Moved to ${name}` : 'Moved out of the folder', { action: 'Undo', onAction: undo });
   };
+
   row.addEventListener('pointerup', end);
   row.addEventListener('pointercancel', end);
   row.addEventListener('lostpointercapture', end);
@@ -233,7 +311,7 @@ function todoItem(t, key, actions) {
       t.sharedWith?.length ? h('span', { class: 'mark shared-mark', 'aria-label': 'Shared' }, icon(ICONS.people)) : null,
       tagFor(t, key, done)),
     isTracked(t) ? tracker(t, key) : null);
-  const li = h('li', { class: `todo${done ? ' done' : ''}${starred ? ' imp' : ''}` },
+  const li = h('li', { class: `todo${done ? ' done' : ''}${starred ? ' imp' : ''}`, 'data-id': t.id },
     h('div', { class: 'todo-actions' },
       h('button', { class: 'todo-act', 'aria-label': `Postpone ${t.title} to tomorrow`, onclick: () => postponeTomorrow(t, key) },
         icon(ICONS.arrow), h('span', {}, 'Tmrw')),
@@ -247,18 +325,20 @@ function todoItem(t, key, actions) {
 
 // One section's to-dos grouped into (nested) category folders. A folder only shows
 // if it has to-dos here somewhere inside it; its open/closed state is saved.
-function folderTree(todos, key, actions, opts = {}) {
+function folderTree(todos, key, actions, opts = {}, section = 'todo') {
   const known = new Set(cur().categories.map((c) => c.id));
   const catOf = (t) => (known.has(t.category) ? t.category : null);
 
   const countIn = (catId) => todos.filter((t) => catOf(t) === catId).length
     + childCategories(catId).reduce((n, c) => n + countIn(c.id), 0);
+  // A folder shows if it has to-dos here, or lives in this section (even empty).
+  const shows = (c) => countIn(c.id) > 0 || folderHome(c) === section || childCategories(c.id).some(shows);
   const openIn = (catId) => todos.filter((t) => catOf(t) === catId && !isDone(t, key)).length
     + childCategories(catId).reduce((n, c) => n + openIn(c.id), 0);
 
   const branch = (catId) => {
     const items = todos.filter((t) => catOf(t) === catId).map((t) => todoItem(t, key, actions));
-    const folders = childCategories(catId).filter((c) => countIn(c.id) > 0).map((c) => {
+    const folders = childCategories(catId).filter(shows).map((c) => {
       const left = openIn(c.id);
       const open = c.open !== false;
       // Tap the name to edit the folder, + to add a to-do in it, anywhere else to fold it.
@@ -273,7 +353,7 @@ function folderTree(todos, key, actions, opts = {}) {
           class: 'folder-name', 'aria-label': `Edit folder ${c.name}`,
           onclick: (e) => {
             e.stopPropagation();
-            openFolderSheet({ cat: c, onSubfolder: (id) => actions.create({ kind: 'todo', date: key, category: id, ...opts }) });
+            openFolderSheet({ cat: c, onSubfolder: () => {} });
           },
         }, c.name),
         c.sharedWith?.length ? h('span', { class: 'mark shared-mark', 'aria-label': 'Shared' }, icon(ICONS.people)) : null,
@@ -335,11 +415,9 @@ function todoColumn(key, actions) {
     class: 'icon-btn section-add', 'aria-label': label,
     onclick: () => actions.create({ kind: 'todo', date: key, ...opts }),
   }, icon(ICONS.plus));
-  // New folder → then straight into adding its first to-do (an empty folder wouldn't show
-  // in the day's list yet).
-  const folderBtn = (label, opts) => h('button', {
+  const folderBtn = (label, opts = {}) => h('button', {
     class: 'icon-btn section-add section-folder', 'aria-label': label,
-    onclick: () => openFolderSheet({ onDone: (id) => actions.create({ kind: 'todo', date: key, category: id, ...opts }) }),
+    onclick: () => openFolderSheet({ section: opts.repeat ? 'routine' : 'todo' }),
   }, icon(ICONS.folderPlus));
 
   // If any routine is tracked, tapping "Routines" reveals how often each was done.
@@ -355,10 +433,10 @@ function todoColumn(key, actions) {
     h('section', { class: 'todo-section routines' },
       h('div', { class: 'section-head', 'data-drop': '' }, routineTitle, folderBtn('New routine folder', { repeat: 'daily' }), plus('Add routine', { repeat: 'daily' })),
       tracked.length && showStats ? routineStatsList(tracked) : null,
-      routines.length ? folderTree(routines, key, actions, { repeat: 'daily' }) : null),
+      folderTree(routines, key, actions, { repeat: 'daily' }, 'routine')),
     h('section', { class: 'todo-section' },
       h('div', { class: 'section-head', 'data-drop': '' }, h('h3', { class: 'section-label' }, 'To-do', count(regular)), folderBtn('New folder'), plus('Add to-do')),
-      regular.length ? folderTree(regular, key, actions) : null),
+      folderTree(regular, key, actions, {}, 'todo')),
     sharedSection(key)));
 }
 

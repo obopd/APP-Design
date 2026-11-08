@@ -1,6 +1,6 @@
 // Small bottom sheet to create or edit a to-do folder: name + underline color.
 import { h, icon, ICONS } from './util.js';
-import { cur, save, ensureCategoryPath, deleteCategory } from './store.js';
+import { cur, save, ensureCategoryPath, deleteCategory, folderHome } from './store.js';
 import { ask } from './ui.js';
 import { shareField } from './people.js';
 
@@ -32,11 +32,11 @@ export const FOLDER_COLORS = [
 ];
 
 /**
- * openFolderSheet({ cat?, parent?, onDone?(id), onCancel? })
+ * openFolderSheet({ cat?, parent?, section?, onDone?(id), onCancel? })
  * New folder: "Academic/Biology" creates nested folders; the color goes on the last one.
  * Editing (cat) with onSubfolder(id): a button makes a folder inside it, then calls onSubfolder.
  */
-export function openFolderSheet({ cat = null, parent = null, onDone = () => {}, onCancel = () => {}, onSubfolder = null } = {}) {
+export function openFolderSheet({ cat = null, parent = null, section = null, onDone = () => {}, onCancel = () => {}, onSubfolder = null } = {}) {
   let color = cat ? cat.color || null : null;
   let finished = false;
 
@@ -71,7 +71,8 @@ export function openFolderSheet({ cat = null, parent = null, onDone = () => {}, 
       cat.color = color;
       id = cat.id;
     } else {
-      id = ensureCategoryPath(text, parent);
+      const parentCat = parent ? cur().categories.find((c) => c.id === parent) : null;
+      id = ensureCategoryPath(text, parent, section || (parentCat ? folderHome(parentCat) : null));
       cur().categories.find((c) => c.id === id).color = color;
     }
     if (share) cur().categories.find((c) => c.id === id).sharedWith = share.value();
