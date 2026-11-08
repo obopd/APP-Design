@@ -63,6 +63,26 @@ shows **different** things than the card so nothing is repeated:
 When the card isn't showing (ended after ~8 h, or turned off), the plain wallpaper layouts
 from 2 can be used instead; the "Get Planner Wallpaper" intent can take a "with card" option.
 
+## 5 · Routine stopwatch in the Dynamic Island — `5-island-timer.png`
+
+Like iPhone's own Timer: **starting a time-tracked routine** (▶ in the app, or on the Lock
+Screen card) starts a Live Activity for it; **stopping** it (■ in the island, the Lock
+Screen or the app) ends it.
+
+- **Compact** (next to the camera): the routine's dash mark (amber) on the left, the running
+  time on the right, counting up by itself (`Text(timerInterval: start...Date.distantFuture,
+  countsDown: false)`, no updates needed).
+- **Expanded** (press and hold the island): folder + routine name, big running time, today's
+  earlier total ("1h 40m before this"), start time, ■ Stop (App Intent).
+- **Lock Screen**: the same as a card with ■ Stop. **Minimal** (two activities at once): the
+  amber mark only.
+- Data: the web app stores a running stopwatch on the to-do as `timer: { key, start }`
+  (`start` = epoch ms) and the day's saved seconds in `values[key]`; Stop adds the elapsed
+  seconds to `values[key]` and clears `timer`. A timer started on another device should start
+  the activity too (via ActivityKit push, or when the app opens).
+- Only one stopwatch runs at a time in the app; if the Lock Screen card (1) is also showing,
+  its Routines tab shows the same timer.
+
 ## How the owner turns each one on (please build these steps in)
 
 - **Home Screen widgets**: nothing extra; added the normal way (long-press → Edit → Add
