@@ -10,6 +10,18 @@ and numbers, the system font for small text, slim vertical "dash" marks for to-d
 open, solid = done, done = struck through). Film mode = warm black `#0d0c0a`, cream text
 `#f1ebe0`, tungsten-amber accent `#e2a24a`, still film grain + vignette, sprocket holes.
 
+## What's new (since the version first sent)
+
+- **New design 5**: routine stopwatch in the Dynamic Island / Lock Screen (below).
+- **To-do order**: to-dos can be dragged into any order. Each one may have `order` (number,
+  lower = higher up); show them the way the app does: unfinished first, then by `order`
+  (to-dos without one after), then starred first.
+- **Empty folders**: a folder can exist with no to-dos; `category.section` ('routine' |
+  'todo') says which list it belongs to. Widgets that list folders should keep empty ones.
+- **App icon badge**: the number on the icon now means only unread chat messages + new
+  friend / share notifications (no longer today's starred items).
+- Pull the latest repository to get all of this; `CLAUDE.md` always describes the current app.
+
 ## 1 · Lock Screen card (Live Activity) — `1-lock-screen-card.png` ★ owner's favorite
 
 One interactive card at the bottom of the Lock Screen (ActivityKit Live Activity), with
