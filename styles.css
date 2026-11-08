@@ -271,7 +271,7 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .todo { position: relative; overflow: hidden; border-radius: 10px; }
 /* The row slides left (swipe) to reveal the Postpone actions underneath. */
 .todo-row {
-  position: relative; z-index: 1; display: flex; align-items: flex-start;
+  position: relative; z-index: 1; display: flex; flex-wrap: wrap; align-items: flex-start;
   background: var(--row-bg, var(--bg)); touch-action: pan-y;
   transition: transform .3s var(--ease);
 }
@@ -304,8 +304,8 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .dash { width: 3.5px; height: 13px; /* a bit taller than the 14px text's caps, easy to see */ border-radius: 2px; background: var(--muted); opacity: .55; transition: background .2s, opacity .2s, width .2s; }
 .todo.done .dash { background: var(--accent); opacity: 1; }
 .todo-title {
-  flex: 1; min-width: 0; text-align: left; padding: 8px 2px 8px 6px;
-  font-size: 14px; line-height: 18px; overflow-wrap: anywhere;
+  flex: 1 1 auto; min-width: 0; text-align: left; padding: 8px 2px 8px 6px;
+  font-size: 14px; line-height: 18px; overflow-wrap: break-word;
 }
 .todo.done .todo-title { color: var(--muted); text-decoration: line-through; }
 .todo.imp .todo-title { font-weight: 600; }
@@ -315,7 +315,8 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .due-tag.due-now { color: var(--accent); font-weight: 600; }
 
 /* Tracking: a small number pill (count or time) and a stopwatch button. */
-.tracker { display: flex; align-items: center; gap: 2px; flex-shrink: 0; padding: 5px 0 0 4px; }
+/* In a narrow column the tracker drops under the title instead of squeezing it. */
+.tracker { display: flex; align-items: center; gap: 2px; flex-shrink: 0; margin-left: auto; padding: 5px 0 4px 4px; }
 .track-pill {
   min-width: 30px; height: 24px; padding: 0 8px; border-radius: 12px;
   font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--muted);
@@ -1285,9 +1286,10 @@ body.fx-dissolve .tabbar { animation: fx-dissolve-dock 1.4s cubic-bezier(.45, 0,
 /* The month title stays on one line, and the to-do column's headings keep their words. */
 .cal-title { white-space: nowrap; font-size: clamp(17px, 5.6vw, 21px); }
 @media (max-width: 400px) {
-  .section-head .section-label { padding-left: 10px; padding-right: 2px; font-size: 15px; }
-  .section-head .icon-btn { width: 30px; }
-  .section-head .section-folder { margin-right: -4px; }
+  .section-head .section-label { gap: 4px; padding-left: 10px; padding-right: 2px; font-size: 15px; }
+  .section-head .icon-btn { position: relative; width: 26px; }
+  .section-head .icon-btn::after { content: ''; position: absolute; inset: -2px -7px; }
+  .section-head .section-folder { margin-right: -2px; }
 }
 @media (max-width: 340px) {
   .section-head .section-label { padding-left: 8px; font-size: 14px; }
