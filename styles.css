@@ -325,6 +325,7 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .routines .track-pill { background: var(--bg); }
 .track-pill.has { color: var(--fg); }
 .track-pill.running { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.track-pill.paused { color: var(--accent); border-color: var(--accent); }
 .track-btn { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); }
 .track-btn svg { width: 12px; height: 12px; stroke-width: 2; fill: currentColor; }
 .track-btn.running { color: var(--accent); }

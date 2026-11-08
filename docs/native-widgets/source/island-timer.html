@@ -20,7 +20,7 @@ body { font-family: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-
 .ico { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; background: #1f1f22; }
 .ico i { width: 3px; height: 11px; border-radius: 2px; background: #f0b462; }
 .island.expanded { width: 370px; height: 140px; border-radius: 44px; padding: 18px 22px; }
-.btn { font: 700 13px -apple-system, Arial; padding: 8px 14px; border-radius: 999px; }
+.btn { font: 700 13px -apple-system, Arial; padding: 8px 14px; border-radius: 999px; white-space: nowrap; }
 .stop { background: #f0b462; color: #1a1207; }
 .done { background: #2c2c2e; color: #f5f5f7; }
 .card { position: absolute; left: 12px; right: 12px; bottom: 22px; border-radius: 24px; background: rgba(28,28,30,.92); padding: 14px 16px; }
@@ -59,12 +59,12 @@ body { font-family: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-
         <div class="timer amber" style="font-size:38px;line-height:1">1:52:04</div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px">
-        <span style="font-size:12px;color:#8a8a90">Today 1h 40m before this · started 9:29</span>
-        <span style="display:flex;gap:6px"><span class="btn stop">■ Stop</span></span>
+        <span style="font-size:12px;color:#8a8a90">1h 40m before · from 9:29</span>
+        <span style="display:flex;gap:6px"><span class="btn done">❚❚ Pause</span><span class="btn stop">■ Stop</span></span>
       </div>
     </div>
   </div>
-  <div class="label">2 · Expanded: press and hold the island<small>Name, big running time, today's earlier total, ■ Stop saves it to the routine</small></div>
+  <div class="label">2 · Expanded: press and hold the island<small>Name, running time, today's earlier total; ❚❚ Pause keeps it open, ■ Stop ends it</small></div>
 </div>
 
 <!-- 3 · Lock Screen: same timer as a card -->
@@ -82,12 +82,12 @@ body { font-family: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-
             <div style="font-size:11.5px;color:#8a8a90">Routine · started 9:29</div>
           </div>
         </div>
-        <div class="timer amber" style="font-size:30px">12:04</div>
+        <div style="text-align:right"><div class="timer" style="font-size:30px;color:#8a8a90">12:04</div><div style="font-size:11px;color:#f0b462;font-weight:700;letter-spacing:.06em">PAUSED</div></div>
       </div>
-      <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:12px"><span class="btn stop">■ Stop</span></div>
+      <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:12px"><span class="btn done">▶ Resume</span><span class="btn stop">■ Stop</span></div>
     </div>
   </div>
-  <div class="label">3 · Lock Screen<small>When the phone is locked the same timer shows as a card with ■ Stop</small></div>
+  <div class="label">3 · Lock Screen<small>Same timer as a card; here it's paused: time frozen, ▶ Resume or ■ Stop</small></div>
 </div>
 
 </div>

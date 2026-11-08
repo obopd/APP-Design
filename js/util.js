@@ -31,6 +31,7 @@ export const ICONS = {
   updown: '<path d="M8 9.5l4-4 4 4M8 14.5l4 4 4-4"/>',
   play: '<path d="M8 5.8v12.4l10-6.2z"/>',
   stop: '<rect x="6.5" y="6.5" width="11" height="11" rx="2"/>',
+  pause: '<rect x="7" y="6" width="3.6" height="12" rx="1.2"/><rect x="13.4" y="6" width="3.6" height="12" rx="1.2"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
   grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/>',
   link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.3 1.3"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.3-1.3"/>',

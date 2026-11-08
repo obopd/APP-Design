@@ -2,7 +2,7 @@
 import { h, icon, ICONS, fmt, todayKey, parseKey, daysBetween, toMinutes, shortTime, formatDuration, formatClock, formatNumber } from './util.js';
 import {
   cur, save, eventsOn, todosOn, isDone, isRoutine, toggleDone, childCategories,
-  isTracked, valueOn, setValue, startTimer, stopTimer, routineStats, hasDue, rollsOver, isStarred, folderHome,
+  isTracked, valueOn, setValue, startTimer, stopTimer, pauseTimer, timerRunning, timerPaused, routineStats, hasDue, rollsOver, isStarred, folderHome,
 } from './store.js';
 import { askText, tell, snack } from './ui.js';
 import { sharedTodosOn, sharedEventsOn, isSharedDone, toggleShared, nameOf } from './social.js';
@@ -39,28 +39,32 @@ function tracker(t, key) {
     }, value ? formatNumber(value) : '0'));
   }
 
-  const running = t.timer && t.timer.key === key;
+  const running = timerRunning(t, key);
+  const paused = timerPaused(t, key);
   const pill = h('button', {
-    class: `track-pill${value || running ? ' has' : ''}${running ? ' running' : ''}`,
+    class: `track-pill${value || running ? ' has' : ''}${running ? ' running' : ''}${paused ? ' paused' : ''}`,
     'aria-label': `Time for ${t.title}: ${value ? formatDuration(value) : 'none'}`,
     onclick: async () => {
-      if (running) return;
+      if (running || paused) return;
       const mins = value ? `${Math.floor(value / 3600)}:${String(Math.round((value % 3600) / 60)).padStart(2, '0')}` : '';
       const input = await askText({ title: t.title, message: 'Time spent: minutes, or h:mm', value: mins, placeholder: 'e.g. 45 or 1:30', inputmode: 'numeric' });
       if (input === null) return;
       const secs = parseMinutes(input);
       if (secs !== null) setValue(t, key, secs);
     },
-  }, running ? formatClock(value + (Date.now() - t.timer.start) / 1000) : value ? formatDuration(value) : '0m');
+  }, running ? formatClock(value + (Date.now() - t.timer.start) / 1000) : paused ? formatClock(value) : value ? formatDuration(value) : '0m');
   if (running) {
     pill.dataset.liveStart = String(t.timer.start);
     pill.dataset.liveBase = String(value);
   }
-  const watch = h('button', {
-    class: `track-btn${running ? ' running' : ''}`, 'aria-label': running ? 'Stop stopwatch' : 'Start stopwatch',
-    onclick: () => (running ? stopTimer(t) : startTimer(t, key)),
-  }, icon(running ? ICONS.stop : ICONS.play));
-  return h('span', { class: 'tracker' }, pill, watch);
+  // Running: ⏸ pause + ■ stop. Paused: ▶ resume + ■ stop. Idle: ▶ start.
+  const btn = (label, ic, fn, cls = '') => h('button', { class: `track-btn${cls}`, 'aria-label': label, onclick: fn }, icon(ic));
+  const buttons = running
+    ? [btn('Pause stopwatch', ICONS.pause, () => pauseTimer(t), ' running'), btn('Stop stopwatch', ICONS.stop, () => stopTimer(t))]
+    : paused
+      ? [btn('Resume stopwatch', ICONS.play, () => startTimer(t, key), ' running'), btn('Stop stopwatch', ICONS.stop, () => stopTimer(t))]
+      : [btn('Start stopwatch', ICONS.play, () => startTimer(t, key))];
+  return h('span', { class: 'tracker' }, pill, ...buttons);
 }
 
 // Update running stopwatches in place (called every second by app.js).

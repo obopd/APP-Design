@@ -12,7 +12,8 @@ open, solid = done, done = struck through). Film mode = warm black `#0d0c0a`, cr
 
 ## What's new (since the version first sent)
 
-- **New design 5**: routine stopwatch in the Dynamic Island / Lock Screen (below).
+- **New design 5**: routine stopwatch in the Dynamic Island / Lock Screen (below), with
+  **Pause** (`timer.start = null`) as well as Stop.
 - **To-do order**: to-dos can be dragged into any order. Each one may have `order` (number,
   lower = higher up); show them the way the app does: unfinished first, then by `order`
   (to-dos without one after), then starred first.
@@ -85,12 +86,16 @@ Screen or the app) ends it.
   time on the right, counting up by itself (`Text(timerInterval: start...Date.distantFuture,
   countsDown: false)`, no updates needed).
 - **Expanded** (press and hold the island): folder + routine name, big running time, today's
-  earlier total ("1h 40m before this"), start time, ■ Stop (App Intent).
-- **Lock Screen**: the same as a card with ■ Stop. **Minimal** (two activities at once): the
+  earlier total ("1h 40m before this"), start time, **❚❚ Pause** and **■ Stop** (App Intents).
+- **Paused**: the time stops and shows "PAUSED" (gray time); buttons become **▶ Resume** and
+  **■ Stop**. The activity stays until Stop.
+- **Lock Screen**: the same as a card with the same buttons. **Minimal** (two activities at once): the
   amber mark only.
-- Data: the web app stores a running stopwatch on the to-do as `timer: { key, start }`
-  (`start` = epoch ms) and the day's saved seconds in `values[key]`; Stop adds the elapsed
-  seconds to `values[key]` and clears `timer`. A timer started on another device should start
+- Data: the web app stores the stopwatch on the to-do as `timer: { key, start }` (`start` =
+  epoch ms while running, `null` while paused) and the day's saved seconds in `values[key]`.
+  Pause adds the elapsed seconds to `values[key]` and sets `start: null`; Resume sets `start`
+  to now; Stop adds any running time and clears `timer` (null). Shown time = `values[key]` +
+  (running ? now − start : 0). A timer started on another device should start
   the activity too (via ActivityKit push, or when the app opens).
 - Only one stopwatch runs at a time in the app; if the Lock Screen card (1) is also showing,
   its Routines tab shows the same timer.

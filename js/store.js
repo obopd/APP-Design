@@ -257,17 +257,36 @@ export function setValue(todo, key, value) {
 }
 
 // The stopwatch is stored as a start time, so it keeps running while the app is closed.
+// Pausing adds the time so far to the day's value and keeps the session open
+// (timer.start = null); ▶ resumes it, ■ ends it.
+export const timerRunning = (todo, key) => !!(todo.timer && todo.timer.key === key && todo.timer.start);
+export const timerPaused = (todo, key) => !!(todo.timer && todo.timer.key === key && !todo.timer.start);
+
+const banked = (todo) => {
+  const { key, start } = todo.timer;
+  if (start) todo.values = { ...todo.values, [key]: valueOn(todo, key) + Math.round((Date.now() - start) / 1000) };
+};
+
 export function startTimer(todo, key) {
-  if (todo.timer) stopTimer(todo, false);
-  todo.timer = { key, start: Date.now() };
+  if (timerPaused(todo, key)) todo.timer = { key, start: Date.now() };
+  else {
+    if (todo.timer) stopTimer(todo, false);
+    todo.timer = { key, start: Date.now() };
+  }
+  save();
+}
+
+export function pauseTimer(todo) {
+  if (!todo.timer?.start) return;
+  banked(todo);
+  todo.timer = { key: todo.timer.key, start: null };
   save();
 }
 
 export function stopTimer(todo, persist = true) {
   if (!todo.timer) return;
-  const { key, start } = todo.timer;
+  banked(todo);
   todo.timer = null;
-  todo.values = { ...todo.values, [key]: valueOn(todo, key) + Math.round((Date.now() - start) / 1000) };
   if (persist) save();
 }
 
