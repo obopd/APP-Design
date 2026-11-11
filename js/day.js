@@ -2,7 +2,7 @@
 import { h, icon, ICONS, fmt, todayKey, parseKey, daysBetween, toMinutes, shortTime, formatDuration, formatClock, formatNumber } from './util.js';
 import {
   cur, save, eventsOn, todosOn, isDone, isRoutine, toggleDone, childCategories,
-  isTracked, valueOn, setValue, hasChoices, pickedOn, pickChoice, startTimer, stopTimer, pauseTimer, timerRunning, timerPaused, routineStats, hasDue, rollsOver, isStarred, folderHome,
+  isTracked, valueOn, setValue, coveredOn, openOn, startTimer, stopTimer, pauseTimer, timerRunning, timerPaused, routineStats, hasDue, rollsOver, isStarred, folderHome,
 } from './store.js';
 import { askText, tell, snack } from './ui.js';
 import { sharedTodosOn, sharedEventsOn, isSharedDone, toggleShared, nameOf } from './social.js';
@@ -300,18 +300,6 @@ function laterTag(t, key) {
 }
 const tagFor = (t, key, done) => (done ? null : hasDue(t) ? dueTag(t, key) : rollsOver(t) && t.date < key ? laterTag(t, key) : null);
 
-// "Do one of these": tap the one you did; it checks the to-do off (tap again to undo).
-function choiceChips(t, key) {
-  const picked = pickedOn(t, key);
-  return h('div', { class: `choices${picked ? ' has-pick' : ''}` }, t.choices.flatMap((c, i) => [
-    i ? h('span', { class: 'choice-or', 'aria-hidden': 'true' }, 'or') : null,
-    h('button', {
-      class: `choice${picked === c.id ? ' picked' : ''}`, 'aria-pressed': String(picked === c.id),
-      'aria-label': `Did ${c.label}`, onclick: () => pickChoice(t, key, c.id),
-    }, c.label),
-  ]));
-}
-
 // The slim mark checks a to-do off; tapping the text opens it for editing.
 function todoItem(t, key, actions) {
   const done = isDone(t, key);
@@ -326,9 +314,9 @@ function todoItem(t, key, actions) {
       starred ? h('span', { class: 'mark star', 'aria-hidden': 'true' }, '★') : null,
       t.sharedWith?.length ? h('span', { class: 'mark shared-mark', 'aria-label': 'Shared' }, icon(ICONS.people)) : null,
       tagFor(t, key, done)),
-    isTracked(t) ? tracker(t, key) : null,
-    hasChoices(t) ? choiceChips(t, key) : null);
-  const li = h('li', { class: `todo${done ? ' done' : ''}${starred ? ' imp' : ''}`, 'data-id': t.id },
+    isTracked(t) ? tracker(t, key) : null);
+  const covered = coveredOn(t, key);
+  const li = h('li', { class: `todo${done ? ' done' : ''}${covered ? ' covered' : ''}${starred ? ' imp' : ''}`, 'data-id': t.id },
     h('div', { class: 'todo-actions' },
       h('button', { class: 'todo-act', 'aria-label': `Postpone ${t.title} to tomorrow`, onclick: () => postponeTomorrow(t, key) },
         icon(ICONS.arrow), h('span', {}, 'Tmrw')),
@@ -338,6 +326,18 @@ function todoItem(t, key, actions) {
   makeSwipeable(li, row);
   makeMovable(li, row, t);
   return li;
+}
+
+// Open to-dos; tied ones count once (doing any one of them is enough).
+function openCount(list, key) {
+  const seen = new Set();
+  let n = 0;
+  for (const t of list) {
+    if (!openOn(t, key)) continue;
+    if (t.tie) { if (seen.has(t.tie)) continue; seen.add(t.tie); }
+    n += 1;
+  }
+  return n;
 }
 
 // One section's to-dos grouped into (nested) category folders. A folder only shows
@@ -350,11 +350,23 @@ function folderTree(todos, key, actions, opts = {}, section = 'todo') {
     + childCategories(catId).reduce((n, c) => n + countIn(c.id), 0);
   // A folder shows if it has to-dos here, or lives in this section (even empty).
   const shows = (c) => countIn(c.id) > 0 || folderHome(c) === section || childCategories(c.id).some(shows);
-  const openIn = (catId) => todos.filter((t) => catOf(t) === catId && !isDone(t, key)).length
+  const openIn = (catId) => openCount(todos.filter((t) => catOf(t) === catId), key)
     + childCategories(catId).reduce((n, c) => n + openIn(c.id), 0);
 
   const branch = (catId) => {
-    const items = todos.filter((t) => catOf(t) === catId).map((t) => todoItem(t, key, actions));
+    const here = todos.filter((t) => catOf(t) === catId);
+    // Tied to-dos (2+ here) are drawn together where the first one is, joined by a curve.
+    const groups = new Map();
+    for (const t of here) if (t.tie) groups.set(t.tie, [...(groups.get(t.tie) || []), t]);
+    const items = [];
+    for (const t of here) {
+      const group = t.tie && groups.get(t.tie);
+      if (!group || group.length < 2) { items.push(todoItem(t, key, actions)); continue; }
+      if (group[0] !== t) continue;
+      const met = group.some((x) => isDone(x, key));
+      items.push(h('li', { class: `tie${met ? ' met' : ''}`, 'aria-label': 'Do one of these' },
+        h('ul', { class: 'todos tie-list' }, group.map((x) => todoItem(x, key, actions)))));
+    }
     const folders = childCategories(catId).filter(shows).map((c) => {
       const left = openIn(c.id);
       const open = c.open !== false;
@@ -426,7 +438,7 @@ function todoColumn(key, actions) {
   const routines = todos.filter(isRoutine);
   const regular = todos.filter((t) => !isRoutine(t));
 
-  const left = (list) => list.filter((t) => !isDone(t, key)).length;
+  const left = (list) => openCount(list, key);
   const count = (list) => (left(list) ? h('span', { class: 'section-count' }, String(left(list))) : null);
   const plus = (label, opts) => h('button', {
     class: 'icon-btn section-add', 'aria-label': label,

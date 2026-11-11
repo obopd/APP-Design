@@ -39,7 +39,7 @@ function load() {
   try {
     const data = JSON.parse(localStorage.getItem(KEY));
     if (data && Array.isArray(data.todos) && Array.isArray(data.events)) {
-      return { ...structuredClone(DEFAULTS), ...data, settings: { ...DEFAULTS.settings, ...data.settings } };
+      return untangleChoices({ ...structuredClone(DEFAULTS), ...data, settings: { ...DEFAULTS.settings, ...data.settings } });
     }
   } catch { /* fall through to defaults */ }
   return structuredClone(DEFAULTS);
@@ -166,7 +166,6 @@ export const isStarred = (item, key = todayKey()) =>
   !!item.important || (hasDue(item) && !item.done && key >= item.due);
 
 export function toggleDone(todo, key) {
-  if (isDone(todo, key)) unpick(todo, key);
   if (isRoutine(todo)) {
     todo.doneOn = { ...todo.doneOn };
     if (todo.doneOn[key]) delete todo.doneOn[key];
@@ -178,29 +177,56 @@ export function toggleDone(todo, key) {
   save();
 }
 
-/* ---------- Choices ("do one of these") ---------- */
+/* ---------- Tied to-dos ("do one of these") ---------- */
 
-// todo.choices = [{ id, label }]; doing any one checks the to-do off for that day and
-// remembers which (todo.picked[dateKey] = choice id).
-export const hasChoices = (todo) => Array.isArray(todo.choices) && todo.choices.length > 0;
-export const pickedOn = (todo, key) => (isDone(todo, key) ? todo.picked?.[key] || null : null);
-function unpick(todo, key) {
-  if (!todo.picked?.[key]) return;
-  todo.picked = { ...todo.picked };
-  delete todo.picked[key];
+// To-dos with the same `tie` id are alternatives: doing any one of them covers the others
+// for that day. They're drawn together, joined by a curved line.
+const doneThatDay = (t, key) => (isRoutine(t) ? !!t.doneOn?.[key] : !!t.done && t.date === key);
+export const tiedTo = (todo) => (todo.tie ? cur().todos.filter((x) => x !== todo && x.tie === todo.tie) : []);
+export const coveredOn = (todo, key) => !!todo.tie && !isDone(todo, key) && tiedTo(todo).some((x) => doneThatDay(x, key));
+export const openOn = (todo, key) => !isDone(todo, key) && !coveredOn(todo, key);
+
+// Tie `todo` to exactly `others`; an empty list takes just this one out (the rest stay
+// tied). Tied to-dos join its folder.
+export function setTie(todo, others) {
+  const old = todo.tie;
+  const id = old || uid();
+  if (!others.length) delete todo.tie;
+  else {
+    for (const x of cur().todos) if (old && x.tie === old && x !== todo && !others.includes(x)) delete x.tie;
+    todo.tie = id;
+    for (const x of others) { x.tie = id; x.category = todo.category || null; }
+  }
+  // A tie left with one to-do isn't a tie.
+  for (const t of [old, id]) {
+    const left = cur().todos.filter((x) => t && x.tie === t);
+    if (left.length === 1) delete left[0].tie;
+  }
 }
 
-// Tap a choice: not done → done with it; done with another → switch; same again → undo.
-export function pickChoice(todo, key, choiceId) {
-  const current = pickedOn(todo, key);
-  if (current === choiceId) { toggleDone(todo, key); return; }
-  if (!isDone(todo, key)) {
-    if (!isRoutine(todo) && rollsOver(todo)) todo.date = key;
-    toggleDone(todo, key);
-    if (!isRoutine(todo)) key = todo.date;
+// The first version kept alternatives inside one to-do (choices / picked); turn each into
+// its own tied to-do so nothing is lost.
+// (Runs inside load(), before the helpers below exist, so it uses its own.)
+function untangleChoices(data) {
+  const newId = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
+  const routine = (t) => !!t.repeat && t.repeat !== 'none';
+  const todos = [];
+  for (const t of data.todos) {
+    if (!Array.isArray(t.choices) || !t.choices.length) { todos.push(t); continue; }
+    const tie = newId();
+    t.choices.forEach((c, i) => {
+      const { choices, picked, ...rest } = t;
+      const doneOn = {};
+      for (const [k, v] of Object.entries(picked || {})) if (v === c.id) doneOn[k] = true;
+      const pickedOnce = Object.values(picked || {}).includes(c.id);
+      todos.push({
+        ...rest, id: i ? newId() : t.id, title: c.label, notes: i ? '' : [t.title, t.notes].filter(Boolean).join(' · '),
+        tie, ...(routine(t) ? { doneOn } : { done: !!t.done && pickedOnce }),
+      });
+    });
   }
-  todo.picked = { ...todo.picked, [key]: choiceId };
-  save();
+  data.todos = todos;
+  return data;
 }
 
 const byTime = (a, b) => (a.allDay === b.allDay ? (a.start || '').localeCompare(b.start || '') : a.allDay ? -1 : 1);

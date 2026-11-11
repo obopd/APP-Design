@@ -19,9 +19,9 @@ open, solid = done, done = struck through). Film mode = warm black `#0d0c0a`, cr
   (to-dos without one after), then starred first.
 - **Empty folders**: a folder can exist with no to-dos; `category.section` ('routine' |
   'todo') says which list it belongs to. Widgets that list folders should keep empty ones.
-- **Choices** ("do one of these"): a to-do may have `choices: [{ id, label }]`; doing any one
-  checks it off and stores which in `picked[dateKey]`. Show the choices as small buttons under
-  the title (tap = done with that one; the picked one filled, the others faded).
+- **Tied to-dos** ("do one of these"): to-dos with the same `tie` id are alternatives;
+  doing any one covers the others for that day (show them faded, count the group once). In
+  the app they're drawn together, joined on the left by one curved line.
 - **App icon badge**: the number on the icon now means only unread chat messages + new
   friend / share notifications (no longer today's starred items).
 - Pull the latest repository to get all of this; `CLAUDE.md` always describes the current app.

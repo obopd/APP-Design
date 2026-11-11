@@ -327,30 +327,19 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .track-pill.running { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .track-pill.paused { color: var(--accent); border-color: var(--accent); }
 
-/* Choices: "do one of these" chips under the title; the one you did fills in. */
-.choices { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 5px 4px; padding: 0 0 8px 28px; margin-top: -3px; }
-.choice {
-  position: relative; height: 24px; padding: 0 9px; border-radius: 12px; font-size: 12px; font-weight: 500;
-  color: var(--fg); background: var(--soft); border: 1px solid var(--line); max-width: 100%;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+/* Tied to-dos ("do one of these"): one curved line joins their marks on the left; it takes
+   the accent once one is done, and the others fade (covered for the day). */
+.tie { position: relative; list-style: none; }
+.tie > .tie-list { padding: 0; }
+.tie::before {
+  content: ''; position: absolute; left: 1px; top: 17px; bottom: 17px; width: 9px;
+  border: 1.5px solid color-mix(in srgb, var(--fg) 28%, transparent); border-right: 0;
+  border-radius: 9px 0 0 9px; pointer-events: none; z-index: 2; transition: border-color .2s;
 }
-.choice::after { content: ''; position: absolute; inset: -7px -3px; }
-.routines .choice { background: var(--bg); }
-.choice.picked { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-.choices.has-pick .choice:not(.picked) { color: var(--muted); opacity: .6; }
-.choice-or { font-size: 10.5px; color: var(--muted); }
-.choice-edit { display: flex; align-items: center; gap: 4px; min-height: 40px; }
-.choice-edit .choice-or { width: 18px; flex: none; text-align: right; padding-right: 4px; }
-.choice-edit .icon-btn { color: var(--muted); }
-.choice-edit input {
-  flex: 1; min-width: 0; font: inherit; font-size: 14px; color: var(--fg); outline: none;
-  background: var(--soft); border: 0; border-radius: 7px; padding: 6px 10px; min-height: 32px;
-}
-.choice-edit input::placeholder { color: var(--muted); opacity: .7; }
-.choice-edit .icon-btn svg { width: 14px; height: 14px; }
-.choices-block + .field, .field + .choices-block { border-top: 1px solid var(--line); }
-.choice-list:empty { display: none; }
-.choice-list { padding-bottom: 4px; }
+.tie.met::before { border-color: var(--accent); }
+.todo.covered .todo-title { color: var(--muted); }
+.todo.covered .dash { opacity: .3; }
+.tie-btn { max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .track-btn { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); }
 .track-btn svg { width: 12px; height: 12px; stroke-width: 2; fill: currentColor; }
 .track-btn.running { color: var(--accent); }

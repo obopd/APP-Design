@@ -1,8 +1,8 @@
 // Bottom sheet for creating / editing a to-do or a schedule item.
 import { h, icon, ICONS, todayKey, toMinutes, fromMinutes, pad } from './util.js';
-import { cur, save, uid, REPEATS, TRACKS, categoryTree, rollsOver, todoDate } from './store.js';
+import { cur, save, uid, REPEATS, TRACKS, categoryTree, rollsOver, todoDate, tiedTo, setTie, isRoutine, todosOn } from './store.js';
 import { openFolderSheet } from './folders.js';
-import { ask, selectButton } from './ui.js';
+import { ask, selectButton, pickMany } from './ui.js';
 import { postponeTomorrow, postponePick } from './postpone.js';
 import { shareField } from './people.js';
 
@@ -87,28 +87,24 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null, 
   const timeRow = field('Time', h('span', { class: 'times' }, start, '–', end));
   const untilRow = field('Until', until);
   const dueRow = field('Due', due);
-  // Choices: "do one of these" — doing any one checks the to-do off.
-  const choiceList = h('div', { class: 'choice-list' });
-  const addChoice = (c = { id: uid(), label: '' }, focus = false) => {
-    const input = h('input', { type: 'text', maxlength: '40', value: c.label, placeholder: `Choice ${choiceList.children.length + 1}`, autocomplete: 'off', enterkeyhint: 'done', 'aria-label': 'Choice' });
-    input.dataset.id = c.id;
-    const row = h('div', { class: 'choice-edit' }, h('span', { class: 'choice-or' }, choiceList.children.length ? 'or' : ''), input,
-      h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Remove choice', onclick: () => { row.remove(); renumber(); } }, icon(ICONS.close)));
-    choiceList.append(row);
-    if (focus) input.focus(); // only after the + was tapped
-  };
-  const renumber = () => [...choiceList.children].forEach((row, i) => {
-    row.querySelector('.choice-or').textContent = i ? 'or' : '';
-    row.querySelector('input').placeholder = `Choice ${i + 1}`;
+  // Tie: alternatives — doing any one of the tied to-dos covers the others that day.
+  let tiePick = item ? tiedTo(item) : [];
+  const tieLabel = () => (tiePick.length ? tiePick.map((x) => x.title).join(', ') : 'None');
+  const tieBtn = h('button', { type: 'button', class: 'select-btn tie-btn', 'aria-label': 'Tie with other to-dos' }, tieLabel());
+  tieBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const routine = repeat.value !== 'none';
+    const pool = cur().todos.filter((x) => x !== item && isRoutine(x) === routine
+      && (routine ? todosOn(dateIn.value || draft.date).includes(x) : !x.done));
+    const names = Object.fromEntries(cur().categories.map((c) => [c.id, c.name]));
+    const chosen = await pickMany(pool.map((x) => [x.id, x.title, names[x.category] || '']), tiePick.map((x) => x.id), {
+      title: 'Do one of these', message: 'Doing any one of them counts for all.', empty: routine ? 'No other routines yet.' : 'No other to-dos yet.',
+    });
+    if (!chosen) return;
+    tiePick = pool.filter((x) => chosen.includes(x.id));
+    tieBtn.textContent = tieLabel();
   });
-  (draft.choices || []).forEach((c) => addChoice(c));
-  const choicesRow = h('div', { class: 'field choices-field' }, h('span', {}, 'Choices'),
-    h('button', { type: 'button', class: 'pill', 'aria-label': 'Add choice', onclick: () => {
-      if (!choiceList.children.length) addChoice();
-      addChoice(undefined, true);
-    } }, '+ Add'));
-  const choicesBlock = h('div', { class: 'choices-block' }, choicesRow, choiceList);
-  const todoRows = [field('Folder', category), field('Track', track), choicesBlock];
+  const todoRows = [field('Folder', category), field('Track', track), h('div', { class: 'field' }, h('span', {}, 'Or'), tieBtn)];
   const eventRows = [field('All-day', allDay), timeRow, field('Alert', alert)];
 
   const sync = () => {
@@ -144,10 +140,10 @@ export function openEditor({ kind, item = null, date = todayKey(), hour = null, 
     if (type === 'todo') {
       // Due date: one-off only, never before the to-do's date.
       const dueKey = repeat.value === 'none' && due.value ? (due.value < date ? date : due.value) : '';
-      const choices = [...choiceList.querySelectorAll('input')].map((i) => ({ id: i.dataset.id, label: i.value.trim() })).filter((c) => c.label);
-      const data = { ...base, category: category.value && category.value !== '__new' ? category.value : null, track: track.value, due: dueKey, choices };
-      if (isNew) cur().todos.push({ id: uid(), ...data });
-      else Object.assign(item, data);
+      const data = { ...base, category: category.value && category.value !== '__new' ? category.value : null, track: track.value, due: dueKey };
+      const todo = isNew ? { id: uid(), ...data } : Object.assign(item, data);
+      if (isNew) cur().todos.push(todo);
+      setTie(todo, tiePick.filter((x) => cur().todos.includes(x)));
     } else {
       const s = start.value || '09:00';
       let e = end.value || fromMinutes(toMinutes(s) + 60);
