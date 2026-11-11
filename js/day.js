@@ -2,7 +2,7 @@
 import { h, icon, ICONS, fmt, todayKey, parseKey, daysBetween, toMinutes, shortTime, formatDuration, formatClock, formatNumber } from './util.js';
 import {
   cur, save, eventsOn, todosOn, isDone, isRoutine, toggleDone, childCategories,
-  isTracked, valueOn, setValue, startTimer, stopTimer, pauseTimer, timerRunning, timerPaused, routineStats, hasDue, rollsOver, isStarred, folderHome,
+  isTracked, valueOn, setValue, hasChoices, pickedOn, pickChoice, startTimer, stopTimer, pauseTimer, timerRunning, timerPaused, routineStats, hasDue, rollsOver, isStarred, folderHome,
 } from './store.js';
 import { askText, tell, snack } from './ui.js';
 import { sharedTodosOn, sharedEventsOn, isSharedDone, toggleShared, nameOf } from './social.js';
@@ -300,6 +300,18 @@ function laterTag(t, key) {
 }
 const tagFor = (t, key, done) => (done ? null : hasDue(t) ? dueTag(t, key) : rollsOver(t) && t.date < key ? laterTag(t, key) : null);
 
+// "Do one of these": tap the one you did; it checks the to-do off (tap again to undo).
+function choiceChips(t, key) {
+  const picked = pickedOn(t, key);
+  return h('div', { class: `choices${picked ? ' has-pick' : ''}` }, t.choices.flatMap((c, i) => [
+    i ? h('span', { class: 'choice-or', 'aria-hidden': 'true' }, 'or') : null,
+    h('button', {
+      class: `choice${picked === c.id ? ' picked' : ''}`, 'aria-pressed': String(picked === c.id),
+      'aria-label': `Did ${c.label}`, onclick: () => pickChoice(t, key, c.id),
+    }, c.label),
+  ]));
+}
+
 // The slim mark checks a to-do off; tapping the text opens it for editing.
 function todoItem(t, key, actions) {
   const done = isDone(t, key);
@@ -314,7 +326,8 @@ function todoItem(t, key, actions) {
       starred ? h('span', { class: 'mark star', 'aria-hidden': 'true' }, '★') : null,
       t.sharedWith?.length ? h('span', { class: 'mark shared-mark', 'aria-label': 'Shared' }, icon(ICONS.people)) : null,
       tagFor(t, key, done)),
-    isTracked(t) ? tracker(t, key) : null);
+    isTracked(t) ? tracker(t, key) : null,
+    hasChoices(t) ? choiceChips(t, key) : null);
   const li = h('li', { class: `todo${done ? ' done' : ''}${starred ? ' imp' : ''}`, 'data-id': t.id },
     h('div', { class: 'todo-actions' },
       h('button', { class: 'todo-act', 'aria-label': `Postpone ${t.title} to tomorrow`, onclick: () => postponeTomorrow(t, key) },

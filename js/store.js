@@ -166,6 +166,7 @@ export const isStarred = (item, key = todayKey()) =>
   !!item.important || (hasDue(item) && !item.done && key >= item.due);
 
 export function toggleDone(todo, key) {
+  if (isDone(todo, key)) unpick(todo, key);
   if (isRoutine(todo)) {
     todo.doneOn = { ...todo.doneOn };
     if (todo.doneOn[key]) delete todo.doneOn[key];
@@ -174,6 +175,31 @@ export function toggleDone(todo, key) {
     if (!todo.done && rollsOver(todo)) todo.date = key; // stays on the day it was finished
     todo.done = !todo.done;
   }
+  save();
+}
+
+/* ---------- Choices ("do one of these") ---------- */
+
+// todo.choices = [{ id, label }]; doing any one checks the to-do off for that day and
+// remembers which (todo.picked[dateKey] = choice id).
+export const hasChoices = (todo) => Array.isArray(todo.choices) && todo.choices.length > 0;
+export const pickedOn = (todo, key) => (isDone(todo, key) ? todo.picked?.[key] || null : null);
+function unpick(todo, key) {
+  if (!todo.picked?.[key]) return;
+  todo.picked = { ...todo.picked };
+  delete todo.picked[key];
+}
+
+// Tap a choice: not done → done with it; done with another → switch; same again → undo.
+export function pickChoice(todo, key, choiceId) {
+  const current = pickedOn(todo, key);
+  if (current === choiceId) { toggleDone(todo, key); return; }
+  if (!isDone(todo, key)) {
+    if (!isRoutine(todo) && rollsOver(todo)) todo.date = key;
+    toggleDone(todo, key);
+    if (!isRoutine(todo)) key = todo.date;
+  }
+  todo.picked = { ...todo.picked, [key]: choiceId };
   save();
 }
 

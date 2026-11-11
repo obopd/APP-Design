@@ -103,7 +103,7 @@ const { check, wait, browser, phone, inApp, done } = require('./helpers');
   check('a new folder doesn\'t open the to-do editor', await p.locator('#editor[open]').count() === 0);
   check('the empty folder shows in To-do', await p.locator('.todo-section:not(.routines) .folder-name:has-text("Reading")').count() === 1);
   check('…not in Routines', await p.locator('.routines .folder-name:has-text("Reading")').count() === 0);
-  await p.locator('.cal-rows button').nth(10).click().catch(() => {}); await wait(900);
+  await p.locator('.cal-rows .row:has(button.today) button.day:not(.today)').first().click(); await wait(900);
   check('…and on other days too', await p.locator('.todo-section:not(.routines) .folder-name:has-text("Reading")').count() === 1);
   await p.click('.routines .section-folder'); await wait(500);
   await p.click('#folder-sheet input[type=text]'); await p.keyboard.type('Gym'); await p.click('#folder-sheet .ok'); await wait(700);

@@ -26,6 +26,10 @@ const { MOCK, check, wait, done } = require('./helpers');
   // Two days later.
   // (The test server can't refresh sign-in tokens, so keep the session valid across the jump.)
   await p.evaluate(() => { const a = JSON.parse(localStorage.getItem('planner.auth')); a.expires_at = Date.now() + 30 * 86400000; localStorage.setItem('planner.auth', JSON.stringify(a)); });
+  // The app may save its own copy over that; then it asks to renew, so answer with the same token.
+  const auth = await p.evaluate(() => JSON.parse(localStorage.getItem('planner.auth')));
+  await ctx.route('**/auth/v1/token?grant_type=refresh_token', (r) => r.fulfill({ contentType: 'application/json',
+    body: JSON.stringify({ access_token: auth.access_token, refresh_token: auth.refresh_token, expires_in: 30 * 86400, user: auth.user }) }));
   await p.clock.setSystemTime(new Date('2026-11-03T09:00:00+09:00'));
   const stamp = await run((s) => s.state.meta.updatedAt);
   await p.reload(); await p.clock.runFor(2500);
@@ -37,6 +41,8 @@ const { MOCK, check, wait, done } = require('./helpers');
   check('future to-dos stay in the future', !(await ids('2026-11-03')).includes('later') && (await ids('2026-11-05')).includes('later'));
   check('just opening the app changes nothing (no edit to sync)', await run((s) => s.state.meta.updatedAt) === stamp);
 
+  // The app may still be starting up after the clock jump: let it run until today shows.
+  for (let i = 0; i < 20 && !(await p.locator('.cal-rows button.today').count()); i += 1) await p.clock.runFor(1000);
   await p.locator('.cal-rows button.today').click(); await p.clock.runFor(1200);
   const tag = await p.locator('.todo:has-text("Write treatment") .due-tag').innerText();
   check('it shows the day it came from, small and gray', /1/.test(tag) && /Nov|11/.test(tag), tag);
