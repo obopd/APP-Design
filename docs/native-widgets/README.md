@@ -22,6 +22,7 @@ open, solid = done, done = struck through). Film mode = warm black `#0d0c0a`, cr
 - **Tied to-dos** ("do one of these"): to-dos with the same `tie` id are alternatives;
   doing any one covers the others for that day (show them faded, count the group once). In
   the app they're drawn together, joined on the left by one curved line.
+- **Distance tracking**: `track: 'distance'`; `values[dateKey]` = km (decimal). Show "5.2 km".
 - **App icon badge**: the number on the icon now means only unread chat messages + new
   friend / share notifications (no longer today's starred items).
 - Pull the latest repository to get all of this; `CLAUDE.md` always describes the current app.

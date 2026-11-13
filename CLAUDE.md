@@ -91,7 +91,7 @@ its original date as a small gray tag, and checking it off pins `date` to that d
 (`li.tie`) joined by one curved line on the left; doing any one covers the others that day
 (`coveredOn`, faded; line turns accent) and they count once (`openCount`). Old `choices`
 to-dos are split into tied to-dos in `load()` (`untangleChoices`). **Due date** (one-off only): starred from its due day, "D-3" tag (instead of the date tag).
-**Tracking** (optional): Count or Time (stopwatch `timer: { key, start }`, start = epoch ms,
+**Tracking** (optional): Count, Distance (km, `formatKm`; "5,2" accepted) or Time (stopwatch `timer: { key, start }`, start = epoch ms,
 `null` = paused; ▶ / ⏸ pause / ■ stop; pause and stop add the time to `values[dateKey]`); tapping "Routines" shows per-routine stats. **Important ★** = accent
 dot. **Folders** nest ("Academic/Biology"); open/closed saved in
 `category.open`; underline color from 20 `FOLDER_COLORS` (`js/folders.js`); a folder shows
@@ -244,7 +244,7 @@ Keep the internal names as they are, or users lose data/sessions: `planner.v1`,
 {
   todos:  [{ id, title, date: 'YYYY-MM-DD', important, notes, category: id | null,
              repeat, until, done /* one-off */, doneOn: { key: true } /* routines */,
-             due: '' | key, skipOn: { key: true }, track: 'none'|'count'|'time',
+             due: '' | key, skipOn: { key: true }, track: 'none'|'count'|'time'|'distance',
              values: { key: number }, timer: { key, start: ms | null /* paused */ } | null,
              order? /* hand-sorted */, tie?: id /* alternatives share one */ }],
   events: [{ id, title, date, allDay, start: 'HH:MM', end: 'HH:MM', repeat, until,
@@ -292,7 +292,7 @@ vault / pg_net / pg_cron) and `db/seed.sql` (users a@x, b@x, c@x, password `secr
 is friends with bob and carol; an alice↔bob chat), runs `mock-server.js` on :54321
 (PostgREST + GoTrue + Storage + RPC + Realtime stand-in with real RLS; `Bearer service` =
 service role) and the app on :8765. Suites: `sync`, `todos` (roll-over across days with a fake clock), `folders` (folder
-sheet, + in a folder, drag between folders), `badge` (icon badge = unread only), `stopwatch` (start / pause / resume / stop), `ties`, `desktop` (Desktop
+sheet, + in a folder, drag between folders), `badge` (icon badge = unread only), `stopwatch` (start / pause / resume / stop, distance), `ties`, `desktop` (Desktop
 Chrome: mouse, keyboard, window sizes), `storage`, `resilience` (offline, 2 minutes open: errors + memory,
 sign-out cleanup), `motion`, `preview`, `shoot`,
 `app-features` (push sign-up, instant chat, search, backups, clean-up, ping) and
@@ -318,7 +318,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v98`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v99`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 

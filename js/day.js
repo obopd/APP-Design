@@ -2,7 +2,7 @@
 import { h, icon, ICONS, fmt, todayKey, parseKey, daysBetween, toMinutes, shortTime, formatDuration, formatClock, formatNumber } from './util.js';
 import {
   cur, save, eventsOn, todosOn, isDone, isRoutine, toggleDone, childCategories,
-  isTracked, valueOn, setValue, coveredOn, openOn, startTimer, stopTimer, pauseTimer, timerRunning, timerPaused, routineStats, hasDue, rollsOver, isStarred, folderHome,
+  isTracked, valueOn, setValue, formatKm, coveredOn, openOn, startTimer, stopTimer, pauseTimer, timerRunning, timerPaused, routineStats, hasDue, rollsOver, isStarred, folderHome,
 } from './store.js';
 import { askText, tell, snack } from './ui.js';
 import { sharedTodosOn, sharedEventsOn, isSharedDone, toggleShared, nameOf } from './social.js';
@@ -26,6 +26,18 @@ function parseMinutes(text) {
 // Number shown next to a tracked to-do: tap to record it; time also gets a stopwatch.
 function tracker(t, key) {
   const value = valueOn(t, key);
+
+  if (t.track === 'distance') {
+    return h('span', { class: 'tracker' }, h('button', {
+      class: `track-pill${value ? ' has' : ''}`, 'aria-label': `Distance for ${t.title}: ${value ? formatKm(value) : 'none'}`,
+      onclick: async () => {
+        const input = await askText({ title: t.title, message: 'Distance (km)', value: value ? String(value) : '', placeholder: 'e.g. 5.2', inputmode: 'decimal' });
+        if (input === null) return;
+        const n = Number(input.trim().replace(',', '.') || 0);
+        if (Number.isFinite(n) && n >= 0) setValue(t, key, Math.round(n * 100) / 100);
+      },
+    }, value ? formatKm(value) : '0 km'));
+  }
 
   if (t.track === 'count') {
     return h('span', { class: 'tracker' }, h('button', {
@@ -423,7 +435,7 @@ let showStats = false;
 function routineStatsList(tracked) {
   return h('ul', { class: 'routine-stats' }, tracked.map((t) => {
     const { times, total } = routineStats(t);
-    const amount = t.track === 'time' ? formatDuration(total) : formatNumber(total);
+    const amount = t.track === 'time' ? formatDuration(total) : t.track === 'distance' ? formatKm(total) : formatNumber(total);
     return h('li', {},
       h('span', { class: 'rs-name' }, t.title),
       h('span', { class: 'rs-times' }, `${times}×`),

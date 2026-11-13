@@ -296,9 +296,11 @@ export function deleteCategory(id) {
 
 /* ---------- Tracking (count / time per occurrence) ---------- */
 
-export const TRACKS = [['none', 'Off'], ['count', 'Count'], ['time', 'Time']];
+export const TRACKS = [['none', 'Off'], ['count', 'Count'], ['time', 'Time'], ['distance', 'Distance']];
 
-export const isTracked = (todo) => todo.track === 'count' || todo.track === 'time';
+export const isTracked = (todo) => todo.track === 'count' || todo.track === 'time' || todo.track === 'distance';
+// Distance is stored in km; shown with up to 2 decimals ("5.2 km").
+export const formatKm = (km) => `${Math.round(km * 100) / 100} km`;
 export const valueOn = (todo, key) => todo.values?.[key] || 0;
 
 export function setValue(todo, key, value) {
