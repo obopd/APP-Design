@@ -41,7 +41,7 @@ to Home Screen). The owner (film director, photographer, reader, college student
   segment is a lighter pill. Small controls get invisible enlarged tap areas (`::after`).
 - **Dock**: floating rounded bar like the iPhone dock (52px, radius 26px, frosted, icons
   only, no +). Normal: Calendar · D-Day · Chat · Settings. Film mode: Calendar · Write ·
-  Organize · Preview · Chat · Settings. A tab = `.tab[data-view]` in `index.html` + a
+  Organize · Preview · Chat · Settings. Study mode: Decks · Browse · Stats · Settings. A tab = `.tab[data-view]` in `index.html` + a
   `#view-<name>` container, switched by `view.tab` in `js/app.js`. Adding happens with +
   next to section headings and by tapping an empty hour.
 
@@ -158,8 +158,12 @@ the in-app toast. Limits: iOS 16.4+, app on the Home Screen.
 **Search** (`js/search.js`): card from the top; searches to-dos, events, D-Days, cached
 chats and (film mode) writing; results go to the day, chat, D-Day tab or Write section.
 
-**Film Production Mode** (`js/film.js`, `js/filmui.js`, `supabase/film.sql`): **press and
-hold the logo** ~0.9s → `html.film`, the logo becomes a clapperboard (CSS only); saved per
+**Modes**: **press and hold the logo** ~0.9s → a menu Planner · Film · Study (`switchMode` in
+filmui.js, the dissolve with that mode's logo tile; the Decks page has its own small logo
+button, `.mode-btn`, since study mode has no Calendar tab). Modes are exclusive per device.
+
+**Film Production Mode** (`js/film.js`, `js/filmui.js`, `supabase/film.sql`): Film in the mode
+menu → `html.film`, the logo becomes a clapperboard (CSS only); saved per
 device (`planner.film`). The switch animation lives in `js/cinema.js` (`playFilmSwitch`): `FILM_TRANSITION`
 = **`'dissolve'`** (the owner's choice, 1.4s): the page eases back and fades out, the logo
 tile (`.fx-mark`, a copy of `#brand`'s art, 76px) fades into the empty middle — entering, the
@@ -204,6 +208,43 @@ Kinds the database refuses (`23514`, setup not run) are held on the phone per ki
   `result`), big thumbnail, plays in an embedded youtube-nocookie iframe; redraws that change
   nothing are skipped so refreshes don't restart it; leaving the tab stops it.
 
+**Study mode** (Anki-style flashcards; `html.study`, `planner.study` = '1' on this device):
+- **Scheduler** (`js/srs.js`, pure): FSRS-5 (default weights, Stability / Difficulty, target
+  retention) or SM-2 per preset; learning / relearning steps in minutes; days start at 4:00
+  (`dayOf`, `dayStart`); seeded fuzz so a button's label matches its result; leeches (tag
+  `leech`, suspend or tag only). `answer(card, rating, preset, now)` → `{ card, log, leech }`.
+- **Text** (`js/cardtext.js`): note types = fields + templates (`{{Field}}`, `{{FrontSide}}`,
+  `{{cloze:Text}}`, `{{type:Back}}`, `{{#F}}…{{/F}}`); built-ins Basic, Basic (and reversed),
+  Basic (optional reversed), Basic (type in the answer), Cloze. Card HTML (typed or imported)
+  only reaches the page through `safeFragment` (allow-listed tags / styles, rebuilt as DOM;
+  images show 🖼 until media support).
+- **Data** (`js/study.js`, `supabase/study.sql`): IndexedDB `planner-study` (items, reviews,
+  meta; per user, cleared on sign-out), all in memory. `study_items` rows (`kind` deck /
+  preset / notetype / note / card, `data` jsonb, `deleted` tombstones) + append-only
+  `study_reviews`; RLS own rows; server time (`updated_at` / `synced_at`, trigger) is the pull
+  cursor (5s look-back); push dirty rows in batches of 200 (upsert); newest `mod` wins per item.
+  Missing tables → works on the phone only, with a note on Decks. `nextCard` / `dueCounts`:
+  learning due now → reviews and new cards mixed (daily limits from today's review log) →
+  learning within 20 min; filtered decks (`deck.filtered = { query, order, limit }`) study a
+  search. Sibling cards bury until tomorrow (`card.buried` = day number).
+- **Screens**: Decks (`js/studyui.js`): deck tree with New / Learning / To review counts,
+  overview (Study now, Add, Browse, Options, Custom study, subdeck / rename / delete), review
+  page (`body.studying`, dock hidden; Show answer → Again / Hard / Good / Easy with intervals;
+  Undo; card menu: edit, flag, bury, suspend, card info; computers: Space / Enter, 1–4, Z,
+  Esc), add / edit sheet (`#study-sheet`, contenteditable fields with B / I / U / […] cloze,
+  tags, duplicate check per note type; adding stays open), deck options presets, card info
+  with history. Browse (`js/studybrowse.js`): Anki search syntax (`js/studysearch.js`: words,
+  quotes, or, -, ( ), field:, deck:, tag:, note:, card:, flag:, is:, prop:, added:, rated:,
+  introduced:) + sort + select → bulk suspend / flag / move / tags / reset / delete. Stats
+  (`js/studystats.js`): today, card counts, future due, reviews, intervals, true retention,
+  hourly, answer buttons, FSRS memory; SVG bars, tap for numbers.
+- **Anki import** (`js/anki.js`, Decks ↓): .apkg/.colpkg exported with "Support older Anki
+  versions" (zip via `DecompressionStream`, own read-only SQLite reader): decks (nesting),
+  option groups → presets, note types with their templates, notes, cards with scheduling
+  (FSRS memory from card data or estimated), review log; ids `anki-*` so re-imports skip.
+- Not built yet (next step, agreed with the owner): images / audio / video, image occlusion,
+  math formulas, custom card CSS.
+
 **Keep-awake**: `.github/workflows/keep-awake.yml` calls `ping()` every 3 days so the free
 Supabase project doesn't pause.
 
@@ -224,7 +265,9 @@ js/cloud.js  auth, sync + merge, storage helpers   js/account.js  login page
 js/settings.js  js/reminders.js (local alerts)  js/push.js  js/live.js  js/search.js
 js/social.js  js/people.js  js/chat.js  js/chatview.js
 js/film.js  js/filmui.js  js/write.js  js/organize.js  js/preview.js
-supabase/    setup → social → chat → film → push → maintenance (.sql, run in this order;
+js/srs.js  js/cardtext.js  js/study.js  js/studysearch.js  js/studyui.js  js/studybrowse.js
+js/studystats.js  js/anki.js   (study mode)
+supabase/    setup → social → chat → film → push → maintenance → study (.sql, run in this order;
              all safe to re-run) + functions/push/index.ts
 tests/       test suite (see below)          docs/  screenshots, logo images
 docs/native-widgets/  the owner's chosen Lock Screen / widget designs for the native iOS app
@@ -237,7 +280,8 @@ Keep the internal names as they are, or users lose data/sessions: `planner.v1`,
 `planner.auth`, `planner.social`, `planner.friendsopen`, `planner.chat`, `planner.expand`,
 `planner.film`, `planner.filmdata`, `planner.filmsection`, `planner.orgsection`,
 `planner.previewsection`, `planner.previewurls`, `planner.syncbase`, `planner.push`,
-`planner_data`, `planner-vN`.
+`planner.study`, `planner.studytype`, `planner.studydeck`, IndexedDB `planner-study`,
+`planner_data`, `study_items`, `study_reviews`, `planner-vN`.
 
 ```js
 // localStorage planner.v1
@@ -292,7 +336,9 @@ vault / pg_net / pg_cron) and `db/seed.sql` (users a@x, b@x, c@x, password `secr
 is friends with bob and carol; an alice↔bob chat), runs `mock-server.js` on :54321
 (PostgREST + GoTrue + Storage + RPC + Realtime stand-in with real RLS; `Bearer service` =
 service role) and the app on :8765. Suites: `sync`, `todos` (roll-over across days with a fake clock), `folders` (folder
-sheet, + in a folder, drag between folders), `badge` (icon badge = unread only), `stopwatch` (start / pause / resume / stop, distance), `ties`, `desktop` (Desktop
+sheet, + in a folder, drag between folders), `badge` (icon badge = unread only), `stopwatch` (start / pause / resume / stop, distance), `ties`, `study` (mode menu, note
+types, review + undo, burying, leech, options, custom study, browse search + bulk, stats,
+sync between phones + RLS, Anki import from `db/make-apkg.py`), `desktop` (Desktop
 Chrome: mouse, keyboard, window sizes), `storage`, `resilience` (offline, 2 minutes open: errors + memory,
 sign-out cleanup), `motion`, `preview`, `shoot`,
 `app-features` (push sign-up, instant chat, search, backups, clean-up, ping) and
@@ -309,8 +355,9 @@ anon-key requests are safe checks.
 ## Deployment
 
 GitHub Pages serves this branch's root (relative paths; `.nojekyll`). Supabase project
-`rkpsjkssmfjuavdhayie` (free tier); all SQL files and the push function are set up and
-verified. Push needs the `push` Edge Function (Verify JWT off) and four Vault secrets
+`rkpsjkssmfjuavdhayie` (free tier); the SQL files up to maintenance and the push function are
+set up and verified; `study.sql` was given to the owner to run (until then study mode stays on
+the phone). Push needs the `push` Edge Function (Verify JWT off) and four Vault secrets
 (`push_url`, `push_secret`, `vapid_public`, `vapid_private`), given to the owner as one
 paste from the git-excluded `.setup/`. **Never commit** the service_role key, the VAPID
 private key or the push secret.
@@ -318,7 +365,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v99`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v100`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 

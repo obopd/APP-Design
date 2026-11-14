@@ -4,7 +4,7 @@ const http = require('http');
 const { Pool } = require('pg');
 const pool = new Pool({ host: '127.0.0.1', user: 'postgres', password: 'pg', database: 'planner' });
 pool.on('error', () => {});
-const TABLES = new Set(['planner_data', 'profiles', 'friendships', 'shares', 'share_checks', 'chats', 'chat_members', 'messages', 'projects', 'project_members', 'project_items', 'project_docs', 'push_subscriptions', 'push_alerts', 'planner_backups']);
+const TABLES = new Set(['planner_data', 'profiles', 'friendships', 'shares', 'share_checks', 'chats', 'chat_members', 'messages', 'projects', 'project_members', 'project_items', 'project_docs', 'push_subscriptions', 'push_alerts', 'planner_backups', 'study_items', 'study_reviews']);
 const ident = (s) => { if (!/^[a-z_][a-z0-9_]*$/.test(s)) throw Object.assign(new Error('bad ident ' + s), { code: 'PGRST100' }); return `"${s}"`; };
 
 function send(res, status, body) {

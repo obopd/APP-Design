@@ -2,7 +2,7 @@ import { addDays, dateKey, parseKey, todayKey, h } from './util.js';
 import { onChange } from './store.js';
 import { renderCalendar, renderExpanded } from './calendar.js';
 import { filmOn, onFilmChange, refreshFilm, editorOf } from './film.js';
-import { setupBrand, renderProjectChip, paintBrand } from './filmui.js';
+import { setupBrand, renderProjectChip, paintBrand, switchMode, currentMode } from './filmui.js';
 import { renderWrite, finishEditing, writeBackgrounded, isEditing, showWriteSection } from './write.js';
 import { renderOrganize } from './organize.js';
 import { renderPreview, leavePreview } from './preview.js';
@@ -21,6 +21,11 @@ import { socialEnabled, socialStatus, onSocialChange, refreshSocial, unseenCount
 import { openNotifications, redrawNotifications } from './people.js';
 import { onChatChange, refreshChats, unreadTotal, chatEnabled } from './chat.js';
 import { renderChat, chatShown, openChat } from './chatview.js';
+import { studyOn, onStudyChange, loadStudy, syncStudy } from './study.js';
+import { renderDecks, reviewing, leaveStudy, setBrowseHook, setModeMenu } from './studyui.js';
+import { renderBrowse, browseFor } from './studybrowse.js';
+import { renderStats } from './studystats.js';
+import { snack, tell, pick } from './ui.js';
 
 const calendarView = document.getElementById('view-calendar');
 const calendarEl = document.getElementById('calendar');
@@ -32,6 +37,9 @@ const chatEl = document.getElementById('view-chat');
 const writeEl = document.getElementById('view-write');
 const organizeEl = document.getElementById('view-organize');
 const previewEl = document.getElementById('view-preview');
+const decksEl = document.getElementById('view-decks');
+const browseEl = document.getElementById('view-browse');
+const statsEl = document.getElementById('view-stats');
 const chatBadge = document.querySelector('.tab[data-view="chat"] .tab-badge');
 const toastEl = document.getElementById('toast');
 const ddaySlot = document.getElementById('dday-slot');
@@ -237,6 +245,14 @@ function swapExpanded(oldNodes, { kind, dir }) {
 
 // Accounts are required: while signed out, only the login page shows (no dock).
 const FILM_TABS = ['write', 'organize', 'preview'];
+const STUDY_TABS = ['decks', 'browse', 'stats'];
+// Which tabs a mode's dock has (Settings is in all of them).
+function fitTab() {
+  if (studyOn()) { if (!STUDY_TABS.includes(view.tab) && view.tab !== 'settings') view.tab = 'decks'; return; }
+  if (STUDY_TABS.includes(view.tab)) view.tab = 'calendar';
+  if (filmOn() && view.tab === 'dday') view.tab = 'calendar';
+  if (!filmOn() && FILM_TABS.includes(view.tab)) view.tab = 'calendar';
+}
 const isGated = () => isConfigured() && !currentUser();
 let gateShown = false;
 
@@ -246,6 +262,8 @@ function render() {
   loginEl.hidden = !gated;
   if (gated) {
     calendarView.hidden = settingsEl.hidden = ddayEl.hidden = chatEl.hidden = writeEl.hidden = organizeEl.hidden = previewEl.hidden = true;
+    decksEl.hidden = browseEl.hidden = statsEl.hidden = true;
+    leaveStudy();
     leavePreview();
     chatShown(false);
     paintAppBadge();
@@ -261,9 +279,7 @@ function render() {
     prevView = null;
   }
 
-  // Film mode has a Write tab instead of D-Day.
-  if (filmOn() && view.tab === 'dday') view.tab = 'calendar';
-  if (!filmOn() && FILM_TABS.includes(view.tab)) view.tab = 'calendar';
+  fitTab();
   if (view.tab !== 'write' && isEditing()) finishEditing();
   if (view.tab !== 'preview') leavePreview(); // stop a playing video
 
@@ -287,6 +303,9 @@ function render() {
   writeEl.hidden = view.tab !== 'write';
   organizeEl.hidden = view.tab !== 'organize';
   previewEl.hidden = view.tab !== 'preview';
+  decksEl.hidden = view.tab !== 'decks';
+  browseEl.hidden = view.tab !== 'browse';
+  statsEl.hidden = view.tab !== 'stats';
 
   if (view.tab === 'settings') { renderSettings(settingsEl); prevView = { ...view }; return; }
   if (view.tab === 'chat') { renderChat(chatEl); prevView = { ...view }; return; }
@@ -294,6 +313,9 @@ function render() {
   if (view.tab === 'write') { renderWrite(writeEl); prevView = { ...view }; return; }
   if (view.tab === 'organize') { renderOrganize(organizeEl); prevView = { ...view }; return; }
   if (view.tab === 'preview') { renderPreview(previewEl); prevView = { ...view }; return; }
+  if (view.tab === 'decks') { renderDecks(decksEl, { onImport: () => apkgInput.click() }); prevView = { ...view }; return; }
+  if (view.tab === 'browse') { renderBrowse(browseEl); prevView = { ...view }; return; }
+  if (view.tab === 'stats') { renderStats(statsEl); prevView = { ...view }; return; }
 
   // Month ⇄ week: lay out the end state at once, then animate only transform / opacity /
   // clip-path from where things were (FLIP), so the phone never re-lays out mid-animation.
@@ -379,10 +401,40 @@ document.getElementById('search-btn').addEventListener('click', () => openSearch
 
 // Film Production Mode: the logo (press and hold) switches; project data redraws the views.
 setupBrand(document.getElementById('brand'), () => {
-  if (filmOn() && view.tab === 'dday') view.tab = 'calendar';
-  if (!filmOn() && FILM_TABS.includes(view.tab)) view.tab = 'calendar';
+  if (!studyOn()) leaveStudy();
+  fitTab();
   render();
 });
+
+// Study mode: data changes redraw its tabs (not while a card is on screen: the review
+// screen redraws itself); Browse from a deck's overview opens the search.
+onStudyChange(() => {
+  if (document.documentElement.classList.contains('study') !== studyOn()) paintBrand(false);
+  if (isGated() || reviewing()) return;
+  if (studyOn() || STUDY_TABS.includes(view.tab)) render();
+});
+setBrowseHook((q) => { browseFor(q); view.tab = 'browse'; render(); });
+const afterSwitch = () => { if (!studyOn()) leaveStudy(); fitTab(); render(); };
+setModeMenu(async (anchor) => {
+  const now = currentMode();
+  const to = await pick(anchor, [['planner', 'Planner'], ['film', 'Film'], ['study', 'Study']], now);
+  if (to && to !== now) switchMode(to, afterSwitch);
+});
+const apkgInput = document.getElementById('apkg-input');
+apkgInput.addEventListener('change', async () => {
+  const file = apkgInput.files[0];
+  apkgInput.value = '';
+  if (!file) return;
+  snack('Importing…');
+  try {
+    const { importApkg } = await import('./anki.js');
+    const r = await importApkg(file);
+    tell('Imported', `${r.notes} notes · ${r.cards} cards · ${r.reviews} past reviews${r.skipped ? ` · ${r.skipped} already here` : ''}.`);
+  } catch (e) {
+    tell('Couldn’t import', e.message);
+  }
+});
+loadStudy();
 onFilmChange(() => {
   // The film look follows the mode even when it changes without the logo (e.g. signing out).
   // Checked after this turn, so the logo's own animated switch (paintBrand(true)) goes first.
@@ -542,4 +594,4 @@ onCloudChange(() => {
 handleAuthRedirect()
   .then((type) => { if (type === 'recovery') { view.tab = 'settings'; render(); openAccountSheet('new-password'); } })
   .catch(() => {})
-  .finally(() => syncNow().then(() => { refreshSocial(); refreshChats(); refreshFilm(); syncPush(); openFromNotification(launchView); }));
+  .finally(() => syncNow().then(() => { refreshSocial(); refreshChats(); refreshFilm(); syncPush(); if (studyOn()) syncStudy(); openFromNotification(launchView); }));

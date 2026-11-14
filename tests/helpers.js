@@ -55,11 +55,17 @@ const inApp = (p, fn, arg) => p.evaluate(async ([src, a]) => {
   return eval(src)(s, c, a);
 }, [fn.toString(), arg]);
 
-/** Press and hold the logo (film mode), then create a project. */
-async function filmProject(p, name) {
+/** Press and hold the logo, then pick a mode in its menu ('Planner' | 'Film' | 'Study'). */
+async function chooseMode(p, label) {
   const bx = await p.locator('#brand').boundingBox();
   await p.mouse.move(bx.x + 15, bx.y + 15);
-  await p.mouse.down(); await p.waitForTimeout(1100); await p.mouse.up(); await p.waitForTimeout(900);
+  await p.mouse.down(); await p.waitForTimeout(1100); await p.mouse.up(); await p.waitForTimeout(300);
+  await p.click(`.layer .menu-item:has-text("${label}")`);
+}
+
+/** Switch to film mode, then create a project. */
+async function filmProject(p, name) {
+  await chooseMode(p, 'Film'); await p.waitForTimeout(1800);
   if (!name) return;
   await p.click('.film-chip'); await p.click('.layer .new-group');
   await p.fill('.layer .ask-input', name); await p.click('.layer .ask-btn.primary');
@@ -72,4 +78,4 @@ async function done(b) {
   console.log(failed ? `\n${failed} failed` : '\nall passed');
 }
 
-module.exports = { APP, MOCK, sql, wait, check, browser, phone, inApp, filmProject, done };
+module.exports = { APP, MOCK, sql, wait, check, browser, phone, inApp, filmProject, chooseMode, done };

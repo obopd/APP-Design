@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium, devices } = require('playwright');
-const { MOCK, APP, sql, check, wait, done } = require('./helpers');
+const { MOCK, APP, sql, check, wait, done, chooseMode } = require('./helpers');
 
 const OUT = path.join(__dirname, 'out', 'desktop');
 fs.mkdirSync(OUT, { recursive: true });
@@ -120,9 +120,8 @@ fs.mkdirSync(OUT, { recursive: true });
 
   // Film mode with the mouse: hold the logo, write, organize, preview.
   await p.click('.tab[data-view=calendar]'); await wait(500);
-  const bx = await p.locator('#brand').boundingBox();
-  await p.mouse.move(bx.x + 15, bx.y + 15); await p.mouse.down(); await wait(1000); await p.mouse.up(); await wait(1800);
-  check('holding the logo with the mouse enters film mode', await p.evaluate(() => document.documentElement.classList.contains('film')));
+  await chooseMode(p, 'Film'); await wait(1800);
+  check('holding the logo with the mouse, then Film, enters film mode', await p.evaluate(() => document.documentElement.classList.contains('film')));
   await p.click('.film-chip'); await p.click('.layer .new-group'); await p.click('.layer .ask-input'); await p.keyboard.type('Desk Film'); await p.keyboard.press('Enter'); await wait(2500);
   await shot('09-film-calendar');
   await p.click('.tab[data-view=write]'); await wait(300);

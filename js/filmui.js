@@ -2,7 +2,7 @@
 // hold ~1s to switch), the project sheet (choose / create / invite / leave) and the
 // project name shown above the month.
 import { h, icon, ICONS } from './util.js';
-import { ask, tell, askText, openLayer } from './ui.js';
+import { ask, tell, askText, openLayer, pick } from './ui.js';
 import {
   filmOn, setFilm, filmStatus, projects, currentProject, chooseProject, createProject, renameProject,
   inviteCollaborators, removeCollaborator, leaveProject, membersOf, isOwner, nameOf, myId,
@@ -11,13 +11,32 @@ import { acceptedFriends, myHandle } from './social.js';
 import { pickFriends, chooseHandle } from './people.js';
 import { chatEnabled } from './chat.js';
 import { playFilmSwitch } from './cinema.js';
+import { studyOn, setStudy } from './study.js';
 
 const HOLD_MS = 900;
 // Film mode's background style (styles.css "Film mode backgrounds"): glow | grade | darkroom | grain.
 export const FILM_BACKGROUND = 'grain';
 document.documentElement.dataset.filmbg = FILM_BACKGROUND;
 
-/** Press and hold the logo to switch modes; a tap in film mode opens the projects. */
+export const currentMode = () => (studyOn() ? 'study' : filmOn() ? 'film' : 'planner');
+
+/** Switch to 'planner' | 'film' | 'study' with the dissolve; then calls onSwitched(). */
+export function switchMode(to, onSwitched = () => {}) {
+  const from = currentMode();
+  if (to === from) return;
+  if (to === 'film' && !chatEnabled()) { tell('Sign in first', 'Film Production Mode needs your account.'); return; }
+  const mark = { planner: 'cal', film: 'slate', study: 'study' }[to];
+  playFilmSwitch(to !== 'planner', () => {
+    if (to !== 'study' && studyOn()) setStudy(false);
+    if (to !== 'film' && filmOn()) setFilm(false);
+    if (to === 'film') setFilm(true);
+    if (to === 'study') setStudy(true);
+    paintBrand(true);
+    onSwitched();
+  }, to === 'film' ? currentProject()?.name : '', undefined, mark);
+}
+
+/** Press and hold the logo to choose a mode; a tap in film mode opens the projects. */
 export function setupBrand(brand, onSwitched) {
   let timer = 0;
   let fired = false;
@@ -30,9 +49,10 @@ export function setupBrand(brand, onSwitched) {
     timer = setTimeout(() => {
       fired = true;
       brand.classList.remove('pressing');
-      if (!chatEnabled()) { tell('Sign in first', 'Film Production Mode needs your account.'); return; }
-      const entering = !filmOn();
-      playFilmSwitch(entering, () => { setFilm(entering); paintBrand(true); onSwitched(); }, entering ? currentProject()?.name : '');
+      const now = currentMode();
+      pick(brand, [['planner', 'Planner'], ['film', 'Film'], ['study', 'Study']], now).then((to) => {
+        if (to && to !== now) switchMode(to, onSwitched);
+      });
     }, HOLD_MS);
   });
   brand.addEventListener('pointermove', (e) => { if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) cancel(); });
@@ -53,6 +73,7 @@ export function paintBrand(animate) {
     requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('film-instant')));
   }
   root.classList.toggle('film', filmOn());
+  root.classList.toggle('study', studyOn());
 }
 
 /* ---------- Project name above the month ---------- */

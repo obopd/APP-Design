@@ -28,9 +28,9 @@ export const TRANSITIONS = Object.keys(STYLES);
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 let playing = null;
 
-// A copy of the logo tile from #brand: the clapperboard, or the calendar icon.
-function markTile(slate) {
-  const src = document.querySelector(slate ? '#brand .brand-slate' : '#brand .brand-cal');
+// A copy of a logo tile from #brand: 'slate' (film), 'study' (cards) or 'cal' (planner).
+function markTile(kind) {
+  const src = document.querySelector(`#brand .brand-${kind}`) || document.querySelector('#brand .brand-cal');
   const art = src.cloneNode(true);
   art.setAttribute('class', 'fx-mark-art');
   art.querySelector('.slate-arm')?.setAttribute('class', 'fx-mark-arm');
@@ -41,7 +41,7 @@ function markTile(slate) {
  * Plays the chosen style and calls switchMode() at its covered moment; resolves when done.
  * With 'flip', reduced motion, or a show already running, it just switches.
  */
-export function playFilmSwitch(entering, switchMode, title = '', style = FILM_TRANSITION) {
+export function playFilmSwitch(entering, switchMode, title = '', style = FILM_TRANSITION, mark = entering ? 'slate' : 'cal') {
   const s = STYLES[style];
   if (!s || reduced.matches || playing) { switchMode(); return Promise.resolve(); }
   const dir = entering ? 'in' : 'out';
@@ -50,7 +50,7 @@ export function playFilmSwitch(entering, switchMode, title = '', style = FILM_TR
     document.body.classList.add('fx-page', `fx-${style}`, `fx-${dir}`);
     // The empty middle shows the app's own mark: the slate claps going in; the calendar
     // logo comes back going out.
-    if (s.mark) el = h('div', { class: `fx fx-mark fx-${dir}`, 'aria-hidden': 'true' }, markTile(entering));
+    if (s.mark) el = h('div', { class: `fx fx-mark fx-${dir}`, 'aria-hidden': 'true' }, markTile(mark));
     if (el) document.body.append(el);
   } else {
     el = h('div', { class: `fx fx-${style} fx-${dir}`, 'aria-hidden': 'true' },

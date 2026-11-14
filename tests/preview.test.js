@@ -11,7 +11,7 @@ const { browser, phone, filmProject, sql, check, wait, done, MOCK } = require('.
 
   await A.click('.tab[data-view=preview]'); await wait(300);
   const shot = await A.screenshot(); // any picture will do
-  await A.setInputFiles('input[type=file]', [1, 2, 3].map((i) => ({ name: `c${i}.png`, mimeType: 'image/png', buffer: shot })));
+  await A.setInputFiles('input[type=file][multiple]', [1, 2, 3].map((i) => ({ name: `c${i}.png`, mimeType: 'image/png', buffer: shot })));
   await wait(3500);
   const files = await sql('select count(*)::int n, max(length(data))::int big from storage.objects');
   check('3 images uploaded (2 files each, shrunk)', await A.locator('.pv-tile:not(.loading)').count() === 3 && files[0].n === 6, `largest ${files[0].big} bytes`);

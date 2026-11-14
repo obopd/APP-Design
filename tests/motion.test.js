@@ -1,5 +1,5 @@
 // Sheets slide away and can be dragged down to close; tabs fade in.
-const { browser, phone, check, wait, done } = require('./helpers');
+const { browser, phone, check, wait, done, chooseMode } = require('./helpers');
 
 (async () => {
   const b = await browser();
@@ -47,17 +47,14 @@ const { browser, phone, check, wait, done } = require('./helpers');
   // Entering film mode plays the clapperboard show, then leaves film mode switched on.
   await p.click('.tab[data-view=calendar]'); await wait(300);
   await p.click('#calendar .cal-title').catch(() => {}); await wait(900);
-  const hold = async (page) => {
-    const bx = await page.locator('#brand').boundingBox();
-    await page.mouse.move(bx.x + 15, bx.y + 15); await page.mouse.down(); await wait(1000); await page.mouse.up();
-  };
+  const hold = (page, mode) => chooseMode(page, mode);
   // The owner's choice: dissolve, with the slate clapping in the empty middle.
-  await hold(p); await wait(650); // the logo flips at the switch, mid-dissolve
+  await hold(p, 'Film'); await wait(650); // the logo flips at the switch, mid-dissolve
   check('the logo flips into the clapperboard (animated, not instant)', await p.evaluate(() => document.querySelector('#brand .brand-slate').getAnimations().length > 0));
   check('entering plays the dissolve with the slate in the middle', await p.locator('.fx-mark.fx-in .fx-mark-arm').count() === 1);
   await wait(1500);
   check('…then it\'s gone and film mode is on', await p.locator('.fx').count() === 0 && await p.evaluate(() => document.documentElement.classList.contains('film') && !document.body.className.includes('fx-')));
-  await hold(p); await wait(200);
+  await hold(p, 'Planner'); await wait(200);
   check('leaving shows the calendar logo in the middle', await p.locator('.fx-mark.fx-out img.fx-mark-art').count() === 1);
   await wait(1500);
   check('…then film mode is off', await p.evaluate(() => !document.documentElement.classList.contains('film')));
