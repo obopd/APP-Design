@@ -355,9 +355,8 @@ anon-key requests are safe checks.
 ## Deployment
 
 GitHub Pages serves this branch's root (relative paths; `.nojekyll`). Supabase project
-`rkpsjkssmfjuavdhayie` (free tier); the SQL files up to maintenance and the push function are
-set up and verified; `study.sql` was given to the owner to run (until then study mode stays on
-the phone). Push needs the `push` Edge Function (Verify JWT off) and four Vault secrets
+`rkpsjkssmfjuavdhayie` (free tier); all SQL files (including `study.sql`) and the push function are
+set up and verified. Push needs the `push` Edge Function (Verify JWT off) and four Vault secrets
 (`push_url`, `push_secret`, `vapid_public`, `vapid_private`), given to the owner as one
 paste from the git-excluded `.setup/`. **Never commit** the service_role key, the VAPID
 private key or the push secret.
