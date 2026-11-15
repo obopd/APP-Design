@@ -238,10 +238,17 @@ Kinds the database refuses (`23514`, setup not run) are held on the phone per ki
   introduced:) + sort + select → bulk suspend / flag / move / tags / reset / delete. Stats
   (`js/studystats.js`): today, card counts, future due, reviews, intervals, true retention,
   hourly, answer buttons, FSRS memory; SVG bars, tap for numbers.
-- **Anki import** (`js/anki.js`, Decks ↓): .apkg/.colpkg exported with "Support older Anki
-  versions" (zip via `DecompressionStream`, own read-only SQLite reader): decks (nesting),
-  option groups → presets, note types with their templates, notes, cards with scheduling
-  (FSRS memory from card data or estimated), review log; ids `anki-*` so re-imports skip.
+- **Anki import** (`js/anki.js`, Decks ↓; the file input has no `accept` so iOS lets you
+  pick .apkg): reads only the zip's directory and the collection from the File (`slice`),
+  never the media, so 250 MB decks import in a moment. Newest format: `collection.anki21b`
+  decompressed by `js/zstd.js` (own RFC 8878 decoder), schema-18 tables (notetypes / fields /
+  templates / decks / deck_config with protobuf blobs, WITHOUT ROWID tables read as index
+  b-trees); the `collection.anki2` next to it is only a "please update" placeholder. Older
+  format: JSON in `col`. Own read-only SQLite reader. Brings decks (nesting), option groups →
+  presets, note types with templates, notes, cards with scheduling (FSRS memory from card
+  data or estimated), review log; ids `anki-*` so re-imports skip. Fixtures:
+  `tests/db/make-apkg.py` (old) and `tests/db/new-format.apkg` (from `make-apkg-new.py`,
+  needs the zstandard module).
 - Not built yet (next step, agreed with the owner): images / audio / video, image occlusion,
   math formulas, custom card CSS.
 
@@ -266,7 +273,7 @@ js/settings.js  js/reminders.js (local alerts)  js/push.js  js/live.js  js/searc
 js/social.js  js/people.js  js/chat.js  js/chatview.js
 js/film.js  js/filmui.js  js/write.js  js/organize.js  js/preview.js
 js/srs.js  js/cardtext.js  js/study.js  js/studysearch.js  js/studyui.js  js/studybrowse.js
-js/studystats.js  js/anki.js   (study mode)
+js/studystats.js  js/anki.js  js/zstd.js   (study mode)
 supabase/    setup → social → chat → film → push → maintenance → study (.sql, run in this order;
              all safe to re-run) + functions/push/index.ts
 tests/       test suite (see below)          docs/  screenshots, logo images
@@ -364,7 +371,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v100`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v101`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 

@@ -9,36 +9,47 @@
 import { dayOf, dayStart, DEFAULT_PRESET } from './srs.js';
 import { getItem, importBatch, decks as existingDecks } from './study.js';
 
-/* ---------- Zip ---------- */
+/* ---------- Zip (read straight from the File: only the parts needed) ---------- */
 
 async function inflate(bytes) {
   const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
+const slice = async (file, from, to) => new Uint8Array(await file.slice(from, to).arrayBuffer());
 
-/** { name: () => Promise<Uint8Array> } for every file in a zip. */
-function unzip(buf) {
-  const u8 = new Uint8Array(buf);
-  const dv = new DataView(buf);
+/**
+ * { name: () => Promise<Uint8Array> } for every file in a zip. Reads the directory at the
+ * end of the file, then only the entries asked for (a deck with its images can be hundreds
+ * of MB; the cards are a small part of it).
+ */
+async function unzip(file) {
+  const size = file.size;
+  const tailFrom = Math.max(0, size - 65557 - 20);
+  const tail = await slice(file, tailFrom, size);
+  const tdv = new DataView(tail.buffer);
   let eocd = -1;
-  for (let i = u8.length - 22; i >= Math.max(0, u8.length - 65557); i -= 1) {
-    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  for (let i = tail.length - 22; i >= 0; i -= 1) {
+    if (tdv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
   }
   if (eocd < 0) throw new Error('This isn’t an Anki package (.apkg).');
-  let count = dv.getUint16(eocd + 10, true);
-  let cd = dv.getUint32(eocd + 16, true);
-  // Zip64 (very large packages)
-  if (cd === 0xffffffff) {
+  let count = tdv.getUint16(eocd + 10, true);
+  let cdSize = tdv.getUint32(eocd + 12, true);
+  let cd = tdv.getUint32(eocd + 16, true);
+  if (cd === 0xffffffff || count === 0xffff) { // Zip64
     const loc = eocd - 20;
-    if (dv.getUint32(loc, true) === 0x07064b50) {
-      const z = Number(dv.getBigUint64(loc + 8, true));
-      count = Number(dv.getBigUint64(z + 32, true));
-      cd = Number(dv.getBigUint64(z + 48, true));
+    if (loc >= 0 && tdv.getUint32(loc, true) === 0x07064b50) {
+      const at = Number(tdv.getBigUint64(loc + 8, true));
+      const rec = new DataView((await slice(file, at, at + 56)).buffer);
+      count = Number(rec.getBigUint64(32, true));
+      cdSize = Number(rec.getBigUint64(40, true));
+      cd = Number(rec.getBigUint64(48, true));
     }
   }
-  const files = {};
+  const dir = await slice(file, cd, cd + cdSize);
+  const dv = new DataView(dir.buffer);
   const dec = new TextDecoder();
-  for (let n = 0, p = cd; n < count; n += 1) {
+  const files = {};
+  for (let n = 0, p = 0; n < count && p + 46 <= dir.length; n += 1) {
     if (dv.getUint32(p, true) !== 0x02014b50) break;
     const method = dv.getUint16(p + 10, true);
     let csize = dv.getUint32(p + 20, true);
@@ -46,9 +57,8 @@ function unzip(buf) {
     const extraLen = dv.getUint16(p + 30, true);
     const commentLen = dv.getUint16(p + 32, true);
     let local = dv.getUint32(p + 42, true);
-    const name = dec.decode(u8.subarray(p + 46, p + 46 + nameLen));
-    // Zip64 extra field: real sizes / offset
-    for (let e = p + 46 + nameLen; e < p + 46 + nameLen + extraLen;) {
+    const name = dec.decode(dir.subarray(p + 46, p + 46 + nameLen));
+    for (let e = p + 46 + nameLen; e + 4 <= p + 46 + nameLen + extraLen;) {
       const id = dv.getUint16(e, true);
       const len = dv.getUint16(e + 2, true);
       if (id === 1) {
@@ -59,9 +69,14 @@ function unzip(buf) {
       }
       e += 4 + len;
     }
-    const start = local + 30 + dv.getUint16(local + 26, true) + dv.getUint16(local + 28, true);
-    const data = u8.subarray(start, start + csize);
-    files[name] = () => (method === 0 ? Promise.resolve(data) : method === 8 ? inflate(data) : Promise.reject(new Error('Unsupported zip compression.')));
+    files[name] = async () => {
+      const head = new DataView((await slice(file, local, local + 30)).buffer);
+      const start = local + 30 + head.getUint16(26, true) + head.getUint16(28, true);
+      const data = await slice(file, start, start + csize);
+      if (method === 0) return data;
+      if (method === 8) return inflate(data);
+      throw new Error('Unsupported zip compression.');
+    };
     p += 46 + nameLen + extraLen + commentLen;
   }
   return files;
@@ -91,8 +106,9 @@ function sqlite(u8) {
   const vnum = (p) => { const [v, q] = varint(p); return [Number(v), q]; };
 
   // The full payload of a cell (following overflow pages).
-  const payload = (p, size) => {
-    const maxLocal = usable - 35;
+  // Table leaves keep up to usable-35 bytes on the page; index pages less.
+  const payload = (p, size, index = false) => {
+    const maxLocal = index ? Math.floor(((usable - 12) * 64) / 255) - 23 : usable - 35;
     const minLocal = Math.floor(((usable - 12) * 32) / 255) - 23;
     if (size <= maxLocal) return u8.subarray(p, p + size);
     let local = minLocal + ((size - minLocal) % (usable - 4));
@@ -141,7 +157,8 @@ function sqlite(u8) {
     });
   };
 
-  // Every row of a table b-tree: [rowid, values].
+  // Every row of a table b-tree: [rowid, values] (pages 13 / 5). WITHOUT ROWID tables are
+  // index b-trees (pages 10 / 2) whose records are the rows: [null, values].
   const rows = (root) => {
     const out = [];
     const walk = (n) => {
@@ -149,7 +166,8 @@ function sqlite(u8) {
       const hdr = n === 1 ? base + 100 : base;
       const type = u8[hdr];
       const cellsN = dv.getUint16(hdr + 3);
-      const ptrs = hdr + (type === 5 ? 12 : 8);
+      const interior = type === 5 || type === 2;
+      const ptrs = hdr + (interior ? 12 : 8);
       for (let i = 0; i < cellsN; i += 1) {
         const cell = base + dv.getUint16(ptrs + i * 2);
         if (type === 13) {
@@ -157,8 +175,16 @@ function sqlite(u8) {
           const [rowid, b] = vnum(a);
           out.push([rowid, record(payload(b, size))]);
         } else if (type === 5) walk(dv.getUint32(cell));
+        else if (type === 10) {
+          const [size, a] = vnum(cell);
+          out.push([null, record(payload(a, size, true))]);
+        } else if (type === 2) {
+          walk(dv.getUint32(cell));
+          const [size, a] = vnum(cell + 4);
+          out.push([null, record(payload(a, size, true))]);
+        }
       }
-      if (type === 5) walk(dv.getUint32(hdr + 8));
+      if (interior) walk(dv.getUint32(hdr + 8));
     };
     walk(root);
     return out;
@@ -174,7 +200,7 @@ function sqlite(u8) {
       const cols = m.sql.slice(m.sql.indexOf('(') + 1, m.sql.lastIndexOf(')'))
         .split(/,(?![^(]*\))/).map((c) => c.trim()).filter((c) => !/^(primary|unique|check|foreign|constraint)\b/i.test(c));
       const names = cols.map((c) => c.split(/\s+/)[0].replace(/["`[\]]/g, ''));
-      const pk = cols.findIndex((c) => /integer\s+primary\s+key/i.test(c));
+      const pk = /without\s+rowid/i.test(m.sql) ? -1 : cols.findIndex((c) => /^\S+\s+integer\b.*\bprimary\s+key\b/i.test(c));
       return rows(m.root).map(([rowid, vals]) => {
         const o = {};
         names.forEach((nm, i) => { o[nm] = i === pk && vals[i] == null ? rowid : vals[i]; });
@@ -194,21 +220,23 @@ const mins = (arr, fallback) => (Array.isArray(arr) && arr.length ? arr.map(Numb
  * Notes already imported before (same Anki id) are skipped.
  */
 export async function importApkg(file) {
-  const files = unzip(await file.arrayBuffer());
-  const pick = files['collection.anki21'] || files['collection.anki2'];
-  if (!pick && files['collection.anki21b']) {
-    throw new Error('This file uses Anki’s newest format. In Anki, export again with “Support older Anki versions” ticked.');
-  }
-  if (!pick) throw new Error('No Anki collection found in this file.');
-  const db = sqlite(await pick());
+  const files = await unzip(file);
+  // Newest Anki (2.1.50+): zstd-compressed collection; the plain collection.anki2 next to it
+  // is only a "please update Anki" placeholder.
+  let bytes;
+  if (files['collection.anki21b']) {
+    const { zstdDecompress } = await import('./zstd.js');
+    bytes = zstdDecompress(await files['collection.anki21b']());
+  } else if (files['collection.anki21'] || files['collection.anki2']) {
+    bytes = await (files['collection.anki21'] || files['collection.anki2'])();
+  } else throw new Error('No Anki collection found in this file.');
+  const db = sqlite(bytes);
   const col = db.table('col')[0];
   if (!col) throw new Error('The package’s database couldn’t be read.');
-  if (!col.models || col.models === '{}') {
-    throw new Error('This file uses Anki’s newest format. In Anki, export again with “Support older Anki versions” ticked.');
-  }
-  const models = JSON.parse(col.models);
-  const ankiDecks = JSON.parse(col.decks || '{}');
-  const dconf = JSON.parse(col.dconf || '{}');
+  const legacy = col.models && col.models !== '{}';
+  const { models, decks: ankiDecks, dconf } = legacy
+    ? { models: JSON.parse(col.models), decks: JSON.parse(col.decks || '{}'), dconf: JSON.parse(col.dconf || '{}') }
+    : modernSchema(db);
   const crtDay = dayOf((col.crt || 0) * 1000);
   const items = [];
   const out = { decks: 0, notes: 0, cards: 0, reviews: 0, skipped: 0 };
@@ -365,6 +393,83 @@ export async function importApkg(file) {
   out.reviews = fresh.length;
   await importBatch(items, fresh);
   return out;
+}
+
+/* ---------- Newer Anki collections (schema 18): settings live in protobuf blobs ---------- */
+
+// Minimal protobuf reader: { fieldNumber: [values] } (varints as numbers, bytes as Uint8Array,
+// 32-bit as float).
+function pb(buf) {
+  const out = {};
+  if (!buf || !buf.length) return out;
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  let p = 0;
+  const varint = () => {
+    let v = 0;
+    for (let mul = 1; p < buf.length; mul *= 128) {
+      const b = buf[p++];
+      v += (b & 0x7f) * mul;
+      if (!(b & 0x80)) break;
+    }
+    return v;
+  };
+  while (p < buf.length) {
+    const key = varint();
+    const field = Math.floor(key / 8);
+    const wt = key & 7;
+    let v;
+    if (wt === 0) v = varint();
+    else if (wt === 1) { v = dv.getFloat64(p, true); p += 8; } else if (wt === 2) { const n = varint(); v = buf.subarray(p, p + n); p += n; } else if (wt === 5) { v = dv.getFloat32(p, true); p += 4; } else break;
+    (out[field] ||= []).push(v);
+  }
+  return out;
+}
+const pbText = (v) => (v instanceof Uint8Array ? new TextDecoder().decode(v) : '');
+const floats = (vals) => (vals || []).flatMap((v) => {
+  if (!(v instanceof Uint8Array)) return [v];
+  const dv = new DataView(v.buffer, v.byteOffset, v.byteLength);
+  return Array.from({ length: v.length >> 2 }, (_, i) => dv.getFloat32(i * 4, true));
+});
+
+// The same shapes the older JSON columns had, built from the newer tables.
+function modernSchema(db) {
+  if (!db.has('notetypes')) throw new Error('This Anki file’s format isn’t supported.');
+  const fields = db.table('fields');
+  const templates = db.table('templates');
+  const models = {};
+  for (const nt of db.table('notetypes')) {
+    const conf = pb(nt.config);
+    models[nt.id] = {
+      name: nt.name,
+      type: conf[1]?.[0] === 1 ? 1 : 0,
+      css: pbText(conf[3]?.[0]),
+      flds: fields.filter((f) => f.ntid === nt.id).map((f) => ({ name: f.name, ord: f.ord })),
+      tmpls: templates.filter((t) => t.ntid === nt.id).map((t) => {
+        const tc = pb(t.config);
+        return { name: t.name, ord: t.ord, qfmt: pbText(tc[1]?.[0]), afmt: pbText(tc[2]?.[0]) };
+      }),
+    };
+  }
+  const decks = {};
+  for (const d of db.table('decks')) {
+    const kind = pb(d.kind);
+    const normal = kind[1]?.[0];
+    decks[d.id] = { name: d.name, dyn: normal ? 0 : 1, conf: normal ? pb(normal)[1]?.[0] ?? 1 : 1 };
+  }
+  // Deck options: only the settings whose places are certain; the rest keep defaults.
+  const ok = (n, lo, hi) => (Number.isFinite(n) && n >= lo && n <= hi ? n : undefined);
+  const dconf = {};
+  for (const c of db.has('deck_config') ? db.table('deck_config') : []) {
+    const conf = pb(c.config);
+    const steps = (f) => { const v = floats(conf[f]).filter((x) => x > 0 && x < 1e6); return v.length ? v : undefined; };
+    dconf[c.id] = {
+      name: c.name,
+      new: { perDay: ok(conf[9]?.[0], 0, 9999), delays: steps(1) },
+      rev: { perDay: ok(conf[10]?.[0], 0, 99999) },
+      lapse: { delays: steps(2) },
+    };
+  }
+  return { models, decks, dconf };
 }
 
 function hash(s) {

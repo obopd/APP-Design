@@ -213,6 +213,28 @@ async function addNote(p, front, back, type) {
   const again = await p.locator('.layer .ask-message').innerText().catch(() => '');
   check('importing the same file again skips what\'s already here', /0 notes · 0 cards · 0 past reviews · 3 already here/.test(again), again);
   await p.click('.layer .ask-btn.primary'); await wait(300);
+  // Newest Anki format (zstd + protobuf settings), e.g. decks downloaded from the internet.
+  await p.setInputFiles('#apkg-input', path.join(__dirname, 'db', 'new-format.apkg')); await wait(2000);
+  const msgNew = await p.locator('.layer .ask-message').innerText().catch(() => '');
+  check('a newest-format Anki package imports', /3 notes · 4 cards · 1 past review/.test(msgNew), msgNew);
+  await p.click('.layer .ask-btn.primary'); await wait(300);
+  const nf = await S(p, (s) => {
+    const bio = s.decks().find((d) => d.name === 'Biology' && s.deckPath(d.id) === 'MCAT::Biology');
+    const pr = bio && s.presetOf(bio.id);
+    const rev = s.getItem('anki-c-6001');
+    const type = s.noteType(s.note('anki-n-5001')?.type);
+    return {
+      deck: !!bio, newPerDay: pr?.newPerDay, steps: pr?.learnSteps?.join(), relearn: pr?.relearnSteps?.join(), reviews: pr?.reviewsPerDay,
+      rev: rev && [rev.state, rev.ivl, rev.S, rev.D], type: type && [type.name, type.fields.join(), type.templates[0].back],
+      cloze: s.cards().filter((c) => c.note === 'anki-n-5009').map((c) => !!c.suspended).join(),
+      placeholder: s.notes().some((n) => /Please update/.test(Object.values(n.fields).join(' '))),
+    };
+  });
+  check('…with its nested decks and deck options (30 new/day, steps 1m 10m 1h)', nf.deck && nf.newPerDay === 30 && nf.steps === '1,10,60' && nf.relearn === '10' && nf.reviews === 300, JSON.stringify(nf));
+  check('…its note types and templates', nf.type && nf.type[0] === 'MCAT Basic' && nf.type[1] === 'Front,Back' && /FrontSide/.test(nf.type[2]), JSON.stringify(nf.type));
+  check('…cards with FSRS memory, cloze cards and suspension', nf.rev && nf.rev[0] === 'review' && nf.rev[1] === 21 && Math.abs(nf.rev[2] - 24.2) < 1e-6 && nf.cloze === 'false,true', JSON.stringify(nf));
+  check('…and not the "please update Anki" placeholder', nf.placeholder === false);
+
   // An imported card renders (its own template, hr id=answer)
   await p.click('.deck-name:has-text("Languages")'); await wait(300);
   await p.click('.study-now'); await wait(400);
