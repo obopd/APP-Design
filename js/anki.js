@@ -197,10 +197,12 @@ function sqlite(u8) {
     table(name) {
       const m = master.find((x) => x.type === 'table' && x.name === name);
       if (!m) return [];
-      const cols = m.sql.slice(m.sql.indexOf('(') + 1, m.sql.lastIndexOf(')'))
+      // Anki's own table definitions carry comments ("guid text not null, /* 1 */").
+      const sqlText = m.sql.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/--[^\n]*/g, ' ');
+      const cols = sqlText.slice(sqlText.indexOf('(') + 1, sqlText.lastIndexOf(')'))
         .split(/,(?![^(]*\))/).map((c) => c.trim()).filter((c) => !/^(primary|unique|check|foreign|constraint)\b/i.test(c));
       const names = cols.map((c) => c.split(/\s+/)[0].replace(/["`[\]]/g, ''));
-      const pk = /without\s+rowid/i.test(m.sql) ? -1 : cols.findIndex((c) => /^\S+\s+integer\b.*\bprimary\s+key\b/i.test(c));
+      const pk = /without\s+rowid/i.test(sqlText) ? -1 : cols.findIndex((c) => /^\S+\s+integer\b.*\bprimary\s+key\b/i.test(c));
       return rows(m.root).map(([rowid, vals]) => {
         const o = {};
         names.forEach((nm, i) => { o[nm] = i === pk && vals[i] == null ? rowid : vals[i]; });
@@ -317,7 +319,8 @@ export async function importApkg(file) {
 
   // Notes.
   const noteId = {};
-  for (const n of db.table('notes')) {
+  const noteRows = db.table('notes');
+  for (const n of noteRows) {
     const nid = `anki-n-${n.id}`;
     noteId[n.id] = nid;
     if (getItem(nid)) { out.skipped += 1; continue; }
@@ -335,7 +338,8 @@ export async function importApkg(file) {
 
   // Cards with their scheduling.
   const cardId = {};
-  for (const c of db.table('cards')) {
+  const cardRows = db.table('cards');
+  for (const c of cardRows) {
     const cid = `anki-c-${c.id}`;
     cardId[c.id] = cid;
     if (getItem(cid) || !noteId[c.nid] || getItem(noteId[c.nid])) continue;
@@ -391,6 +395,10 @@ export async function importApkg(file) {
   const added = new Set(items.filter((x) => x.kind === 'card').map((x) => x.id));
   const fresh = reviews.filter((r) => added.has(r.card));
   out.reviews = fresh.length;
+  if (!out.notes && !out.cards && !out.skipped) {
+    // Nothing usable came out: say what was found so it can be looked into.
+    throw new Error(`No cards could be read from this file (found ${noteRows.length} notes, ${cardRows.length} cards, ${Object.keys(models).length} note types).`);
+  }
   await importBatch(items, fresh);
   return out;
 }
