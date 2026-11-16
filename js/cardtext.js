@@ -43,7 +43,7 @@ const inert = typeof document !== 'undefined' ? document.implementation.createHT
 export function plain(html) {
   if (!html) return '';
   if (!inert) return String(html).replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
-  const d = new DOMParser().parseFromString(`<body>${String(html).replace(/<br\s*\/?>/gi, ' ')}`, 'text/html');
+  const d = new DOMParser().parseFromString(`<body>${String(html).replace(/<br\s*\/?>/gi, ' ').replace(/\[sound:[^\]]+\]/g, ' ')}`, 'text/html');
   return (d.body.textContent || '').replace(/\s+/g, ' ').trim();
 }
 
@@ -141,7 +141,13 @@ const TAGS = new Set(['b', 'strong', 'i', 'em', 'u', 's', 'strike', 'sub', 'sup'
 const DROP = new Set(['script', 'style', 'iframe', 'object', 'embed', 'link', 'meta', 'head', 'title', 'form', 'input', 'button', 'textarea', 'select', 'svg', 'math', 'template', 'noscript']);
 const STYLE_PROPS = new Set(['color', 'background-color', 'font-weight', 'font-style', 'text-decoration', 'text-align', 'font-size', 'vertical-align']);
 const SAFE_VALUE = /^[#(),.%\w\s-]+$/;
-const CLASSES = new Set(['cloze', 'answer', 'typein', 'hint']);
+const CLASSES = new Set(['cloze', 'answer', 'typein', 'hint', 'snd']);
+// A card's own media file (Anki style: a bare name), never a web address or data URL.
+const mediaName = (src) => {
+  const v = String(src || '').trim();
+  if (!v || /^[a-z][a-z0-9+.-]*:/i.test(v) || v.startsWith('//') || v.includes('/')) return null;
+  try { return decodeURIComponent(v); } catch { return v; }
+};
 
 function cleanStyle(style) {
   const out = [];
@@ -161,7 +167,11 @@ function copy(node, into) {
     if (n.nodeType !== 1) continue;
     const tag = n.tagName.toLowerCase();
     if (DROP.has(tag)) continue;
-    if (tag === 'img') { into.append(h('span', { class: 'media-missing', title: 'Image (coming in the next update)' }, '🖼')); continue; }
+    if (tag === 'img') {
+      const name = mediaName(n.dataset?.media || n.getAttribute('src'));
+      if (name) into.append(h('img', { class: 'card-img', 'data-media': name, alt: '' }));
+      continue;
+    }
     if (!TAGS.has(tag)) { copy(n, into); continue; } // unknown wrapper: keep its text
     const el = document.createElement(tag === 'font' || tag === 'a' || tag === 'center' ? 'span' : tag);
     const style = cleanStyle(n.getAttribute('style'));
@@ -172,17 +182,21 @@ function copy(node, into) {
     if (n.tagName === 'HR' && n.id === 'answer') cls.push('answer');
     if (cls.length) el.className = cls.join(' ');
     if (tag === 'span' && n.dataset?.field && cls.includes('typein')) el.dataset.field = n.dataset.field;
+    if (tag === 'span' && cls.includes('snd') && mediaName(n.dataset?.media)) el.dataset.media = mediaName(n.dataset.media);
     if ((tag === 'td' || tag === 'th') && /^\d{1,2}$/.test(n.getAttribute('colspan') || '')) el.setAttribute('colspan', n.getAttribute('colspan'));
     copy(n, el);
     into.append(el);
   }
 }
 
+// [sound:name.mp3] → a player slot (filled by studymedia.js).
+const soundSlots = (html) => String(html).replace(/\[sound:([^\]]+)\]/g, (all, name) => `<span class="snd" data-media="${esc(name.trim())}"></span>`);
+
 /** Safe DOM (a fragment) from card / field HTML. */
 export function safeFragment(html) {
   const frag = document.createDocumentFragment();
   if (!html) return frag;
-  const d = new DOMParser().parseFromString(`<body>${html}`, 'text/html');
+  const d = new DOMParser().parseFromString(`<body>${soundSlots(html)}`, 'text/html');
   copy(d.body, frag);
   return frag;
 }
@@ -191,6 +205,13 @@ export function safeFragment(html) {
 export function cleanHtml(html) {
   const box = document.createElement('div');
   box.append(safeFragment(html));
+  // Media go back to Anki's form: <img src="name"> and [sound:name].
+  box.querySelectorAll('img[data-media]').forEach((img) => {
+    const clean = document.createElement('img');
+    clean.setAttribute('src', img.dataset.media);
+    img.replaceWith(clean);
+  });
+  box.querySelectorAll('.snd[data-media]').forEach((sp) => sp.replaceWith(document.createTextNode(`[sound:${sp.dataset.media}]`)));
   // Trailing empty lines from the editor aren't content.
   return box.innerHTML.replace(/(<br>|<div><br><\/div>)+$/g, '').trim();
 }

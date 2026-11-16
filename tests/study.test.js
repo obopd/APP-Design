@@ -47,6 +47,19 @@ async function addNote(p, front, back, type) {
   check('Basic → 1 card, reversed → 2, cloze with c1 and c2 → 2, type-in → 1', counts.notes === 4 && counts.cards === 6, JSON.stringify(counts));
   check('a Default deck is made for the first card', counts.decks.join() === 'Default');
 
+  // A photo added in the editor is saved with the note and shows on the card.
+  await p.click('[aria-label="Add card"]'); await wait(400);
+  await p.click('#study-sheet .field:has-text("Type") .select-btn'); await p.click('.layer .menu-item span:text-is("Basic")'); await wait(200);
+  await p.locator('#study-sheet .field-edit').nth(0).click(); await p.keyboard.type('Heart diagram ');
+  const [chooser] = await Promise.all([p.waitForEvent('filechooser'), p.click('#study-sheet [aria-label="Add photo"]')]);
+  await chooser.setFiles(path.join(__dirname, '..', 'icons', 'icon-192.png')); await wait(1200);
+  check('the photo shows in the field', await p.evaluate(() => document.querySelector('#study-sheet .field-edit img')?.naturalWidth > 0));
+  await p.locator('#study-sheet .field-edit').nth(1).click(); await p.keyboard.type('the heart');
+  await p.click('#study-sheet .ok'); await wait(400); await p.click('#study-sheet [aria-label="Close"]'); await wait(400);
+  const saved = await S(p, (s) => s.notes().find((n) => /Heart diagram/.test(n.fields.Front))?.fields.Front);
+  check('the note keeps it as <img src="photo-….jpg"> (like Anki)', /^Heart diagram(\s|&nbsp;)*<img src="photo-[a-z0-9-]+\.jpg">$/.test(saved || ''), saved);
+  await S(p, (s) => { const n = s.notes().find((x) => /Heart diagram/.test(x.fields.Front)); s.deleteNotes([n.id]); });
+
   // Duplicate check
   await p.click('[aria-label="Add card"]'); await wait(400);
   await p.click('#study-sheet .field:has-text("Type") .select-btn'); await p.click('.layer .menu-item span:text-is("Basic")'); await wait(200);
@@ -191,7 +204,7 @@ async function addNote(p, front, back, type) {
   await p.click('.tab[data-view="decks"]'); await wait(300);
   await p.setInputFiles('#apkg-input', apkg); await wait(1500);
   const msg = await p.locator('.layer .ask-message').innerText().catch(() => '');
-  check('import reports what came in', /3 notes · 4 cards · 4 past reviews/.test(msg), msg);
+  check('import reports what came in', /3 notes · 4 cards · 4 past reviews · 2 images and sounds/.test(msg), msg);
   await p.click('.layer .ask-btn.primary'); await wait(300);
   const imp = await S(p, (s) => {
     const fr = s.decks().find((d) => d.name === 'French');
@@ -213,10 +226,40 @@ async function addNote(p, front, back, type) {
   const again = await p.locator('.layer .ask-message').innerText().catch(() => '');
   check('importing the same file again skips what\'s already here', /0 notes · 0 cards · 0 past reviews · 3 already here/.test(again), again);
   await p.click('.layer .ask-btn.primary'); await wait(300);
+  // Media: only the files cards use are kept on the phone, then uploaded to the account.
+  const media = await p.evaluate(async () => {
+    const s = await import('./js/study.js');
+    const has = await s.mediaHas(['cat pic.png', 'meow.mp3', 'unused.png']);
+    return [...has].sort().join();
+  });
+  check('the images and sounds cards use come in (not unused ones)', media === 'cat pic.png,meow.mp3', media);
+  const deckFiles = "select name from storage.objects o join auth.users u on split_part(o.name, '/', 1) = u.id::text where bucket_id = 'study-media' and u.email = 'c@x' and name ~ '\\.(png|mp3)$'";
+  for (let i = 0; i < 40 && (await sql(deckFiles)).length < 2; i += 1) await wait(300);
+  const up = await sql(deckFiles);
+  check('…and upload to the account\'s private folder', up.length === 2 && up.every((r) => /^[0-9a-f-]{36}\/[0-9a-f]{64}\.(png|mp3)$/.test(r.name)), up.map((r) => r.name).join());
+  const peek = await other.evaluate(async () => {
+    const { api } = await import('./js/cloud.js');
+    try { return await api('/storage/v1/object/sign/study-media', { method: 'POST', auth: true, body: { expiresIn: 60, paths: [] } }); } catch (e) { return e.message; }
+  });
+  check('another account can\'t sign them', JSON.stringify(peek) === '[]' || /not|denied|found/i.test(String(peek)), JSON.stringify(peek));
+  const p3 = await phone(b, 'c@x');
+  const shown = await p3.evaluate(async () => {
+    await (await import('./js/study.js')).loadStudy();
+    const m = await import('./js/studymedia.js');
+    const box = document.createElement('div');
+    const t = await import('./js/cardtext.js');
+    box.append(t.safeFragment('chat<img src="cat%20pic.png"> [sound:meow.mp3]'));
+    document.body.append(box);
+    m.fillMedia(box);
+    for (let i = 0; i < 40 && !box.querySelector('img')?.naturalWidth; i += 1) await new Promise((r) => setTimeout(r, 150));
+    return { w: box.querySelector('img')?.naturalWidth, btn: !!box.querySelector('.snd-btn') };
+  });
+  check('another phone downloads an image when a card needs it', shown.w === 24 && shown.btn, JSON.stringify(shown));
+
   // Newest Anki format (zstd + protobuf settings), e.g. decks downloaded from the internet.
   await p.setInputFiles('#apkg-input', path.join(__dirname, 'db', 'new-format.apkg')); await wait(2000);
   const msgNew = await p.locator('.layer .ask-message').innerText().catch(() => '');
-  check('a newest-format Anki package imports', /3 notes · 4 cards · 1 past review/.test(msgNew), msgNew);
+  check('a newest-format Anki package imports (with its zstd-compressed image)', /3 notes · 4 cards · 1 past reviews? · 1 images and sounds/.test(msgNew), msgNew);
   await p.click('.layer .ask-btn.primary'); await wait(300);
   const nf = await S(p, (s) => {
     const bio = s.decks().find((d) => d.name === 'Biology' && s.deckPath(d.id) === 'MCAT::Biology');
@@ -240,6 +283,10 @@ async function addNote(p, front, back, type) {
   await p.click('.study-now'); await wait(400);
   await p.click('.rv-show'); await wait(200);
   check('an imported card shows front and back', /chien|chat/.test(await p.locator('.rv-card').innerText()) && await p.locator('.rv-card hr.answer').count() === 1);
+  if (/chat/.test(await p.locator('.rv-card').innerText())) {
+    await wait(500);
+    check('…with its picture and a sound button', await p.evaluate(() => document.querySelector('.rv-card img')?.naturalWidth === 24) && await p.locator('.rv-card .snd-btn').count() === 1);
+  }
   await p.keyboard.press('Escape'); await wait(300);
 
   // Back to planner

@@ -428,8 +428,8 @@ apkgInput.addEventListener('change', async () => {
   snack('Importing…');
   try {
     const { importApkg } = await import('./anki.js');
-    const r = await importApkg(file);
-    tell('Imported', `${r.notes} notes · ${r.cards} cards · ${r.reviews} past reviews${r.skipped ? ` · ${r.skipped} already here` : ''}.`);
+    const r = await importApkg(file, { onProgress: (i, n) => snack(`Images ${i} / ${n}`) });
+    tell('Imported', `${r.notes} notes · ${r.cards} cards · ${r.reviews} past reviews${r.media ? ` · ${r.media} images and sounds` : ''}${r.skipped ? ` · ${r.skipped} already here` : ''}.`);
   } catch (e) {
     tell('Couldn’t import', e.message);
   }

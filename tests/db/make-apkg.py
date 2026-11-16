@@ -59,7 +59,7 @@ dconf = {'1': {'name': 'Default', 'new': {'perDay': 20, 'delays': [1, 10], 'ints
                'rev': {'perDay': 150, 'ease4': 1.3, 'maxIvl': 36500}, 'lapse': {'delays': [5], 'leechFails': 6, 'leechAction': 1}}}
 c.execute('insert into col values (1,?,?,?,11,0,0,0,?,?,?,?,?)', (crt, now, now, '{}', json.dumps(models), json.dumps(decks), json.dumps(dconf), '{}'))
 c.execute("insert into notes values (1001,'g1',111,?,0,' verb french ',?,'chien',0,0,'')", (now, 'chien\x1f<b>dog</b>'))
-c.execute("insert into notes values (1002,'g2',111,?,0,'',?,'chat',0,0,'')", (now, 'chat\x1fcat'))
+c.execute("insert into notes values (1002,'g2',111,?,0,'',?,'chat',0,0,'')", (now, 'chat<img src=\"cat%20pic.png\">\x1fcat [sound:meow.mp3]'))
 c.execute("insert into notes values (1003,'g3',222,?,0,'',?,'x',0,0,'')", (now, 'Paris is the {{c1::capital}} of {{c2::France}}\x1fgeo'))
 # review card due today, a new card, a suspended card, two cloze cards
 c.execute("insert into cards values (2001,1001,50,0,?,0,2,2,?,10,2500,5,1,0,0,0,1,'')", (now, 100))
@@ -69,7 +69,15 @@ c.execute("insert into cards values (2004,1003,1,1,?,0,0,0,8,0,0,0,0,0,0,0,0,'')
 for i, (cid, ease) in enumerate([(2001, 3), (2001, 3), (2001, 1), (2003, 4)]):
     c.execute('insert into revlog values (?,?,0,?,?,?,2500,5000,?)', ((now - (10 - i) * 86400) * 1000, cid, ease, 5, 1, 1))
 c.commit(); c.close()
+import struct, zlib
+def png(w, h, rgb):
+    raw = b''.join(b'\x00' + bytes(rgb) * w for _ in range(h))
+    chunk = lambda t, d: struct.pack('>I', len(d)) + t + d + struct.pack('>I', zlib.crc32(t + d) & 0xffffffff)
+    return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', w, h, 8, 2, 0, 0, 0)) + chunk(b'IDAT', zlib.compress(raw)) + chunk(b'IEND', b'')
 with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
     z.write(db, 'collection.anki21')
-    z.writestr('media', '{}')
+    z.writestr('media', json.dumps({'0': 'cat pic.png', '1': 'meow.mp3', '2': 'unused.png'}))
+    z.writestr('0', png(24, 16, (200, 40, 40)))
+    z.writestr('1', b'ID3fake-mp3-bytes')
+    z.writestr('2', png(4, 4, (0, 0, 0)))
 print(out)

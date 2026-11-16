@@ -10,6 +10,9 @@ import {
 } from './study.js';
 import { renderCard, safeFragment, cleanHtml, plain } from './cardtext.js';
 import { preview, dueLabel, currentR, withDefaults, dayOf } from './srs.js';
+import { fillMedia, pickImage } from './studymedia.js';
+
+const sounds = (html) => [...String(html).matchAll(/\[sound:([^\]]+)\]/g)].map((m) => m[1].trim());
 
 const sheet = document.getElementById('study-sheet');
 sheet.addEventListener('click', (e) => { if (e.target === sheet) sheet.close(); });
@@ -204,6 +207,9 @@ function paintReview() {
     }, h('small', {}, label), h('span', {}, ['Again', 'Hard', 'Good', 'Easy'][rating - 1]))))
     : h('div', { class: 'rv-answers' }, h('button', { class: 'rv-show', onclick: reveal }, 'Show answer'));
   s.root.replaceChildren(h('div', { class: 'study-review' }, top, h('div', { class: 'rv-scroll' }, flag, face), bottom));
+  // Sounds play by themselves when a side appears: the front's first, then the answer's own.
+  const front = sounds(html.front);
+  fillMedia(face, { autoplay: s.shown ? sounds(html.back).find((n) => !front.includes(n)) || false : true });
 }
 
 function typeResult(typed, expected) {
@@ -278,6 +284,13 @@ function onKey(e) {
 
 /* ---------- Add / edit note ---------- */
 
+let noteBox = null;   // the open sheet's fields
+let noteRange = null; // where the cursor was in them
+document.addEventListener('selectionchange', () => {
+  const sel = window.getSelection();
+  if (noteBox && sel.rangeCount && noteBox.contains(sel.anchorNode)) noteRange = sel.getRangeAt(0).cloneRange();
+});
+
 /**
  * openNoteSheet({ noteId?, deckId?, typeId?, onSaved? }) — adding stays open for the next
  * note (like Anki); editing closes on save.
@@ -308,6 +321,7 @@ export function openNoteSheet({ noteId = null, deckId = null, typeId = null, onS
     fieldsBox.replaceChildren(...type.fields.map((f, i) => {
       const ed = h('div', { class: 'field-edit', contenteditable: 'true', role: 'textbox', 'aria-multiline': 'true', 'aria-label': f, 'data-field': f });
       ed.append(safeFragment(values[f] || ''));
+      fillMedia(ed);
       if (i === 0) ed.addEventListener('input', checkDupe);
       editors[f] = ed;
       return h('div', { class: 'note-field' }, h('span', { class: 'note-field-name' }, f), ed);
@@ -345,7 +359,23 @@ export function openNoteSheet({ noteId = null, deckId = null, typeId = null, onS
       ed.append(document.createTextNode(` {{c${n}::}}`));
     }
   });
+  // A photo goes where the cursor was (or at the end of the last field typed in).
+  noteBox = fieldsBox;
+  noteRange = null;
+  const photoBtn = h('button', {
+    type: 'button', class: 'fmt-btn fmt-img', 'aria-label': 'Add photo', onpointerdown: (e) => e.preventDefault(),
+    onclick: async () => {
+      const ed = lastEd || editors[type.fields[0]];
+      const name = await pickImage();
+      if (!name || !ed) return;
+      const img = h('img', { class: 'card-img', 'data-media': name, alt: '' });
+      if (noteRange && ed.contains(noteRange.startContainer)) { noteRange.collapse(false); noteRange.insertNode(img); } else ed.append(img);
+      fillMedia(ed);
+      checkDupe();
+    },
+  }, icon(ICONS.image));
   const toolbar = h('div', { class: 'fmt-bar' },
+    photoBtn,
     fmtBtn('Bold', 'fmt-b', () => document.execCommand('bold')),
     fmtBtn('Italic', 'fmt-i', () => document.execCommand('italic')),
     fmtBtn('Underline', 'fmt-u', () => document.execCommand('underline')),

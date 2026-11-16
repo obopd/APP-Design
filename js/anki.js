@@ -7,7 +7,8 @@
 // exported with "Support older Anki versions" ticked (newer packages are compressed with
 // zstd, which browsers can't unpack); that case gets a clear message.
 import { dayOf, dayStart, DEFAULT_PRESET } from './srs.js';
-import { getItem, importBatch, decks as existingDecks } from './study.js';
+import { getItem, importBatch, decks as existingDecks, mediaHas, mediaPut } from './study.js';
+import { typeOf, uploadMedia } from './studymedia.js';
 
 /* ---------- Zip (read straight from the File: only the parts needed) ---------- */
 
@@ -221,13 +222,13 @@ const mins = (arr, fallback) => (Array.isArray(arr) && arr.length ? arr.map(Numb
  * Import an .apkg File. Returns { decks, notes, cards, reviews, skipped }.
  * Notes already imported before (same Anki id) are skipped.
  */
-export async function importApkg(file) {
+export async function importApkg(file, { onProgress = () => {} } = {}) {
   const files = await unzip(file);
   // Newest Anki (2.1.50+): zstd-compressed collection; the plain collection.anki2 next to it
   // is only a "please update Anki" placeholder.
   let bytes;
+  const { zstdDecompress } = await import('./zstd.js');
   if (files['collection.anki21b']) {
-    const { zstdDecompress } = await import('./zstd.js');
     bytes = zstdDecompress(await files['collection.anki21b']());
   } else if (files['collection.anki21'] || files['collection.anki2']) {
     bytes = await (files['collection.anki21'] || files['collection.anki2'])();
@@ -395,12 +396,70 @@ export async function importApkg(file) {
   const added = new Set(items.filter((x) => x.kind === 'card').map((x) => x.id));
   const fresh = reviews.filter((r) => added.has(r.card));
   out.reviews = fresh.length;
+  // Images / sounds the cards use (also for notes imported before, so a second import of
+  // the same deck fills in what's missing).
+  out.media = await importMedia(files, noteRows, models, zstdDecompress, onProgress);
   if (!out.notes && !out.cards && !out.skipped) {
     // Nothing usable came out: say what was found so it can be looked into.
     throw new Error(`No cards could be read from this file (found ${noteRows.length} notes, ${cardRows.length} cards, ${Object.keys(models).length} note types).`);
   }
   await importBatch(items, fresh);
   return out;
+}
+
+/* ---------- Media ---------- */
+
+const isZstd = (b) => b && b.length > 3 && b[0] === 0x28 && b[1] === 0xb5 && b[2] === 0x2f && b[3] === 0xfd;
+const unescapeHtml = (v) => v.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+
+async function importMedia(files, noteRows, models, zstd, onProgress) {
+  if (!files.media) return 0;
+  // Zip entry ("0", "1", …) → file name. Older packages: JSON; newest: zstd + protobuf.
+  const raw = await files.media();
+  const byName = new Map();
+  if (isZstd(raw)) {
+    (pb(zstd(raw))[1] || []).forEach((entry, i) => {
+      const e = pb(entry);
+      const name = pbText(e[1]?.[0]);
+      if (name) byName.set(name, String(e[255]?.[0] ?? i));
+    });
+  } else {
+    try { Object.entries(JSON.parse(new TextDecoder().decode(raw)) || {}).forEach(([zipName, name]) => byName.set(name, zipName)); } catch { return 0; }
+  }
+  if (!byName.size) return 0;
+  // What the cards use: <img src="…"> and [sound:…] in notes, plus files the templates use.
+  const used = new Set();
+  const scan = (html) => {
+    for (const m of String(html || '').matchAll(/<img[^>]*?\ssrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi)) {
+      const v = unescapeHtml(m[1] ?? m[2] ?? m[3] ?? '');
+      used.add(v);
+      try { used.add(decodeURIComponent(v)); } catch { /* keep as is */ }
+    }
+    for (const m of String(html || '').matchAll(/\[sound:([^\]]+)\]/g)) used.add(unescapeHtml(m[1].trim()));
+  };
+  noteRows.forEach((n) => scan(n.flds));
+  Object.values(models).forEach((m) => (m.tmpls || []).forEach((t) => { scan(t.qfmt); scan(t.afmt); }));
+  const wanted = [...used].filter((n) => byName.has(n));
+  const have = await mediaHas(wanted);
+  const todo = wanted.filter((n) => !have.has(n));
+  let done = 0;
+  let batch = [];
+  for (const name of todo) {
+    const entry = files[byName.get(name)];
+    if (entry) {
+      let data = await entry();
+      if (isZstd(data)) data = zstd(data);
+      batch.push({ name, blob: new Blob([data], { type: typeOf(name) }), uploaded: false });
+    }
+    done += 1;
+    if (batch.length >= 25 || done === todo.length) {
+      await mediaPut(batch);
+      batch = [];
+      onProgress(done, todo.length);
+    }
+  }
+  if (todo.length) uploadMedia();
+  return todo.length;
 }
 
 /* ---------- Newer Anki collections (schema 18): settings live in protobuf blobs ---------- */

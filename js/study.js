@@ -43,10 +43,12 @@ let dbp = null;
 function db() {
   if (!dbp) {
     dbp = new Promise((resolve, reject) => {
-      const req = indexedDB.open(DB_NAME, 1);
+      const req = indexedDB.open(DB_NAME, 2);
       req.onupgradeneeded = () => {
         const d = req.result;
         for (const s of ['items', 'reviews', 'meta']) if (!d.objectStoreNames.contains(s)) d.createObjectStore(s, { keyPath: 'id' });
+        // Card images / sounds: { name, blob, uploaded } (v2)
+        if (!d.objectStoreNames.contains('media')) d.createObjectStore('media', { keyPath: 'name' });
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
@@ -97,7 +99,7 @@ export function loadStudy() {
 async function clearLocal() {
   items = new Map(); reviews = new Map(); dirty = new Set(); dirtyReviews = new Set(); goneReviews = new Set();
   meta = { uid: null, cursor: null, rcursor: null };
-  try { await Promise.all(['items', 'reviews', 'meta'].map((s) => tx(s, 'readwrite', (st) => st.clear()))); } catch { /* ignore */ }
+  try { await Promise.all(['items', 'reviews', 'meta', 'media'].map((s) => tx(s, 'readwrite', (st) => st.clear()))); } catch { /* ignore */ }
 }
 
 /* ---------- Reading ---------- */
@@ -535,4 +537,23 @@ function seededOrder(id, day) {
   let h = day;
   for (let i = 0; i < id.length; i += 1) h = Math.imul(h ^ id.charCodeAt(i), 2654435761);
   return (h >>> 0) / 4294967296;
+}
+
+/* ---------- Media files (images, sounds) on the phone: see studymedia.js ---------- */
+
+export const mediaGet = (name) => tx('media', 'readonly', (st) => st.get(name)).catch(() => null);
+export const mediaPut = (recs) => putMany('media', recs);
+export const mediaHas = async (names) => {
+  const out = new Set();
+  await tx('media', 'readonly', (st) => names.forEach((n) => { const r = st.getKey(n); r.onsuccess = () => { if (r.result !== undefined) out.add(n); }; })).catch(() => {});
+  return out;
+};
+/** Names of files not yet uploaded to the account. */
+export async function mediaPending() {
+  const out = [];
+  await tx('media', 'readonly', (st) => {
+    const r = st.openCursor();
+    r.onsuccess = () => { const c = r.result; if (!c) return; if (!c.value.uploaded) out.push(c.value.name); c.continue(); };
+  }).catch(() => {});
+  return out;
 }

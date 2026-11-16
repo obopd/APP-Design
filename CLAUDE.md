@@ -217,7 +217,15 @@ Kinds the database refuses (`23514`, setup not run) are held on the phone per ki
   `{{cloze:Text}}`, `{{type:Back}}`, `{{#F}}…{{/F}}`); built-ins Basic, Basic (and reversed),
   Basic (optional reversed), Basic (type in the answer), Cloze. Card HTML (typed or imported)
   only reaches the page through `safeFragment` (allow-listed tags / styles, rebuilt as DOM;
-  images show 🖼 until media support).
+  `<img src>` only as a bare media name → `img[data-media]`; `[sound:x]` → `.snd` slot;
+  `cleanHtml` turns both back into Anki's form when saving).
+- **Media** (`js/studymedia.js`): images / sounds / videos by name, kept on the phone
+  (IndexedDB store `media`: `{ name, blob, uploaded }`) and uploaded in the background (3 at a
+  time, resumes on open / online) to the private bucket `study-media` at
+  `<user id>/<sha-256 of name>.<ext>` (study.sql; owner-only policy); other devices download
+  a file the first time a card needs it (signed link) and keep it. `fillMedia(root)` fills
+  images and players (sounds autoplay when a side appears: front's first, then the answer's
+  own). The editor's photo button shrinks a photo to ≤1600px JPEG (`pickImage`).
 - **Data** (`js/study.js`, `supabase/study.sql`): IndexedDB `planner-study` (items, reviews,
   meta; per user, cleared on sign-out), all in memory. `study_items` rows (`kind` deck /
   preset / notetype / note / card, `data` jsonb, `deleted` tombstones) + append-only
@@ -240,7 +248,9 @@ Kinds the database refuses (`23514`, setup not run) are held on the phone per ki
   hourly, answer buttons, FSRS memory; SVG bars, tap for numbers.
 - **Anki import** (`js/anki.js`, Decks ↓; the file input has no `accept` so iOS lets you
   pick .apkg): reads only the zip's directory and the collection from the File (`slice`),
-  never the media, so 250 MB decks import in a moment. Newest format: `collection.anki21b`
+  then only the media files the notes / templates use (`importMedia`: legacy JSON map or
+  newest zstd + protobuf map, files zstd-compressed in the newest format), so a 250 MB deck
+  doesn't load whole; re-importing a deck fills in missing media. Newest format: `collection.anki21b`
   decompressed by `js/zstd.js` (own RFC 8878 decoder), schema-18 tables (notetypes / fields /
   templates / decks / deck_config with protobuf blobs, WITHOUT ROWID tables read as index
   b-trees); the `collection.anki2` next to it is only a "please update" placeholder. Older
@@ -249,8 +259,8 @@ Kinds the database refuses (`23514`, setup not run) are held on the phone per ki
   data or estimated), review log; ids `anki-*` so re-imports skip. Fixtures:
   `tests/db/make-apkg.py` (old) and `tests/db/new-format.apkg` (from `make-apkg-new.py`,
   needs the zstandard module).
-- Not built yet (next step, agreed with the owner): images / audio / video, image occlusion,
-  math formulas, custom card CSS.
+- Not built yet (next step, agreed with the owner): image occlusion, math formulas, custom card
+  CSS; media files aren't deleted with their notes yet.
 
 **Keep-awake**: `.github/workflows/keep-awake.yml` calls `ping()` every 3 days so the free
 Supabase project doesn't pause.
@@ -273,7 +283,7 @@ js/settings.js  js/reminders.js (local alerts)  js/push.js  js/live.js  js/searc
 js/social.js  js/people.js  js/chat.js  js/chatview.js
 js/film.js  js/filmui.js  js/write.js  js/organize.js  js/preview.js
 js/srs.js  js/cardtext.js  js/study.js  js/studysearch.js  js/studyui.js  js/studybrowse.js
-js/studystats.js  js/anki.js  js/zstd.js   (study mode)
+js/studystats.js  js/anki.js  js/zstd.js  js/studymedia.js   (study mode)
 supabase/    setup → social → chat → film → push → maintenance → study (.sql, run in this order;
              all safe to re-run) + functions/push/index.ts
 tests/       test suite (see below)          docs/  screenshots, logo images
@@ -362,8 +372,9 @@ anon-key requests are safe checks.
 ## Deployment
 
 GitHub Pages serves this branch's root (relative paths; `.nojekyll`). Supabase project
-`rkpsjkssmfjuavdhayie` (free tier); all SQL files (including `study.sql`) and the push function are
-set up and verified. Push needs the `push` Edge Function (Verify JWT off) and four Vault secrets
+`rkpsjkssmfjuavdhayie` (free tier); all SQL files and the push function are set up and verified, except
+the `study-media` bucket part of `study.sql` (given to the owner; until it's run, media stay
+on the phone). Push needs the `push` Edge Function (Verify JWT off) and four Vault secrets
 (`push_url`, `push_secret`, `vapid_public`, `vapid_private`), given to the owner as one
 paste from the git-excluded `.setup/`. **Never commit** the service_role key, the VAPID
 private key or the push secret.
@@ -371,7 +382,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v102`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v103`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 

@@ -1624,4 +1624,13 @@ i.c-susp { background: #e0b100; }
 .stat-table th:first-child, .stat-table td:first-child { text-align: left; }
 .stat-table td { text-align: right; padding: 5px 0; border-top: 1px solid var(--line); }
 .stat-table td small { color: var(--muted); font-size: 10.5px; }
-.media-missing { opacity: .5; }
+/* Card media */
+.card-img { display: inline-block; max-width: 100%; height: auto; border-radius: 6px; vertical-align: middle; }
+.card-img.loading { min-width: 40px; min-height: 40px; background: var(--soft); }
+.card-img.missing { min-width: 40px; min-height: 40px; background: var(--soft); outline: 1px dashed var(--line); }
+.field-edit .card-img { max-height: 160px; }
+.snd { display: inline-block; vertical-align: middle; margin: 0 4px; }
+.snd-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--soft); display: grid; place-items: center; color: var(--fg); }
+.snd-btn svg { width: 16px; height: 16px; fill: currentColor; stroke: none; }
+.card-video { max-width: 100%; border-radius: 10px; }
+.fmt-img svg { width: 17px; height: 17px; }

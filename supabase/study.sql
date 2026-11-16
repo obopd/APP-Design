@@ -3,6 +3,7 @@
 --
 -- study_items    decks, deck option presets, note types, notes and cards (one row each)
 -- study_reviews  every answer given (Again / Hard / Good / Easy): stats and card history
+-- study-media    (Storage bucket) the cards' images, sounds and videos
 --
 -- Private to each account: only the owner can read or write their rows.
 -- updated_at / synced_at are set by the server on every write; the app uses them to
@@ -58,6 +59,17 @@ create policy "own study reviews" on public.study_reviews for all to authenticat
 
 revoke all on public.study_items, public.study_reviews from anon;
 grant select, insert, update, delete on public.study_items, public.study_reviews to authenticated;
+
+-- Card images / sounds / videos: a private Storage bucket, one folder per person
+-- (<user id>/<file>). Only the owner can see, add, change or delete their files.
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('study-media', 'study-media', false, 52428800)
+on conflict (id) do update set public = false, file_size_limit = 52428800;
+
+drop policy if exists "study media: own" on storage.objects;
+create policy "study media: own" on storage.objects for all to authenticated
+  using (bucket_id = 'study-media' and split_part(name, '/', 1) = auth.uid()::text)
+  with check (bucket_id = 'study-media' and split_part(name, '/', 1) = auth.uid()::text);
 
 -- Deleted items are kept as small markers so other devices learn about the delete;
 -- after 90 days every device has seen them, so they're cleared out nightly.

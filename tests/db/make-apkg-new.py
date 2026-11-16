@@ -49,7 +49,7 @@ c.execute("insert into decks values (1,'Default',?,0,x'',?)", (now, fb(1, fv(1, 
 c.execute("insert into decks values (77,?,?,0,x'',?)", ('MCAT\x1fBiology', now, fb(1, fv(1, 5))))
 c.execute('insert into deck_config values (5,?,?,0,?)', ('MCAT', now, packed_floats(1, [1.0, 10.0, 60.0]) + packed_floats(2, [10.0]) + fv(9, 30) + fv(10, 300)))
 # Notes + cards (one review card with FSRS memory, one new, two cloze)
-words = [('Mitochondria', 'Powerhouse of the <b>cell</b>'), ('Ribosome', 'Makes proteins')]
+words = [('Mitochondria <img src="mito.png">', 'Powerhouse of the <b>cell</b>'), ('Ribosome', 'Makes proteins')]
 for i, (f, b) in enumerate(words):
     c.execute("insert into notes values (?,?,900,?,0,' bio ',?,?,0,0,'')", (5001 + i, f'g{i}', now, f + '\x1f' + b, f))
 c.execute("insert into notes values (5009,'gz',901,?,0,'',?,'x',0,0,'')", (now, 'ATP is made by {{c1::ATP synthase}} in the {{c2::inner membrane}}\x1fbio'))
@@ -71,7 +71,17 @@ out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file_
 with zipfile.ZipFile(out, 'w', zipfile.ZIP_STORED) as z:
     z.writestr('collection.anki2', open(stub, 'rb').read())
     z.writestr('collection.anki21b', zstandard.ZstdCompressor(level=3).compress(open(path, 'rb').read()))
-    z.writestr('media', zstandard.ZstdCompressor().compress(b''))
+    import zlib
+    def png(w, h, rgb):
+        raw = b''.join(b'\x00' + bytes(rgb) * w for _ in range(h))
+        chunk = lambda t, d: struct.pack('>I', len(d)) + t + d + struct.pack('>I', zlib.crc32(t + d) & 0xffffffff)
+        return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', w, h, 8, 2, 0, 0, 0)) + chunk(b'IDAT', zlib.compress(raw)) + chunk(b'IEND', b'')
+    img = png(30, 20, (40, 120, 220))
+    # MediaEntries { repeated MediaEntry entries = 1 } ; MediaEntry { name = 1, size = 2, sha1 = 3 }
+    import hashlib
+    entries = [fb(1, 'mito.png') + fv(2, len(img)) + fb(3, hashlib.sha1(img).digest()), fb(1, 'other.png') + fv(2, 3)]
+    z.writestr('media', zstandard.ZstdCompressor().compress(b''.join(fb(1, e) for e in entries)))
     z.writestr('meta', b'\x08\x03')
-    z.writestr('0', os.urandom(200_000))  # a stand-in image (not imported yet)
+    z.writestr('0', zstandard.ZstdCompressor().compress(img))
+    z.writestr('1', os.urandom(200_000))  # a big file no card uses (not imported)
 print(out, os.path.getsize(out))

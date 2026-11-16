@@ -31,7 +31,7 @@ const server = http.createServer(async (req, res) => {
   const chunks = [];
   for await (const ch of req) chunks.push(ch);
   const buf = Buffer.concat(chunks);
-  const isJson = !(req.headers['content-type'] || '').startsWith('image/');
+  const isJson = (req.headers['content-type'] || 'application/json').includes('json');
   const body = isJson ? buf.toString() : '';
   const json = body ? JSON.parse(body) : undefined;
   try {
@@ -46,23 +46,23 @@ const server = http.createServer(async (req, res) => {
       const sp = url.pathname.slice('/storage/v1'.length);
       const suid = (req.headers.authorization || '').replace('Bearer tok-', '');
       let mm;
-      if ((mm = sp.match(/^\/object\/sign\/([a-z]+)$/)) && req.method === 'POST') {
+      if ((mm = sp.match(/^\/object\/sign\/([a-z-]+)$/)) && req.method === 'POST') {
         const r = await asUser(suid, 'select name from storage.objects where bucket_id = $1 and name = any($2::text[])', [mm[1], json.paths]);
         const ok = new Set(r.rows.map((x) => x.name));
         return send(res, 200, json.paths.map((path) => (ok.has(path) ? { path, signedURL: `/object/sign/${mm[1]}/${path}?token=t` } : { path, error: 'Not found', signedURL: null })));
       }
-      if ((mm = sp.match(/^\/object\/sign\/([a-z]+)\/(.+)$/)) && req.method === 'GET') {
+      if ((mm = sp.match(/^\/object\/sign\/([a-z-]+)\/(.+)$/)) && req.method === 'GET') {
         const r = await pool.query('select data from storage.objects where bucket_id = $1 and name = $2', [mm[1], mm[2]]);
         if (!r.rows[0]) return send(res, 404, {});
         res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Access-Control-Allow-Origin': '*' }); return res.end(r.rows[0].data);
       }
-      if ((mm = sp.match(/^\/object\/([a-z]+)\/(.+)$/)) && req.method === 'POST') {
+      if ((mm = sp.match(/^\/object\/([a-z-]+)\/(.+)$/)) && req.method === 'POST') {
         const b = await pool.query('select 1 from storage.buckets where id = $1', [mm[1]]);
         if (!b.rows[0]) return send(res, 400, { statusCode: '404', error: 'Bucket not found', message: 'Bucket not found' });
         await asUser(suid, 'insert into storage.objects (bucket_id, name, data) values ($1, $2, $3) on conflict (bucket_id, name) do update set data = excluded.data', [mm[1], mm[2], buf]);
         return send(res, 200, { Key: `${mm[1]}/${mm[2]}` });
       }
-      if ((mm = sp.match(/^\/object\/([a-z]+)$/)) && req.method === 'DELETE') {
+      if ((mm = sp.match(/^\/object\/([a-z-]+)$/)) && req.method === 'DELETE') {
         const r = await asUser(suid, 'delete from storage.objects where bucket_id = $1 and name = any($2::text[]) returning name', [mm[1], json.prefixes]);
         return send(res, 200, r.rows);
       }
