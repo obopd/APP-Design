@@ -27,6 +27,15 @@ const leaveReview = async (p) => {
   const p = await phone(b, 'c@x');
   await chooseMode(p, 'Study'); await wait(1800);
 
+  // A deck made just before the app closes is still there when it opens again (its upload
+  // hadn't happened yet).
+  await p.click('[aria-label="New deck"]'); await wait(300);
+  await p.fill('.layer .ask-input', 'Quick'); await p.click('.layer .ask-btn.primary'); await wait(300);
+  await p.reload(); await wait(2500);
+  check('a new deck survives closing and reopening the app at once', await p.locator('.deck-name:text-is("Quick")').count() === 1);
+  await wait(2000);
+  check('…and then reaches the account', (await sql("select count(*)::int n from study_items where kind = 'deck' and data->>'name' = 'Quick'"))[0].n === 1);
+
   // ---------- Formulas ----------
   await S(p, (s) => {
     const d = s.addDeck('Math');

@@ -559,17 +559,28 @@ export function syncStudy() {
 export const hasUnsyncedStudy = () => dirty.size > 0 || dirtyReviews.size > 0;
 
 // Another account signs in, or this one signs out: clear this phone's copy.
+// (Cloud status changes also fire while the phone's copy is still loading: wait for it, or
+// the not-yet-loaded owner looks like someone else and everything gets cleared.)
+let switching = null;
 onCloudChange(() => {
-  const u = currentUser()?.id || null;
-  if (u === meta.uid || !ready) return;
-  ready = (async () => {
+  if (!ready || switching) return;
+  const loading = ready;
+  switching = loading.then(() => {
+    switching = null;
+    const u = currentUser()?.id || null;
+    if (u === meta.uid || ready !== loading) return;
+    ready = clearFor(u);
+  });
+});
+function clearFor(u) {
+  return (async () => {
     await clearLocal();
     meta.uid = u;
     if (!u) localStorage.removeItem(MODE_KEY);
     notify();
     if (u) syncStudy();
   })();
-});
+}
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && studyOn()) syncStudy();
