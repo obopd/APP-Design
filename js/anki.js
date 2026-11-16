@@ -332,7 +332,7 @@ export async function importApkg(file, { onProgress = () => {} } = {}) {
       id: nid, kind: 'note', type: t.id,
       fields: Object.fromEntries(t.fields.map((f, i) => [f, vals[i] || ''])),
       tags: String(n.tags || '').trim().split(/\s+/).filter(Boolean),
-      added: Math.round(Number(n.id)) || Date.now(),
+      added: Number(n.id) > 1e11 ? Math.round(Number(n.id)) : Date.now(), // Anki note ids are creation times (ms)
     });
     out.notes += 1;
   }

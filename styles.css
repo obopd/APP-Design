@@ -1478,6 +1478,8 @@ html.film body::before {
 .ov-subdecks { margin-top: 4px; }
 
 /* Review: a full page over the app; the dock steps aside (like an open chat). */
+/* While reviewing, messages sit above the answer buttons. */
+body.studying .snack { bottom: calc(env(safe-area-inset-bottom) + 92px); }
 body.studying .tabbar { opacity: 0; transform: translateX(-50%) translateY(16px); pointer-events: none; }
 body.studying #brand { visibility: hidden; }
 .study-review {
