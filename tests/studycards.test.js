@@ -37,7 +37,10 @@ const leaveReview = async (p) => {
   check('…and then reaches the account', (await sql("select count(*)::int n from study_items where kind = 'deck' and data->>'name' = 'Quick'"))[0].n === 1);
 
   // Moving a deck into another one (and back out)
-  await S(p, (s) => { s.addDeck('Book Vocab'); s.addDeck('Laws'); });
+  await S(p, (s) => { s.addDeck('Book Vocab'); s.addDeck('Laws'); s.addDeck('The Laws of Human Nature (Robert Greene) and a much longer name'); });
+  await wait(300);
+  check('a long deck name fits the screen (shortened with …)', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth
+    && [...document.querySelectorAll('.study-page')].every((el) => el.scrollWidth <= el.clientWidth)));
   await p.click('.deck-name:text-is("Laws")'); await wait(300);
   await p.click('[aria-label="More"]'); await menu(p, 'Move into');
   check('a deck can’t be moved into itself', await p.locator('.layer .menu-item:text-is("Laws")').count() === 0);

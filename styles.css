@@ -1702,3 +1702,6 @@ i.c-susp { background: #e0b100; }
   .io-pick { padding-left: 12px; padding-right: 12px; }
   .io-pick span { display: none; }
 }
+/* A long deck name shortens with "…" instead of widening the page. */
+.study-page { grid-template-columns: minmax(0, 1fr); }
+.study-page > * { min-width: 0; }
