@@ -3,7 +3,7 @@
 // Screenshots go to tests/out/audit/. Run after tests/start.sh: node tests/audit.js
 const fs = require('fs');
 const path = require('path');
-const { browser, phone, inApp, filmProject, check, wait, done } = require('./helpers');
+const { browser, phone, inApp, filmProject, chooseMode, check, wait, done } = require('./helpers');
 
 const OUT = path.join(__dirname, 'out', 'audit');
 fs.mkdirSync(OUT, { recursive: true });
@@ -76,6 +76,26 @@ async function inspect(p, name, issues) {
     await p.click('.tab[data-view=preview]'); await shot('preview-concept');
     await p.click('.pv-tabs button:has-text("Result")'); await shot('preview-result');
     await p.click('.tab[data-view=chat]'); await shot('film-chat');
+    // Study mode (with an imported Anki deck: images, cloze, subdecks)
+    await p.click('.tab[data-view=calendar]'); await wait(300);
+    await chooseMode(p, 'Study'); await wait(1800);
+    await shot('study-decks-empty');
+    await p.setInputFiles('#apkg-input', path.join(__dirname, 'db', 'new-format.apkg')); await wait(2000);
+    await p.click('.layer .ask-btn.primary').catch(() => {}); await wait(300);
+    await shot('study-decks');
+    await p.click('.deck-name:has-text("MCAT")'); await shot('study-overview');
+    await p.click('.study-now'); await shot('study-front');
+    await p.click('.rv-show'); await shot('study-back');
+    await p.click('.rv-tools [aria-label="Card menu"]'); await p.click('.layer .menu-item:has-text("Card info")'); await shot('study-card-info');
+    await p.click('.layer .ask-btn.primary'); await wait(200);
+    await p.keyboard.press('Escape'); await wait(300);
+    await p.click('.ov-actions .pill:has-text("Options")'); await shot('study-options'); await p.click('#study-sheet [aria-label=Cancel]'); await wait(300);
+    await p.click('.ov-actions .pill:has-text("Add")'); await shot('study-add'); await p.click('#study-sheet [aria-label=Close]'); await wait(300);
+    await p.click('.tab[data-view=browse]'); await shot('study-browse');
+    await p.click('.tab[data-view=stats]'); await shot('study-stats');
+    await p.click('.tab[data-view=decks]'); await wait(300);
+    while (await p.locator('.back-btn').count()) { await p.click('.back-btn'); await wait(200); }
+    await p.click('.mode-btn'); await p.click('.layer .menu-item:has-text("Planner")'); await wait(1800);
     check(`${theme}: no page errors`, !p.errors.length, p.errors.join('; '));
     check(`${theme}: no console errors`, !consoleErrors.length, consoleErrors.slice(0, 3).join('; '));
     await p.ctx.close();

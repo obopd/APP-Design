@@ -88,6 +88,7 @@ export function loadStudy() {
         }
         meta.uid = u;
         for (const it of await getAll('items')) items.set(it.id, it);
+        bump();
         for (const r of await getAll('reviews')) reviews.set(r.id, r);
       }
     } catch { /* private mode / no IndexedDB: work in memory */ }
@@ -97,6 +98,7 @@ export function loadStudy() {
 }
 
 async function clearLocal() {
+  bump();
   items = new Map(); reviews = new Map(); dirty = new Set(); dirtyReviews = new Set(); goneReviews = new Set();
   meta = { uid: null, cursor: null, rcursor: null };
   try { await Promise.all(['items', 'reviews', 'meta', 'media'].map((s) => tx(s, 'readwrite', (st) => st.clear()))); } catch { /* ignore */ }
@@ -104,7 +106,17 @@ async function clearLocal() {
 
 /* ---------- Reading ---------- */
 
-const byKind = (k) => [...items.values()].filter((x) => x.kind === k && !x.deleted);
+// Lists by kind are kept until something changes (`ver`), since the deck list asks for them
+// once per deck. Callers never sort these arrays in place.
+let ver = 0;
+const bump = () => { ver += 1; };
+const kindCache = new Map();
+let kindVer = -1;
+function byKind(k) {
+  if (kindVer !== ver) { kindCache.clear(); kindVer = ver; }
+  if (!kindCache.has(k)) kindCache.set(k, [...items.values()].filter((x) => x.kind === k && !x.deleted));
+  return kindCache.get(k);
+}
 export const getItem = (id) => { const it = items.get(id); return it && !it.deleted ? it : null; };
 
 export const decks = () => byKind('deck');
@@ -141,13 +153,23 @@ export const noteType = (id) => noteTypes().find((t) => t.id === id) || noteType
 export const notes = () => byKind('note');
 export const cards = () => byKind('card');
 export const note = (id) => (getItem(id)?.kind === 'note' ? getItem(id) : null);
-export const cardsOfNote = (nid) => cards().filter((c) => c.note === nid);
+let byNote = null;
+let byNoteVer = -1;
+export function cardsOfNote(nid) {
+  if (byNoteVer !== ver) {
+    byNote = new Map();
+    for (const c of cards()) { if (!byNote.has(c.note)) byNote.set(c.note, []); byNote.get(c.note).push(c); }
+    byNoteVer = ver;
+  }
+  return byNote.get(nid) || [];
+}
 export const reviewsOf = (cid) => [...reviews.values()].filter((r) => r.card === cid).sort((a, b) => a.at - b.at);
 export const allReviews = () => [...reviews.values()];
 
 /* ---------- Writing ---------- */
 
 function touch(it) {
+  bump();
   it.mod = Date.now();
   items.set(it.id, it);
   dirty.add(it.id);
@@ -289,6 +311,7 @@ export const moveCards = (cs, deckId) => put(...cs.map((c) => ({ ...c, deck: dec
 export async function importBatch(newItems, newReviews) {
   const now = Date.now();
   for (const it of newItems) { it.mod = now; items.set(it.id, it); dirty.add(it.id); }
+  bump();
   for (const r of newReviews) { reviews.set(r.id, r); dirtyReviews.add(r.id); }
   nextPos = 0;
   await putMany('items', newItems).catch(() => {});
@@ -315,7 +338,9 @@ const strip = (it) => { const { id, kind, deleted, ...data } = it; return data; 
 async function pushAll() {
   const ids = [...dirty];
   for (let i = 0; i < ids.length; i += BATCH) {
-    const rows = ids.slice(i, i + BATCH).map((id) => items.get(id)).filter(Boolean)
+    const part = ids.slice(i, i + BATCH);
+    part.forEach((id) => { if (!items.has(id)) dirty.delete(id); });
+    const rows = part.map((id) => items.get(id)).filter(Boolean)
       .map((it) => ({ id: it.id, kind: it.kind, data: strip(it), deleted: !!it.deleted }));
     if (rows.length) await rest('study_items?on_conflict=user_id,id', { method: 'POST', body: rows, headers: { Prefer: 'resolution=merge-duplicates' } });
     rows.forEach((r) => { if (items.get(r.id)?.mod === r.data.mod || r.deleted) dirty.delete(r.id); });
@@ -352,6 +377,7 @@ async function pullAll() {
       items.set(r.id, remote);
       dirty.delete(r.id);
       changed.push(remote);
+      bump();
     }
     if (changed.length) await putMany('items', changed).catch(() => {});
     const last = rows.at(-1)?.updated_at;
@@ -458,6 +484,17 @@ export function searchCards(query, now = Date.now()) {
 
 /* ---------- What to study next ---------- */
 
+let byDeck = null;
+let byDeckVer = -1;
+function cardsInDeck(id) {
+  if (byDeckVer !== ver) {
+    byDeck = new Map();
+    for (const c of cards()) { if (!byDeck.has(c.deck)) byDeck.set(c.deck, []); byDeck.get(c.deck).push(c); }
+    byDeckVer = ver;
+  }
+  return byDeck.get(id) || [];
+}
+
 const LEARN_AHEAD = 20 * 60_000; // learning cards due within 20 minutes can come early (Anki)
 const isLearning = (c) => c.state === 'learn' || c.state === 'relearn';
 const available = (c, today) => !c.suspended && c.buried !== today;
@@ -478,7 +515,7 @@ function poolOf(deckId, now) {
     return { filtered: true, cards: list };
   }
   const ids = new Set(deckIds(deckId));
-  return { filtered: false, ids, cards: cards().filter((c) => ids.has(c.deck)) };
+  return { filtered: false, ids, cards: [...ids].flatMap((id) => cardsInDeck(id)) };
 }
 
 /** Today's numbers for a deck: { new, learn, review } still to do (after daily limits). */
@@ -493,17 +530,33 @@ export function dueCounts(deckId, now = Date.now(), seen = null) {
   if (!pool.filtered) {
     let newDone = 0;
     let revDone = 0;
-    for (const r of reviews.values()) {
-      if (dayOf(r.at) !== today) continue;
-      const c = getItem(r.card);
-      if (!c || !pool.ids.has(c.deck)) continue;
-      if (r.state === 'new') newDone += 1;
-      else if (r.state === 'review') revDone += 1;
+    for (const [deckId, [n, r]] of todayByDeck(today)) {
+      if (!pool.ids.has(deckId)) continue;
+      newDone += n;
+      revDone += r;
     }
     review = Math.min(review, Math.max(0, p.reviewsPerDay - revDone));
     fresh = Math.min(fresh, Math.max(0, p.newPerDay - newDone), Math.max(0, p.reviewsPerDay - revDone - review));
   }
   return { new: fresh, learn, review };
+}
+
+// Today's answers per deck: deck id → [new cards started, reviews done] (counted once).
+let tally = { key: '', map: new Map() };
+function todayByDeck(today) {
+  const key = `${ver}:${reviews.size}:${today}`;
+  if (tally.key === key) return tally.map;
+  const map = new Map();
+  for (const r of reviews.values()) {
+    if (dayOf(r.at) !== today || (r.state !== 'new' && r.state !== 'review')) continue;
+    const c = getItem(r.card);
+    if (!c) continue;
+    const row = map.get(c.deck) || [0, 0];
+    row[r.state === 'new' ? 0 : 1] += 1;
+    map.set(c.deck, row);
+  }
+  tally = { key, map };
+  return map;
 }
 
 /**

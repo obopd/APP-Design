@@ -10,7 +10,7 @@ import {
 } from './study.js';
 import { renderCard, safeFragment, cleanHtml, plain } from './cardtext.js';
 import { preview, dueLabel, currentR, withDefaults, dayOf } from './srs.js';
-import { fillMedia, pickImage } from './studymedia.js';
+import { fillMedia, pickImage, uploadState } from './studymedia.js';
 
 const sounds = (html) => [...String(html).matchAll(/\[sound:([^\]]+)\]/g)].map((m) => m[1].trim());
 
@@ -53,6 +53,7 @@ export function renderDecks(root, { onImport }) {
         h('button', { class: 'icon-btn page-add section-folder', 'aria-label': 'New deck', onclick: () => newDeck(null) }, icon(ICONS.folderPlus)),
         h('button', { class: 'icon-btn page-add', 'aria-label': 'Add card', onclick: () => openNoteSheet() }, icon(ICONS.plus)))),
     missing ? h('p', { class: 'set-note' }, 'Saved on this phone only: run supabase/study.sql in Supabase to sync.') : null,
+    uploadState().running ? h('p', { class: 'set-note upload-note' }, `Uploading images ${uploadState().done} / ${uploadState().total}`) : null,
     tree.length
       ? h('ul', { class: 'deck-list' }, tree.map(({ deck: d, depth }) => deckRow(d, depth)).filter(Boolean))
       : h('p', { class: 'set-note study-empty' }, 'No decks yet. Tap + to add a card, or ↓ to bring in an Anki deck.'),
@@ -174,13 +175,13 @@ function paintReview() {
       s.card ? h('button', { class: 'icon-btn', 'aria-label': 'Card menu', onclick: (e) => cardMenu(e.currentTarget) }, icon(ICONS.more)) : null));
   if (!s.card) {
     const later = s.wait ? `Next learning card at ${fmt({ hour: 'numeric', minute: '2-digit' }).format(new Date(s.wait))}.` : '';
-    s.root.replaceChildren(h('div', { class: 'study-review done' }, top,
+    page(s, true, top,
       h('div', { class: 'rv-done' },
         h('p', { class: 'display rv-done-title' }, s.wait ? 'Almost done' : 'Done for today'),
         h('p', { class: 'set-note' }, later || 'Come back tomorrow, or start a custom study session.'),
         h('div', { class: 'ov-actions' },
           deck(s.deckId)?.filtered ? null : h('button', { class: 'pill', onclick: () => { const id = s.deckId; endSession(); openCustomStudy(id); } }, 'Custom study'),
-          h('button', { class: 'pill', onclick: endSession }, 'Back')))));
+          h('button', { class: 'pill', onclick: endSession }, 'Back'))));
     return;
   }
   const n = note(s.card.note);
@@ -206,10 +207,21 @@ function paintReview() {
       class: `rv-btn r${rating}`, onclick: () => answerNow(rating), 'aria-label': `${['Again', 'Hard', 'Good', 'Easy'][rating - 1]}, ${label}`,
     }, h('small', {}, label), h('span', {}, ['Again', 'Hard', 'Good', 'Easy'][rating - 1]))))
     : h('div', { class: 'rv-answers' }, h('button', { class: 'rv-show', onclick: reveal }, 'Show answer'));
-  s.root.replaceChildren(h('div', { class: 'study-review' }, top, h('div', { class: 'rv-scroll' }, flag, face), bottom));
+  page(s, false, top, h('div', { class: 'rv-scroll' }, flag, face), bottom);
   // Sounds play by themselves when a side appears: the front's first, then the answer's own.
   const front = sounds(html.front);
   fillMedia(face, { autoplay: s.shown ? sounds(html.back).find((n) => !front.includes(n)) || false : true });
+}
+
+// The review page is made once per session (it slides in once); each card only swaps its
+// contents.
+function page(s, done, ...kids) {
+  if (!s.page || !s.root.contains(s.page)) {
+    s.page = h('div', { class: 'study-review' });
+    s.root.replaceChildren(s.page);
+  }
+  s.page.classList.toggle('done', done);
+  s.page.replaceChildren(...kids);
 }
 
 function typeResult(typed, expected) {

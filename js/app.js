@@ -25,6 +25,7 @@ import { studyOn, onStudyChange, loadStudy, syncStudy } from './study.js';
 import { renderDecks, reviewing, leaveStudy, setBrowseHook, setModeMenu } from './studyui.js';
 import { renderBrowse, browseFor } from './studybrowse.js';
 import { renderStats } from './studystats.js';
+import { uploadMedia, onMediaChange } from './studymedia.js';
 import { snack, tell, pick } from './ui.js';
 
 const calendarView = document.getElementById('view-calendar');
@@ -411,8 +412,11 @@ setupBrand(document.getElementById('brand'), () => {
 onStudyChange(() => {
   if (document.documentElement.classList.contains('study') !== studyOn()) paintBrand(false);
   if (isGated() || reviewing()) return;
+  // Don't wipe a search being typed in Browse.
+  if (document.activeElement?.matches?.('.browse-search')) return;
   if (studyOn() || STUDY_TABS.includes(view.tab)) render();
 });
+onMediaChange(() => { if (view.tab === 'decks' && !isGated() && !reviewing()) render(); });
 setBrowseHook((q) => { browseFor(q); view.tab = 'browse'; render(); });
 const afterSwitch = () => { if (!studyOn()) leaveStudy(); fitTab(); render(); };
 setModeMenu(async (anchor) => {
@@ -594,4 +598,4 @@ onCloudChange(() => {
 handleAuthRedirect()
   .then((type) => { if (type === 'recovery') { view.tab = 'settings'; render(); openAccountSheet('new-password'); } })
   .catch(() => {})
-  .finally(() => syncNow().then(() => { refreshSocial(); refreshChats(); refreshFilm(); syncPush(); if (studyOn()) syncStudy(); openFromNotification(launchView); }));
+  .finally(() => syncNow().then(() => { refreshSocial(); refreshChats(); refreshFilm(); syncPush(); if (studyOn()) syncStudy(); uploadMedia(); openFromNotification(launchView); }));
