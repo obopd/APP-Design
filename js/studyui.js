@@ -8,7 +8,9 @@ import {
   note, cardsOfNote, addNote, updateNote, deleteNotes, duplicateOf, answerCard, bury, setSuspended, setFlag,
   dueCounts, nextCard, reviewsOf, getItem, studyStatus, defaultDeck, uid, remove,
 } from './study.js';
-import { renderCard, safeFragment, cleanHtml, plain } from './cardtext.js';
+import { renderCard, safeFragment, cleanHtml, plain, styleClass } from './cardtext.js';
+import { openNoteTypes } from './studytypes.js';
+import { paintOcclusion, occlusionEditor } from './occlusion.js';
 import { preview, dueLabel, currentR, withDefaults, dayOf } from './srs.js';
 import { fillMedia, pickImage, uploadState } from './studymedia.js';
 
@@ -187,7 +189,7 @@ function paintReview() {
   const n = note(s.card.note);
   const type = noteType(n?.type);
   const html = renderCard(type, n || { fields: {}, tags: [] }, s.card.ord, { deck: deckPath(s.card.deck) });
-  const face = h('div', { class: 'rv-card' }, safeFragment(s.shown ? html.back : html.front));
+  const face = h('div', { class: `rv-card ${styleClass(type)}`.trim() }, safeFragment(s.shown ? html.back : html.front, { card: true }));
   // Type-in: a field on the front, a comparison on the back.
   face.querySelectorAll('.typein').forEach((slot, i) => {
     if (i > 0) { slot.remove(); return; }
@@ -207,6 +209,7 @@ function paintReview() {
       class: `rv-btn r${rating}`, onclick: () => answerNow(rating), 'aria-label': `${['Again', 'Hard', 'Good', 'Easy'][rating - 1]}, ${label}`,
     }, h('small', {}, label), h('span', {}, ['Again', 'Hard', 'Good', 'Easy'][rating - 1]))))
     : h('div', { class: 'rv-answers' }, h('button', { class: 'rv-show', onclick: reveal }, 'Show answer'));
+  if (type.io && n) paintOcclusion(face, type, n, s.card.ord, s.shown);
   page(s, false, top, h('div', { class: 'rv-scroll' }, flag, face), bottom);
   // Sounds play by themselves when a side appears: the front's first, then the answer's own.
   const front = sounds(html.front);
@@ -323,6 +326,7 @@ export function openNoteSheet({ noteId = null, deckId = null, typeId = null, onS
   const dupe = h('p', { class: 'dupe-note', hidden: true }, 'Duplicate: another note already has this.');
   const fieldsBox = h('div', { class: 'note-fields' });
   let editors = {};
+  let io = null; // image occlusion: the picture and its boxes
 
   const checkDupe = () => {
     const first = editors[type.fields[0]];
@@ -330,7 +334,9 @@ export function openNoteSheet({ noteId = null, deckId = null, typeId = null, onS
   };
   const buildFields = (values = {}) => {
     editors = {};
-    fieldsBox.replaceChildren(...type.fields.map((f, i) => {
+    io = type.io ? occlusionEditor({ image: (String(values[type.io.image] || '').match(/<img[^>]*?\ssrc\s*=\s*"([^"]+)"/i) || [])[1] || null, text: values[type.io.occl] || '' }) : null;
+    const shown = type.fields.filter((f) => !io || (f !== type.io.occl && f !== type.io.image));
+    fieldsBox.replaceChildren(...(io ? [io.el] : []), ...shown.map((f, i) => {
       const ed = h('div', { class: 'field-edit', contenteditable: 'true', role: 'textbox', 'aria-multiline': 'true', 'aria-label': f, 'data-field': f });
       ed.append(safeFragment(values[f] || ''));
       fillMedia(ed);
@@ -341,14 +347,26 @@ export function openNoteSheet({ noteId = null, deckId = null, typeId = null, onS
     checkDupe();
   };
   buildFields(editing?.fields || {});
-  typeBtn.addEventListener('change', () => {
+  // Switch to another (or an edited) note type, keeping what was typed: same-named fields,
+  // else in order.
+  const retype = (id) => {
     const old = Object.fromEntries(Object.entries(editors).map(([k, el]) => [k, el.innerHTML]));
-    const oldOrder = type.fields.map((f) => old[f]);
-    type = noteType(typeBtn.value);
-    // Keep what was typed: same-named fields, else in order.
-    buildFields(Object.fromEntries(type.fields.map((f, i) => [f, old[f] ?? oldOrder[i] ?? ''])));
+    const oldOrder = type.fields.filter((f) => editors[f]).map((f) => old[f]);
+    if (io) Object.assign(old, ioFields());
+    type = noteType(id);
+    buildFields(Object.fromEntries(type.fields.filter((f) => !type.io || (f !== type.io.occl && f !== type.io.image)).map((f, i) => [f, old[f] ?? oldOrder[i] ?? ''])
+      .concat(type.io ? [[type.io.occl, old[type.io.occl] || ''], [type.io.image, old[type.io.image] || '']] : [])));
     toolbarPaint();
-  });
+  };
+  typeBtn.addEventListener('change', () => retype(typeBtn.value));
+  const typesBtn = h('button', {
+    type: 'button', class: 'icon-btn nt-open', 'aria-label': 'Note types',
+    onclick: () => openNoteTypes({ typeId: type.id, onClose: () => {
+      const id = noteTypes().some((t) => t.id === type.id) ? type.id : 'nt-basic';
+      typeBtn.setOptions(noteTypes().map((t) => [t.id, t.name]), id);
+      retype(id);
+    } }),
+  }, icon(ICONS.cards));
 
   // Formatting (works on the field being typed in): bold, italic, underline, cloze.
   let lastEd = null;
@@ -392,15 +410,21 @@ export function openNoteSheet({ noteId = null, deckId = null, typeId = null, onS
     fmtBtn('Italic', 'fmt-i', () => document.execCommand('italic')),
     fmtBtn('Underline', 'fmt-u', () => document.execCommand('underline')),
     clozeBtn);
-  const toolbarPaint = () => { clozeBtn.hidden = !type.cloze; };
+  const toolbarPaint = () => { clozeBtn.hidden = !type.cloze || !!type.io; photoBtn.hidden = !!type.io; };
   toolbarPaint();
 
-  const read = () => Object.fromEntries(type.fields.map((f) => [f, cleanHtml(editors[f].innerHTML)]));
+  const ioFields = () => ({ [type.io.occl]: io.field(!editing), [type.io.image]: io.image() ? `<img src="${io.image().replace(/&/g, '&amp;').replace(/"/g, '&quot;')}">` : '' });
+  const read = () => ({
+    ...Object.fromEntries(type.fields.filter((f) => editors[f]).map((f) => [f, cleanHtml(editors[f].innerHTML)])),
+    ...(io ? ioFields() : {}),
+  });
   const close = () => sheet.close();
   const submit = (ev) => {
     ev.preventDefault();
     const fields = read();
-    if (!plain(fields[type.fields[0]])) { tell('Nothing to add', `Fill in “${type.fields[0]}” first.`); return; }
+    if (io && !io.image()) { tell('No picture yet', 'Tap Picture to choose one.'); return; }
+    if (io && !io.count()) { tell('Nothing hidden yet', 'Drag over a part of the picture to hide it. Each box is one card.'); return; }
+    if (!io && !plain(fields[type.fields[0]])) { tell('Nothing to add', `Fill in “${type.fields[0]}” first.`); return; }
     if (type.cloze && !/\{\{c\d+::/.test(Object.values(fields).join(' '))) {
       tell('No cloze yet', 'Select a word and tap […] to hide it, or type {{c1::word}}.');
       return;
@@ -438,7 +462,7 @@ export function openNoteSheet({ noteId = null, deckId = null, typeId = null, onS
       editing ? h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Delete note', onclick: del }, icon(ICONS.trash)) : null,
       h('button', { type: 'submit', class: 'icon-btn ok', 'aria-label': editing ? 'Save' : 'Add' }, icon(ICONS.check))),
     h('div', { class: 'fields' },
-      h('div', { class: 'field' }, h('span', {}, 'Type'), typeBtn),
+      h('div', { class: 'field' }, h('span', {}, 'Type'), h('span', { class: 'field-ctl' }, typeBtn, typesBtn)),
       h('div', { class: 'field' }, h('span', {}, 'Deck'), deckBtn)),
     toolbar,
     fieldsBox,

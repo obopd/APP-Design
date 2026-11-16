@@ -25,7 +25,7 @@ import { studyOn, onStudyChange, loadStudy, syncStudy } from './study.js';
 import { renderDecks, reviewing, leaveStudy, setBrowseHook, setModeMenu } from './studyui.js';
 import { renderBrowse, browseFor } from './studybrowse.js';
 import { renderStats } from './studystats.js';
-import { uploadMedia, onMediaChange } from './studymedia.js';
+import { uploadMedia, onMediaChange, cleanupMedia } from './studymedia.js';
 import { snack, tell, pick } from './ui.js';
 
 const calendarView = document.getElementById('view-calendar');
@@ -598,4 +598,4 @@ onCloudChange(() => {
 handleAuthRedirect()
   .then((type) => { if (type === 'recovery') { view.tab = 'settings'; render(); openAccountSheet('new-password'); } })
   .catch(() => {})
-  .finally(() => syncNow().then(() => { refreshSocial(); refreshChats(); refreshFilm(); syncPush(); if (studyOn()) syncStudy(); uploadMedia(); openFromNotification(launchView); }));
+  .finally(() => syncNow().then(() => { refreshSocial(); refreshChats(); refreshFilm(); syncPush(); if (studyOn()) syncStudy().then(() => cleanupMedia()); uploadMedia(); openFromNotification(launchView); }));

@@ -144,9 +144,18 @@ export const presetOf = (deckId) => {
   return withDefaults(presets().find((p) => p.id === id) || presets()[0]);
 };
 
+// Built-in types first, in their own order (an edited one in its place), then the deck's own.
+let typesCache = null;
+let typesVer = -1;
 export const noteTypes = () => {
-  const saved = byKind('notetype');
-  return [...BUILTIN_TYPES.filter((b) => !saved.some((s) => s.id === b.id)).map((b) => ({ kind: 'notetype', ...b })), ...saved];
+  if (typesVer !== ver) {
+    const saved = byKind('notetype');
+    const byId = new Map(saved.map((t) => [t.id, t]));
+    const builtin = new Set(BUILTIN_TYPES.map((b) => b.id));
+    typesCache = [...BUILTIN_TYPES.map((b) => byId.get(b.id) || { kind: 'notetype', ...b }), ...saved.filter((t) => !builtin.has(t.id))];
+    typesVer = ver;
+  }
+  return typesCache;
 };
 export const noteType = (id) => noteTypes().find((t) => t.id === id) || noteTypes()[0];
 
@@ -191,6 +200,7 @@ export function remove(...ids) {
   for (const id of ids) {
     const it = items.get(id);
     if (!it) continue;
+    if (it.kind === 'note') noteChanges += 1;
     const t = { id, kind: it.kind, deleted: true };
     touch(t);
     changed.push(t);
@@ -234,6 +244,7 @@ export function addNote(typeId, fields, tags, deckId) {
 
 /** Save a note's fields / tags; adds cards for new templates or clozes (never removes). */
 export function updateNote(n, fields, tags, deckId = null) {
+  noteChanges += 1;
   n.fields = fields;
   n.tags = cleanTags(tags);
   const type = noteType(n.type);
@@ -249,6 +260,128 @@ export function updateNote(n, fields, tags, deckId = null) {
 export function deleteNotes(nids) {
   const set = new Set(nids);
   remove(...nids, ...cards().filter((c) => set.has(c.note)).map((c) => c.id));
+}
+
+/* ---------- Note types: fields, card templates, styling ---------- */
+
+export const isBuiltinType = (id) => BUILTIN_TYPES.some((b) => b.id === id);
+export const notesOfType = (tid) => notes().filter((n) => n.type === tid);
+/** A copy of a note type to edit (built-in ones share their arrays with the app). */
+export const editableType = (id) => JSON.parse(JSON.stringify(noteType(id)));
+
+// Cards a note type's notes should have but don't yet (after a template is added or changed).
+function missingCards(type) {
+  const made = [];
+  for (const n of notesOfType(type.id)) {
+    const have = cardsOfNote(n.id);
+    const ords = new Set(have.map((c) => c.ord));
+    const deckId = have[0]?.deck || defaultDeck().id;
+    for (const ord of cardOrds(type, n.fields)) {
+      if (ords.has(ord)) continue;
+      made.push({ id: uid(), kind: 'card', note: n.id, ord, deck: deckId, state: 'new', pos: newPos(), due: 0, reps: 0, lapses: 0, flag: 0 });
+    }
+  }
+  return made;
+}
+/** How many cards saving this version of a note type would add. */
+export const cardsToAdd = (type) => missingCards(type).length;
+
+/** Save a note type (name, templates, styling) and make any cards it now needs. */
+export function saveNoteType(type) {
+  const t = { ...type, kind: 'notetype' };
+  const made = missingCards(t);
+  put(t, ...made);
+  return made.length;
+}
+
+/** A new note type copied from another one. */
+export function addNoteType(baseId, name) {
+  const base = editableType(baseId);
+  const t = { ...base, id: uid(), kind: 'notetype', name: name.trim() };
+  delete t.mod;
+  put(t);
+  return t;
+}
+
+const RESERVED = new Set(['FrontSide', 'Tags', 'Deck', 'Subdeck', 'Type', 'Card']);
+/** Why a field name can't be used ('' when it can). */
+export function fieldNameProblem(type, name, except = null) {
+  const v = name.trim();
+  if (!v) return 'Type a name.';
+  if (/[:{}"]/.test(v) || /^[#^/]/.test(v)) return 'Names can’t use : { } " or start with # ^ /.';
+  if (RESERVED.has(v)) return `“${v}” is used by the templates themselves.`;
+  if (type.fields.some((f) => f !== except && f.toLowerCase() === v.toLowerCase())) return 'Another field has that name.';
+  return '';
+}
+
+const reRaw = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+export function renameField(type, from, to) {
+  const name = to.trim();
+  const re = new RegExp(`(\\{\\{[#^/]?\\s*(?:[\\w-]+:)*)${reRaw(from)}(\\s*\\}\\})`, 'g');
+  const swap = (tpl) => String(tpl || '').replace(re, (all, a, b) => `${a}${name}${b}`);
+  type.fields = type.fields.map((f) => (f === from ? name : f));
+  type.templates = type.templates.map((tp) => ({ ...tp, front: swap(tp.front), back: swap(tp.back) }));
+  if (type.io) type.io = Object.fromEntries(Object.entries(type.io).map(([k, v]) => [k, v === from ? name : v]));
+  const changed = notesOfType(type.id).map((n) => {
+    const fields = {};
+    for (const [k, v] of Object.entries(n.fields || {})) fields[k === from ? name : k] = v;
+    n.fields = fields;
+    return n;
+  });
+  put({ ...type, kind: 'notetype' }, ...changed);
+}
+export function addField(type, name) {
+  type.fields = [...type.fields, name.trim()];
+  put({ ...type, kind: 'notetype' });
+}
+/** Remove a field and what every note of this type had in it. */
+export function removeField(type, name) {
+  type.fields = type.fields.filter((f) => f !== name);
+  const changed = notesOfType(type.id).filter((n) => name in (n.fields || {})).map((n) => {
+    const fields = { ...n.fields };
+    delete fields[name];
+    n.fields = fields;
+    return n;
+  });
+  noteChanges += 1; // its pictures may be unused now
+  put({ ...type, kind: 'notetype' }, ...changed);
+}
+export function moveField(type, name, by) {
+  const i = type.fields.indexOf(name);
+  const j = i + by;
+  if (i < 0 || j < 0 || j >= type.fields.length) return;
+  const f = [...type.fields];
+  [f[i], f[j]] = [f[j], f[i]];
+  type.fields = f;
+  put({ ...type, kind: 'notetype' });
+}
+
+/** What removing card template `ord` deletes: { cards, notes } (notes left with no card). */
+export function templateRemoval(type, ord) {
+  const doomed = [];
+  const orphans = [];
+  for (const n of notesOfType(type.id)) {
+    const cs = cardsOfNote(n.id);
+    const gone = cs.filter((c) => c.ord === ord);
+    doomed.push(...gone);
+    if (gone.length && gone.length === cs.length) orphans.push(n);
+  }
+  return { cards: doomed, notes: orphans };
+}
+export function removeTemplate(type, ord) {
+  const { cards: doomed, notes: orphans } = templateRemoval(type, ord);
+  const shifted = [];
+  for (const n of notesOfType(type.id)) for (const c of cardsOfNote(n.id)) if (c.ord > ord) { c.ord -= 1; shifted.push(c); }
+  type.templates = type.templates.filter((t, i) => i !== ord);
+  put({ ...type, kind: 'notetype' }, ...shifted);
+  if (doomed.length || orphans.length) remove(...doomed.map((c) => c.id), ...orphans.map((n) => n.id));
+}
+
+/** Delete a note type with all its notes and cards. */
+export function deleteNoteType(id) {
+  const ns = notesOfType(id);
+  deleteNotes(ns.map((n) => n.id));
+  remove(id);
 }
 
 export const cleanTags = (tags) => [...new Set((Array.isArray(tags) ? tags : String(tags || '').split(/\s+/))
@@ -374,6 +507,7 @@ async function pullAll() {
       const remote = r.deleted ? { id: r.id, kind: r.kind, deleted: true, mod: r.data?.mod || 0 } : { id: r.id, kind: r.kind, ...r.data };
       if (local && dirty.has(r.id) && (local.mod || 0) > (remote.mod || 0)) continue; // ours is newer: push wins
       if (local && !dirty.has(r.id) && JSON.stringify(local) === JSON.stringify(remote)) continue;
+      if (r.kind === 'note') noteChanges += 1;
       items.set(r.id, remote);
       dirty.delete(r.id);
       changed.push(remote);
@@ -601,6 +735,20 @@ export const mediaHas = async (names) => {
   await tx('media', 'readonly', (st) => names.forEach((n) => { const r = st.getKey(n); r.onsuccess = () => { if (r.result !== undefined) out.add(n); }; })).catch(() => {});
   return out;
 };
+/** Every media file on the phone: [{ name, uploaded, added }] (no file contents). */
+export async function mediaList() {
+  const out = [];
+  await tx('media', 'readonly', (st) => {
+    const r = st.openCursor();
+    r.onsuccess = () => { const c = r.result; if (!c) return; out.push({ name: c.value.name, uploaded: !!c.value.uploaded, added: c.value.added || 0 }); c.continue(); };
+  }).catch(() => {});
+  return out;
+}
+export const mediaDelete = (names) => delMany('media', names);
+// Counts note deletes / edits, so media cleanup only runs when it could find something.
+let noteChanges = 0;
+export const noteChangeCount = () => noteChanges;
+
 /** Names of files not yet uploaded to the account. */
 export async function mediaPending() {
   const out = [];

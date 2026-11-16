@@ -35,7 +35,10 @@ function frontOf(c) {
   const key = `${c.id}:${note(c.note)?.mod || 0}`;
   if (!frontCache.has(key)) {
     const n = note(c.note);
-    frontCache.set(key, n ? plain(renderCard(noteType(n.type), n, c.ord).front) : '');
+    const t = n && noteType(n.type);
+    const text = n ? plain(renderCard(t, n, c.ord).front) : '';
+    // A card that's only a picture (e.g. image occlusion) still gets a name in the list.
+    frontCache.set(key, text || (n && /<img/i.test(renderCard(t, n, c.ord).front) ? `${t.io ? `Box ${c.ord + 1}` : 'Picture'}` : text));
   }
   return frontCache.get(key);
 }

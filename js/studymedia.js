@@ -6,8 +6,12 @@
 // so other devices download it the first time a card needs it.
 // Cards refer to files by name, like Anki: <img src="name.jpg"> and [sound:name.mp3].
 import { h, icon, ICONS } from './util.js';
-import { currentUser, isConfigured, uploadFile, signFiles } from './cloud.js';
-import { mediaGet, mediaPut, mediaPending, studyStatus } from './study.js';
+import { currentUser, isConfigured, uploadFile, signFiles, removeFiles } from './cloud.js';
+import {
+  mediaGet, mediaPut, mediaPending, mediaList, mediaDelete, studyStatus, loadStudy, notes, noteTypes,
+  noteChangeCount, onStudyChange,
+} from './study.js';
+import { mediaRefs } from './cardtext.js';
 
 const BUCKET = 'study-media';
 const TYPES = {
@@ -36,7 +40,7 @@ async function keyOf(name) {
 
 /** Save files on the phone ([{ name, blob }]); they upload in the background. */
 export async function saveMedia(list) {
-  const recs = list.map(({ name, blob }) => ({ name, blob: blob.type ? blob : new Blob([blob], { type: typeOf(name) }), uploaded: false }));
+  const recs = list.map(({ name, blob }) => ({ name, blob: blob.type ? blob : new Blob([blob], { type: typeOf(name) }), uploaded: false, added: Date.now() }));
   await mediaPut(recs);
   recs.forEach((r) => { if (urls.has(r.name)) { URL.revokeObjectURL(urls.get(r.name)); urls.delete(r.name); } });
   uploadMedia();
@@ -52,7 +56,7 @@ async function download(name) {
     const res = await fetch(signed[key]);
     if (!res.ok) return null;
     const blob = new Blob([await res.arrayBuffer()], { type: typeOf(name) });
-    await mediaPut([{ name, blob, uploaded: true }]);
+    await mediaPut([{ name, blob, uploaded: true, added: Date.now() }]);
     return blob;
   } catch { return null; }
 }
@@ -167,6 +171,41 @@ export function pickImage() {
     input.click();
   });
 }
+
+/**
+ * Delete files no note or note type uses any more, from the phone and the account.
+ * Files added in the last 10 minutes are kept (a photo picked for a card not saved yet).
+ */
+export async function cleanupMedia() {
+  await loadStudy();
+  const all = notes();
+  if (!all.length) return 0; // nothing loaded (or no notes): never wipe everything
+  const used = new Set();
+  for (const n of all) for (const v of Object.values(n.fields || {})) mediaRefs(v, used);
+  for (const t of noteTypes()) for (const tp of t.templates || []) { mediaRefs(tp.front, used); mediaRefs(tp.back, used); }
+  const cutoff = Date.now() - 10 * 60_000;
+  const gone = (await mediaList()).filter((r) => !used.has(r.name) && r.added < cutoff);
+  if (!gone.length) return 0;
+  await mediaDelete(gone.map((r) => r.name));
+  gone.forEach((r) => { if (urls.has(r.name)) { URL.revokeObjectURL(urls.get(r.name)); urls.delete(r.name); } });
+  const uploaded = gone.filter((r) => r.uploaded);
+  if (uploaded.length && isConfigured() && currentUser()) {
+    try {
+      const keys = await Promise.all(uploaded.map((r) => keyOf(r.name)));
+      for (let i = 0; i < keys.length; i += 100) await removeFiles(BUCKET, keys.slice(i, i + 100));
+    } catch { /* the account copy stays; nothing on the phone uses it */ }
+  }
+  return gone.length;
+}
+// After notes are deleted or edited (here or on another device), tidy up a little later.
+let seenChanges = 0;
+let cleanTimer = 0;
+onStudyChange(() => {
+  if (noteChangeCount() === seenChanges) return;
+  seenChanges = noteChangeCount();
+  clearTimeout(cleanTimer);
+  cleanTimer = setTimeout(() => cleanupMedia(), 4000);
+});
 
 window.addEventListener('online', () => uploadMedia());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') uploadMedia(); });

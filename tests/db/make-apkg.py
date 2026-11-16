@@ -1,6 +1,8 @@
 # Builds a small Anki package (legacy "Support older Anki versions" format) for the import test.
+# With --io it also holds an image occlusion note (Anki's own note type, drawn by a script there).
 import json, sqlite3, sys, tempfile, time, zipfile, os
 out = sys.argv[1]
+io = '--io' in sys.argv
 d = tempfile.mkdtemp()
 db = os.path.join(d, 'collection.anki21')
 c = sqlite3.connect(db)
@@ -52,6 +54,16 @@ models = {
   '222': {'name': 'Cloze', 'type': 1, 'flds': [{'name': 'Text', 'ord': 0}, {'name': 'Extra', 'ord': 1}],
           'tmpls': [{'name': 'Cloze', 'ord': 0, 'qfmt': '{{cloze:Text}}', 'afmt': '{{cloze:Text}}<br>{{Extra}}'}], 'css': ''},
 }
+if io:
+    models['333'] = {'name': 'Image Occlusion', 'type': 1, 'css': '#image-occlusion-container { position: relative; }',
+        'flds': [{'name': n, 'ord': i} for i, n in enumerate(['Occlusion', 'Image', 'Header', 'Back Extra', 'Comments'])],
+        'tmpls': [{'name': 'Image Occlusion', 'ord': 0,
+                   'qfmt': '{{#Header}}<div>{{Header}}</div>{{/Header}}<div style="display: none">{{cloze:Occlusion}}</div><div id="err"></div>'
+                           '<div id="image-occlusion-container">{{Image}}<canvas id="image-occlusion-canvas"></canvas></div>'
+                           '<script>try { anki.imageOcclusion.setup(); } catch (exc) { document.getElementById("err").innerHTML = exc; }</script>',
+                   'afmt': '{{#Header}}<div>{{Header}}</div>{{/Header}}<div style="display: none">{{cloze:Occlusion}}</div>'
+                           '<div id="image-occlusion-container">{{Image}}<canvas id="image-occlusion-canvas"></canvas></div>'
+                           '<script>anki.imageOcclusion.setup();</script><div>{{Back Extra}}</div>'}]}
 decks = {'1': {'name': 'Default', 'dyn': 0, 'conf': 1}, '50': {'name': 'Languages\x1fFrench', 'dyn': 0, 'conf': 7}}
 dconf = {'1': {'name': 'Default', 'new': {'perDay': 20, 'delays': [1, 10], 'ints': [1, 4], 'initialFactor': 2500},
                'rev': {'perDay': 200, 'ease4': 1.3, 'maxIvl': 36500}, 'lapse': {'delays': [10], 'leechFails': 8, 'leechAction': 0}},
@@ -61,6 +73,13 @@ c.execute('insert into col values (1,?,?,?,11,0,0,0,?,?,?,?,?)', (crt, now, now,
 c.execute("insert into notes values (1001,'g1',111,?,0,' verb french ',?,'chien',0,0,'')", (now, 'chien\x1f<b>dog</b>'))
 c.execute("insert into notes values (1002,'g2',111,?,0,'',?,'chat',0,0,'')", (now, 'chat<img src=\"cat%20pic.png\">\x1fcat [sound:meow.mp3]'))
 c.execute("insert into notes values (1003,'g3',222,?,0,'',?,'x',0,0,'')", (now, 'Paris is the {{c1::capital}} of {{c2::France}}\x1fgeo'))
+if io:
+    occl = ('{{c1::image-occlusion:rect:left=.1:top=.1:width=.3:height=.2:oi=1}}<br>'
+            '{{c2::image-occlusion:ellipse:left=.5:top=.5:rx=.1:ry=.15:oi=1}}<br>'
+            '{{c2::image-occlusion:polygon:points=.6,.1 .9,.1 .75,.3:oi=1}}')
+    c.execute("insert into notes values (1004,'g4',333,?,0,'',?,'x',0,0,'')", (now, occl + '\x1f<img src="heart.png">\x1fThe heart\x1fextra\x1f'))
+    c.execute("insert into cards values (2005,1004,1,0,?,0,0,0,9,0,0,0,0,0,0,0,0,'')", (now,))
+    c.execute("insert into cards values (2006,1004,1,1,?,0,0,0,10,0,0,0,0,0,0,0,0,'')", (now,))
 # review card due today, a new card, a suspended card, two cloze cards
 c.execute("insert into cards values (2001,1001,50,0,?,0,2,2,?,10,2500,5,1,0,0,0,1,'')", (now, 100))
 c.execute("insert into cards values (2002,1002,50,0,?,0,0,0,7,0,0,0,0,0,0,0,0,'')", (now,))
@@ -76,7 +95,8 @@ def png(w, h, rgb):
     return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', w, h, 8, 2, 0, 0, 0)) + chunk(b'IDAT', zlib.compress(raw)) + chunk(b'IEND', b'')
 with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
     z.write(db, 'collection.anki21')
-    z.writestr('media', json.dumps({'0': 'cat pic.png', '1': 'meow.mp3', '2': 'unused.png'}))
+    z.writestr('media', json.dumps({'0': 'cat pic.png', '1': 'meow.mp3', '2': 'unused.png', **({'3': 'heart.png'} if io else {})}))
+    if io: z.writestr('3', png(40, 30, (40, 120, 200)))
     z.writestr('0', png(24, 16, (200, 40, 40)))
     z.writestr('1', b'ID3fake-mp3-bytes')
     z.writestr('2', png(4, 4, (0, 0, 0)))

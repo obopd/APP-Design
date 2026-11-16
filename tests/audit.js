@@ -90,7 +90,14 @@ async function inspect(p, name, issues) {
     await p.click('.layer .ask-btn.primary'); await wait(200);
     await p.keyboard.press('Escape'); await wait(300);
     await p.click('.ov-actions .pill:has-text("Options")'); await shot('study-options'); await p.click('#study-sheet [aria-label=Cancel]'); await wait(300);
-    await p.click('.ov-actions .pill:has-text("Add")'); await shot('study-add'); await p.click('#study-sheet [aria-label=Close]'); await wait(300);
+    await p.click('.ov-actions .pill:has-text("Add")'); await shot('study-add');
+    await p.click('#study-sheet [aria-label="Note types"]'); await shot('study-note-type');
+    await p.locator('#nt-sheet ul.nt-list:last-of-type .nt-row').first().click(); await shot('study-template');
+    await p.locator('#nt-sheet .sheet-head .icon-btn').first().click(); await wait(300);
+    await p.click('#nt-sheet [aria-label="Note types"]'); await shot('study-note-types');
+    await p.click('#nt-sheet [aria-label=Close]'); await wait(300);
+    await p.click('#study-sheet .field:has-text("Type") .select-btn'); await p.click('.layer .menu-item:has-text("Image Occlusion")'); await shot('study-add-io');
+    await p.click('#study-sheet [aria-label=Close]'); await wait(300);
     await p.click('.tab[data-view=browse]'); await shot('study-browse');
     await p.click('.tab[data-view=stats]'); await shot('study-stats');
     await p.click('.tab[data-view=decks]'); await wait(300);

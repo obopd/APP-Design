@@ -9,6 +9,7 @@
 import { dayOf, dayStart, DEFAULT_PRESET } from './srs.js';
 import { getItem, importBatch, decks as existingDecks, mediaHas, mediaPut } from './study.js';
 import { typeOf, uploadMedia } from './studymedia.js';
+import { mediaRefs, ioTemplates } from './cardtext.js';
 
 /* ---------- Zip (read straight from the File: only the parts needed) ---------- */
 
@@ -309,13 +310,19 @@ export async function importApkg(file, { onProgress = () => {} } = {}) {
   const typeId = {};
   for (const [id, m] of Object.entries(models)) {
     const tid = `anki-t-${id}`;
-    typeId[id] = { id: tid, fields: m.flds.slice().sort((a, b) => a.ord - b.ord).map((f) => f.name), cloze: m.type === 1 };
-    if (getItem(tid)) continue;
-    items.push({
-      id: tid, kind: 'notetype', name: m.name, cloze: m.type === 1, css: m.css || '',
-      fields: typeId[id].fields,
-      templates: m.tmpls.slice().sort((a, b) => a.ord - b.ord).map((t) => ({ name: t.name, front: t.qfmt, back: t.afmt })),
-    });
+    const fields = m.flds.slice().sort((a, b) => a.ord - b.ord).map((f) => f.name);
+    typeId[id] = { id: tid, fields, cloze: m.type === 1 };
+    const templates = m.tmpls.slice().sort((a, b) => a.ord - b.ord).map((t) => ({ name: t.name, front: t.qfmt, back: t.afmt }));
+    // Anki's image occlusion (its templates draw with a script, which never runs here): the
+    // same fields with this app's templates, so occlusion.js covers the picture.
+    const io = m.type === 1 && fields.length >= 2 && templates.some((t) => /image-occlusion|imageOcclusion/.test(`${t.front}${t.back}`))
+      ? { occl: fields[0], image: fields[1] } : null;
+    const had = getItem(tid);
+    if (had) {
+      if (io && !had.io) items.push({ ...had, io, templates: ioTemplates(fields) }); // imported before this was understood
+      continue;
+    }
+    items.push({ id: tid, kind: 'notetype', name: m.name, cloze: m.type === 1, css: m.css || '', fields, ...(io ? { io } : {}), templates: io ? ioTemplates(fields) : templates });
   }
 
   // Notes.
@@ -410,7 +417,6 @@ export async function importApkg(file, { onProgress = () => {} } = {}) {
 /* ---------- Media ---------- */
 
 const isZstd = (b) => b && b.length > 3 && b[0] === 0x28 && b[1] === 0xb5 && b[2] === 0x2f && b[3] === 0xfd;
-const unescapeHtml = (v) => v.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 
 async function importMedia(files, noteRows, models, zstd, onProgress) {
   if (!files.media) return 0;
@@ -429,14 +435,7 @@ async function importMedia(files, noteRows, models, zstd, onProgress) {
   if (!byName.size) return 0;
   // What the cards use: <img src="…"> and [sound:…] in notes, plus files the templates use.
   const used = new Set();
-  const scan = (html) => {
-    for (const m of String(html || '').matchAll(/<img[^>]*?\ssrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi)) {
-      const v = unescapeHtml(m[1] ?? m[2] ?? m[3] ?? '');
-      used.add(v);
-      try { used.add(decodeURIComponent(v)); } catch { /* keep as is */ }
-    }
-    for (const m of String(html || '').matchAll(/\[sound:([^\]]+)\]/g)) used.add(unescapeHtml(m[1].trim()));
-  };
+  const scan = (html) => mediaRefs(html, used);
   noteRows.forEach((n) => scan(n.flds));
   Object.values(models).forEach((m) => (m.tmpls || []).forEach((t) => { scan(t.qfmt); scan(t.afmt); }));
   const wanted = [...used].filter((n) => byName.has(n));

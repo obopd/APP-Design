@@ -218,7 +218,28 @@ Kinds the database refuses (`23514`, setup not run) are held on the phone per ki
   Basic (optional reversed), Basic (type in the answer), Cloze. Card HTML (typed or imported)
   only reaches the page through `safeFragment` (allow-listed tags / styles, rebuilt as DOM;
   `<img src>` only as a bare media name → `img[data-media]`; `[sound:x]` → `.snd` slot;
-  `cleanHtml` turns both back into Anki's form when saving).
+  `cleanHtml` turns both back into Anki's form when saving). With `{ card: true }` (a shown
+  card) formulas are drawn and the deck's own classes / ids become `x-name` / `xid-name`; in
+  the editor they're kept aside as `data-cls` / `data-xid`.
+- **Formulas** (`js/tex.js`, own TeX → MathML, no library): `\( \)`, `\[ \]`, `[$]`, `[$$]`;
+  fractions, roots, scripts, big operators, Greek, accents, `\left \right`, matrices / cases /
+  align, `\ce{}` (chemistry subset); a cloze inside a formula becomes `\class{cloze}{…}`.
+- **Note types** (`js/studytypes.js`, `#nt-sheet`, opened by the cards icon next to Type in the
+  add sheet): copy / rename / delete a type; add / rename (notes and `{{templates}}` follow) /
+  move / delete fields; add / delete card types (cards made or deleted, ords shift); edit each
+  card's Front / Back and the type's Styling with a live preview of a real note. Built-in types
+  are edited as a saved copy with the same id. Styling (`type.css`, Anki's) goes through
+  `scopedCss`: allow-listed properties, no `url()` / @-rules (except @media) / fixed positions;
+  `.card` = the card itself (its colours and font stay the app's), `.nightMode` = dark; one
+  `<style id="card-styles">`, each type's cards carry `nts-N` (`styleClass`). Scripts never run.
+- **Image occlusion** (`js/occlusion.js`, built-in `nt-io`, `type.io = { occl, image }`): Anki's
+  own format, one cloze per shape in the Occlusion field
+  (`{{c1::image-occlusion:rect:left=.1:top=.2:width=.3:height=.1:oi=1}}`, fractions of the
+  picture; old pixel values work; ellipses and polygons too); `oi=1` = hide all, guess one.
+  Cards render the picture in `.io-slot` and `paintOcclusion` lays boxes over it. The add sheet
+  shows a picture area: drag to draw a box, tap to pick, trash to delete; a new note's boxes are
+  numbered in order, an edited note keeps its numbers. Imported Anki occlusion types (script
+  templates) get `io` and these templates (`ioTemplates`).
 - **Media** (`js/studymedia.js`): images / sounds / videos by name, kept on the phone
   (IndexedDB store `media`: `{ name, blob, uploaded }`) and uploaded in the background (3 at a
   time, resumes on open / online) to the private bucket `study-media` at
@@ -226,6 +247,8 @@ Kinds the database refuses (`23514`, setup not run) are held on the phone per ki
   a file the first time a card needs it (signed link) and keep it. `fillMedia(root)` fills
   images and players (sounds autoplay when a side appears: front's first, then the answer's
   own). The editor's photo button shrinks a photo to ≤1600px JPEG (`pickImage`).
+  `cleanupMedia` deletes files no note or template uses any more (phone + bucket; files added
+  in the last 10 minutes are kept); it runs after sync and a few seconds after notes change.
 - **Data** (`js/study.js`, `supabase/study.sql`): IndexedDB `planner-study` (items, reviews,
   meta; per user, cleared on sign-out), all in memory. `study_items` rows (`kind` deck /
   preset / notetype / note / card, `data` jsonb, `deleted` tombstones) + append-only
@@ -257,10 +280,8 @@ Kinds the database refuses (`23514`, setup not run) are held on the phone per ki
   format: JSON in `col`. Own read-only SQLite reader. Brings decks (nesting), option groups →
   presets, note types with templates, notes, cards with scheduling (FSRS memory from card
   data or estimated), review log; ids `anki-*` so re-imports skip. Fixtures:
-  `tests/db/make-apkg.py` (old) and `tests/db/new-format.apkg` (from `make-apkg-new.py`,
+  `tests/db/make-apkg.py` (old; `--io` adds an image occlusion note) and `tests/db/new-format.apkg` (from `make-apkg-new.py`,
   needs the zstandard module).
-- Not built yet (next step, agreed with the owner): image occlusion, math formulas, custom card
-  CSS; media files aren't deleted with their notes yet.
 
 **Keep-awake**: `.github/workflows/keep-awake.yml` calls `ping()` every 3 days so the free
 Supabase project doesn't pause.
@@ -283,7 +304,8 @@ js/settings.js  js/reminders.js (local alerts)  js/push.js  js/live.js  js/searc
 js/social.js  js/people.js  js/chat.js  js/chatview.js
 js/film.js  js/filmui.js  js/write.js  js/organize.js  js/preview.js
 js/srs.js  js/cardtext.js  js/study.js  js/studysearch.js  js/studyui.js  js/studybrowse.js
-js/studystats.js  js/anki.js  js/zstd.js  js/studymedia.js   (study mode)
+js/studystats.js  js/anki.js  js/zstd.js  js/studymedia.js  js/tex.js  js/studytypes.js
+js/occlusion.js   (study mode)
 supabase/    setup → social → chat → film → push → maintenance → study (.sql, run in this order;
              all safe to re-run) + functions/push/index.ts
 tests/       test suite (see below)          docs/  screenshots, logo images
@@ -355,7 +377,8 @@ is friends with bob and carol; an alice↔bob chat), runs `mock-server.js` on :5
 service role) and the app on :8765. Suites: `sync`, `todos` (roll-over across days with a fake clock), `folders` (folder
 sheet, + in a folder, drag between folders), `badge` (icon badge = unread only), `stopwatch` (start / pause / resume / stop, distance), `ties`, `study` (mode menu, note
 types, review + undo, burying, leech, options, custom study, browse search + bulk, stats,
-sync between phones + RLS, Anki import from `db/make-apkg.py`), `desktop` (Desktop
+sync between phones + RLS, Anki import from `db/make-apkg.py`), `studycards` (formulas, note
+types + styling, image occlusion drawn and imported, media cleanup), `desktop` (Desktop
 Chrome: mouse, keyboard, window sizes), `storage`, `resilience` (offline, 2 minutes open: errors + memory,
 sign-out cleanup), `motion`, `preview`, `shoot`,
 `app-features` (push sign-up, instant chat, search, backups, clean-up, ping) and
@@ -381,7 +404,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v105`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v106`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 
