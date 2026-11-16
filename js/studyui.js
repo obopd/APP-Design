@@ -4,7 +4,7 @@
 import { h, icon, ICONS, fmt } from './util.js';
 import { ask, tell, askText, pick, selectButton, snack, openLayer } from './ui.js';
 import {
-  decks, deck, deckTree, childDecks, deckPath, addDeck, deleteDeck, put, presets, presetOf, noteTypes, noteType,
+  decks, deck, deckTree, deckIds, childDecks, deckPath, addDeck, deleteDeck, put, presets, presetOf, noteTypes, noteType,
   note, cardsOfNote, addNote, updateNote, deleteNotes, duplicateOf, answerCard, bury, setSuspended, setFlag,
   dueCounts, nextCard, reviewsOf, getItem, studyStatus, defaultDeck, uid, remove,
 } from './study.js';
@@ -91,11 +91,22 @@ function overview(id) {
   const c = dueCounts(id);
   const total = c.new + c.learn + c.review;
   const more = async (e) => {
-    const v = await pick(e.currentTarget, [
-      ...(d.filtered ? [] : [['sub', 'Add subdeck'], ['rename', 'Rename']]),
+    const anchor = e.currentTarget;
+    const v = await pick(anchor, [
+      ...(d.filtered ? [] : [['sub', 'Add subdeck'], ['move', 'Move into…'], ['rename', 'Rename']]),
       ['delete', d.filtered ? 'Delete session' : 'Delete deck'],
     ]);
     if (v === 'sub') newDeck(id);
+    if (v === 'move') {
+      // Any other deck (not itself or one of its own subdecks), or the top of the list.
+      const own = new Set(deckIds(id));
+      const to = await pick(anchor, [['', 'Top level'], ...deckTree().filter(({ deck: x }) => !x.filtered && !own.has(x.id))
+        .map(({ deck: x, depth }) => [x.id, `${'\u2002'.repeat(depth * 2)}${x.name}`])], d.parent || '');
+      if (to !== undefined && (to || null) !== (d.parent || null)) {
+        put({ ...d, parent: to || null });
+        snack(to ? `Moved into ${deck(to).name}` : 'Moved to the top level');
+      }
+    }
     if (v === 'rename') {
       const name = await askText({ title: 'Rename deck', value: d.name, ok: 'Save' });
       if (name && name.trim()) put({ ...d, name: name.trim().replace(/::/g, ' ') });

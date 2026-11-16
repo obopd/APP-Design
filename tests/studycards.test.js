@@ -36,6 +36,24 @@ const leaveReview = async (p) => {
   await wait(2000);
   check('…and then reaches the account', (await sql("select count(*)::int n from study_items where kind = 'deck' and data->>'name' = 'Quick'"))[0].n === 1);
 
+  // Moving a deck into another one (and back out)
+  await S(p, (s) => { s.addDeck('Book Vocab'); s.addDeck('Laws'); });
+  await p.click('.deck-name:text-is("Laws")'); await wait(300);
+  await p.click('[aria-label="More"]'); await menu(p, 'Move into');
+  check('a deck can’t be moved into itself', await p.locator('.layer .menu-item:text-is("Laws")').count() === 0);
+  await menu(p, 'Book Vocab');
+  check('a deck moves into another one', (await S(p, (s) => s.deckPath(s.decks().find((d) => d.name === 'Laws').id))) === 'Book Vocab::Laws');
+  for (let i = 0; i < 3 && !(await p.locator('.mode-btn').count()); i += 1) { await p.click('.back-btn'); await wait(300); }
+  check('…and shows under it on Decks', await p.evaluate(() => {
+    const rows = [...document.querySelectorAll('.deck-row')];
+    const i = rows.findIndex((r) => r.textContent.includes('Book Vocab'));
+    return rows[i + 1]?.textContent.includes('Laws') && Number(getComputedStyle(rows[i + 1]).getPropertyValue('--depth')) === 1;
+  }));
+  await p.click('.deck-name:text-is("Laws")'); await wait(300);
+  await p.click('[aria-label="More"]'); await menu(p, 'Move into'); await menu(p, 'Top level');
+  check('…and back to the top level', (await S(p, (s) => s.decks().find((d) => d.name === 'Laws').parent)) === null);
+  await p.click('.back-btn'); await wait(300);
+
   // ---------- Formulas ----------
   await S(p, (s) => {
     const d = s.addDeck('Math');

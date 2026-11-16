@@ -259,7 +259,8 @@ Kinds the database refuses (`23514`, setup not run) are held on the phone per ki
   learning within 20 min; filtered decks (`deck.filtered = { query, order, limit }`) study a
   search. Sibling cards bury until tomorrow (`card.buried` = day number).
 - **Screens**: Decks (`js/studyui.js`): deck tree with New / Learning / To review counts,
-  overview (Study now, Add, Browse, Options, Custom study, subdeck / rename / delete), review
+  overview (Study now, Add, Browse, Options, Custom study, subdeck / move into another deck /
+  rename / delete), review
   page (`body.studying`, dock hidden; Show answer → Again / Hard / Good / Easy with intervals;
   Undo; card menu: edit, flag, bury, suspend, card info; computers: Space / Enter, 1–4, Z,
   Esc), add / edit sheet (`#study-sheet`, contenteditable fields with B / I / U / […] cloze,
@@ -404,7 +405,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v107`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v108`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 
