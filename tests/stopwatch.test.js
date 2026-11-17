@@ -58,6 +58,28 @@ const { check, wait, browser, phone, inApp, done } = require('./helpers');
   await inApp(p, (s) => { const t = s.state.todos.find((x) => x.id === 'r'); t.values['2026-01-01'] = 3.15; s.save(); });
   await p.click('.stats-toggle'); await wait(300);
   check('stats add up the distance', /8\.35 km/.test(await p.locator('.routine-stats li:has-text("Run")').innerText()), await p.locator('.routine-stats li:has-text("Run")').innerText());
+  // A long title wraps beside its mark (it used to drop onto its own line under the mark).
+  await inApp(p, (s) => {
+    const key = new Date().toLocaleDateString('sv');
+    s.state.todos.push({ id: 'long', title: 'Pelican Case (Peli Air 1510 with the Trekpak insert dividers)', date: key, repeat: 'none', until: '', done: false });
+    s.save();
+  });
+  await wait(400);
+  for (const layout of ['split', 'full']) {
+    if (layout === 'full') {
+      const d = await p.locator('.divider').boundingBox();
+      await p.mouse.move(d.x + d.width / 2, d.y + 20); await p.mouse.down();
+      await p.mouse.move(d.x + 200, d.y + 20, { steps: 5 }); await p.mouse.move(2000, d.y + 20, { steps: 5 }); await p.mouse.up(); await wait(600);
+    }
+    const pos = await p.evaluate(() => {
+      const li = [...document.querySelectorAll('.todo')].find((x) => x.textContent.includes('Pelican'));
+      const m = li.querySelector('.mark-btn').getBoundingClientRect();
+      const t = li.querySelector('.todo-title').getBoundingClientRect();
+      return { markTop: m.top, titleTop: t.top, titleLeft: t.left, markRight: m.right };
+    });
+    check(`a long to-do title wraps beside its mark (${layout})`, Math.abs(pos.titleTop - pos.markTop) < 6 && pos.titleLeft >= pos.markRight - 2, JSON.stringify(pos));
+  }
+
   check('no page errors', !p.errors.length, p.errors.join('; '));
   await done(b);
 })();
