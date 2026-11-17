@@ -58,6 +58,30 @@ const { browser, phone, check, wait, done, chooseMode } = require('./helpers');
   check('leaving shows the calendar logo in the middle', await p.locator('.fx-mark.fx-out img.fx-mark-art').count() === 1);
   await wait(1500);
   check('…then film mode is off', await p.evaluate(() => !document.documentElement.classList.contains('film')));
+  // Switching modes fades the page out once and the new mode in once: no flash of the new
+  // tab at the switch (it used to replay the fade-out from fully visible).
+  for (const to of ['Study', 'Planner', 'Film', 'Planner']) {
+    await p.evaluate(() => {
+      window.__ops = [];
+      const t0 = performance.now();
+      const tick = () => {
+        const vs = [...document.querySelectorAll('.view')].filter((v) => !v.hidden && v.offsetParent !== null);
+        window.__ops.push(Math.max(0, ...vs.map((v) => Number(getComputedStyle(v).opacity))));
+        if (performance.now() - t0 < 3600) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    if (await p.locator('#brand').isVisible()) await hold(p, to);
+    else { await p.click('.mode-btn'); await p.click(`.layer .menu-item:has-text("${to}")`); } // study mode's own logo
+    await wait(2600);
+    const ops = await p.evaluate(() => window.__ops);
+    const low = ops.findIndex((o) => o < 0.05);
+    const back = ops.findIndex((o, i) => i > low && o > 0.6);
+    const dip = back > 0 ? ops.slice(back).some((o) => o < 0.3) : true;
+    const flash = low > 0 ? ops.slice(low, back > 0 ? back : undefined).some((o, i, a) => i > 0 && o > 0.35 && a.slice(i).some((x) => x < 0.05)) : true;
+    check(`switching to ${to}: one smooth fade out and in (no flash)`, low > 0 && back > 0 && !dip && !flash, ops.map((o) => o.toFixed(2)).join(' '));
+  }
+
   // Every candidate style plays, switches the mode under cover, and cleans up.
   for (const [style, total, at] of [['dip', 1150, 560], ['letterbox', 1250, 600], ['leak', 1350, 620], ['focus', 1100, 520], ['dissolve', 1400, 560]]) {
     const r = await p.evaluate(async ([style, at]) => {

@@ -61,10 +61,15 @@ export function playFilmSwitch(entering, switchMode, title = '', style = FILM_TR
   }
   document.body.classList.add('fx-on');
   playing = new Promise((resolve) => {
-    setTimeout(switchMode, s.at);
+    // Second half: its own class, so a view that only appears at the switch (another mode's
+    // tab) starts fading in from invisible instead of replaying the fade-out from the start.
+    setTimeout(() => { if (s.onPage) document.body.classList.add('fx-after'); switchMode(); }, s.at);
     setTimeout(() => {
       el?.remove();
-      document.body.classList.remove('fx-on', 'fx-page', `fx-${style}`, `fx-${dir}`);
+      // The new tab's own fade-in (.view-enter) was waiting under this one; it would start
+      // now and flash the page a second time.
+      if (s.onPage) document.querySelectorAll('.view.view-enter').forEach((v) => v.classList.remove('view-enter'));
+      document.body.classList.remove('fx-on', 'fx-page', 'fx-after', `fx-${style}`, `fx-${dir}`);
       playing = null;
       resolve();
     }, s.total);

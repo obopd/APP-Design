@@ -168,7 +168,9 @@ device (`planner.film`). The switch animation lives in `js/cinema.js` (`playFilm
 = **`'dissolve'`** (the owner's choice, 1.4s): the page eases back and fades out, the logo
 tile (`.fx-mark`, a copy of `#brand`'s art, 76px) fades into the empty middle — entering, the
 slate's arm softly claps shut; leaving, the calendar icon — and the new mode fades in from
-slightly closer; the switch happens at 560ms while the page is invisible. The other
+slightly closer; the switch happens at 560ms while the page is invisible (two halves:
+`fx-dissolve-out`, then `fx-after` → `fx-dissolve-in`, so the new mode's tab doesn't flash; its
+`.view-enter` is dropped at the end). The other
 candidates (`dip`, `letterbox`, `leak`, `focus`, `flip` = logo flip only) stay in the file;
 reduced motion = instant. The owner rejected a dramatic clapperboard show (too much). **Film look** (styles.css "Film mode's own look"): `:root.film` swaps the
 palette — light = "script paper" (warm off-white `#f6f1e8`, ink text), dark = "screening
@@ -405,7 +407,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v109`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v110`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 
