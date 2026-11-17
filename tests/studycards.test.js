@@ -57,6 +57,30 @@ const leaveReview = async (p) => {
   check('…and back to the top level', (await S(p, (s) => s.decks().find((d) => d.name === 'Laws').parent)) === null);
   await p.click('.back-btn'); await wait(300);
 
+  // Enter in a field: the cursor goes to the new line inside the field.
+  await p.click('[aria-label="Add card"]'); await wait(400);
+  await p.click('#study-sheet .field:has-text("Type") .select-btn'); await p.click('.layer .menu-item span:text-is("Basic")'); await wait(200);
+  const front = p.locator('#study-sheet .field-edit').nth(0);
+  await front.click(); await p.keyboard.type('"They make you veer toward ideas that soothe your ego."');
+  await p.keyboard.press('Enter');
+  const caret = await p.evaluate(() => {
+    const ed = document.querySelector('#study-sheet .field-edit');
+    const sel = getSelection();
+    const r = sel.getRangeAt(0).getBoundingClientRect();
+    const mark = document.createElement('span'); mark.textContent = '\u200b';
+    sel.getRangeAt(0).insertNode(mark);
+    const m = mark.getBoundingClientRect(); mark.remove();
+    const b = ed.getBoundingClientRect();
+    return { top: m.top, bottom: m.bottom, boxBottom: b.bottom, boxTop: b.top, lines: Math.round((m.top - b.top) / 20), r: r.top };
+  });
+  check('after Enter the cursor is on a new line inside the field', caret.bottom <= caret.boxBottom && caret.top > caret.boxTop + 25, JSON.stringify(caret));
+  await p.keyboard.press('Enter'); await p.keyboard.type('third line');
+  await p.locator('#study-sheet .field-edit').nth(1).click(); await p.keyboard.type('x');
+  await p.click('#study-sheet .ok'); await wait(400);
+  await p.click('#study-sheet [aria-label="Close"]'); await wait(400);
+  const typed = await S(p, (s) => s.notes().find((n) => /soothe/.test(n.fields.Front || ''))?.fields.Front);
+  check('…and the lines are kept as typed', /ego\."<br><br>third line$/.test(typed || ''), typed);
+
   // ---------- Formulas ----------
   await S(p, (s) => {
     const d = s.addDeck('Math');

@@ -317,6 +317,33 @@ document.addEventListener('selectionchange', () => {
   if (noteBox && sel.rangeCount && noteBox.contains(sel.anchorNode)) noteRange = sel.getRangeAt(0).cloneRange();
 });
 
+// Enter in a field: a plain line break with the cursor on the new line. Safari's own new
+// line can be an empty block with no height yet, so the cursor showed below the field; a
+// line at the very end gets a second <br> so it really exists (cleanHtml drops the extra).
+function newLine(ed) {
+  const sel = window.getSelection();
+  if (!sel.rangeCount || !ed.contains(sel.anchorNode)) return;
+  const r = sel.getRangeAt(0);
+  r.deleteContents();
+  const br = document.createElement('br');
+  r.insertNode(br);
+  const rest = document.createRange();
+  rest.setStartAfter(br);
+  rest.setEnd(ed, ed.childNodes.length);
+  const tail = rest.cloneContents();
+  if (!tail.textContent && !tail.querySelector('br, img')) br.after(document.createElement('br'));
+  const at = document.createRange();
+  at.setStartAfter(br);
+  at.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(at);
+  ed.dispatchEvent(new Event('input', { bubbles: true }));
+  // Keep the new line in sight inside the field.
+  const line = br.nextSibling?.nodeType === 1 ? br.nextSibling.getBoundingClientRect() : at.getBoundingClientRect();
+  const box = ed.getBoundingClientRect();
+  if (line.bottom > box.bottom - 8) ed.scrollTop += line.bottom - box.bottom + 12;
+}
+
 /**
  * openNoteSheet({ noteId?, deckId?, typeId?, onSaved? }) — adding stays open for the next
  * note (like Anki); editing closes on save.
@@ -352,6 +379,11 @@ export function openNoteSheet({ noteId = null, deckId = null, typeId = null, onS
       ed.append(safeFragment(values[f] || ''));
       fillMedia(ed);
       if (i === 0) ed.addEventListener('input', checkDupe);
+      ed.addEventListener('beforeinput', (e) => {
+        if (e.inputType !== 'insertParagraph' && e.inputType !== 'insertLineBreak') return;
+        e.preventDefault();
+        newLine(ed);
+      });
       editors[f] = ed;
       return h('div', { class: 'note-field' }, h('span', { class: 'note-field-name' }, f), ed);
     }));
