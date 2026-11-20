@@ -182,7 +182,7 @@ projector beam, `grade` teal/orange, `darkroom` red safelight): a fixed, still `
 mode cards use `--card` with a soft shadow, pinned headers / script bar / composer are
 frosted `--glass`, to-do rows are transparent (swipe actions only show while swiping,
 `:has`), timeline hour labels have no fill. The project name chip / clapperboard opens the projects card (New /
-Invite / Rename / Delete or Leave / Exit). The calendar, editor, folders and expanded grid
+Invite / Rename / Delete or Leave; leaving film mode is only through the logo menu). The calendar, editor, folders and expanded grid
 then show **only the project's** items: `cur()` returns the lists set by `useLists()`;
 `save()` goes to `film.persist()` (row-per-item upsert into `project_items`, merged by object
 identity); personal saves pass `{ personal: true }`. Collaborators = invited accepted
@@ -407,7 +407,7 @@ private key or the push secret.
 The service worker installs with `cache: 'reload'`, fetches with `cache: 'no-cache'` and
 reloads once on `controllerchange`, so the owner only closes and reopens the app once.
 **When you change any file the app loads, bump `CACHE` in `sw.js`** (currently
-`planner-v112`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
+`planner-v113`) and keep `ASSETS` in sync with every file in `js/` and `fonts/`.
 
 ## Git
 

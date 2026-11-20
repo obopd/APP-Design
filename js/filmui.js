@@ -137,8 +137,8 @@ export function openProjects() {
         if (ok) await leaveProject(cur.id);
       }) }, isOwner(cur) ? 'Delete' : 'Leave') : null),
     h('div', { class: 'ask-actions' },
-      h('button', { type: 'button', class: 'ask-btn', autofocus: true, onclick: close }, 'Close'),
-      h('button', { type: 'button', class: 'ask-btn', onclick: () => { close(); playFilmSwitch(false, () => { setFilm(false); paintBrand(true); }); } }, 'Exit film mode'))),
+      // Leaving film mode is done one way only: hold the logo and choose a mode.
+      h('button', { type: 'button', class: 'ask-btn', autofocus: true, onclick: close }, 'Close'))),
   { onBackdrop: close });
 }
 
